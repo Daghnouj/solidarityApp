@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import userService from "./user.service";
 import { ProtectedRequest } from '../types/express';
+import User from './user.model';
 
 export const getProfile = async (req: ProtectedRequest, res: Response): Promise<void> => {
   try {
@@ -142,6 +143,25 @@ export const getCurrentUser = async (req: ProtectedRequest, res: Response): Prom
   } catch (error: any) {
     console.error('[CURRENT USER] Erreur:', error);
     res.status(404).json({ 
+      success: false,
+      message: error.message 
+    });
+  }
+};
+export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // Pour admin seulement - vérifier les permissions
+    const users = await User.find()
+      .select('-mdp -__v -stripeCustomerId')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      data: users
+    });
+  } catch (error: any) {
+    console.error('Erreur getAllUsers:', error);
+    res.status(500).json({ 
       success: false,
       message: error.message 
     });

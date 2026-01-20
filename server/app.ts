@@ -56,7 +56,7 @@ app.use("/api/", generalLimiter);
 
 // 🛣️ 7. Routes
 app.use("/api/auth", authRoutes);  
-app.use("/api/user", userRoutes);
+app.use("/api/users", userRoutes);
 app.use("/api/password", passwordRoutes);
 app.use('/api/auth/password', passwordRoutes);
 app.use('/api/admin/auth', authAdminRouter);

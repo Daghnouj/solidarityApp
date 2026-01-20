@@ -9,10 +9,12 @@ import {
   deactivateAccount,  
   activateAccount,
   getUserById,
-  getCurrentUser
+  getCurrentUser,
+  getAllUsers
 } from "./user.controller";
 import { protect } from "../../middlewares/protect";
 import { uploadProfile } from "../../config/cloudinary/cloudinary";
+import { protectAdmin } from "../../middlewares/protectAdmin";
 
 const router = express.Router();
 
@@ -26,5 +28,7 @@ router.put("/profile/:userId/deactivate", deactivateAccount);
 router.put("/profile/:userId/activate", activateAccount);
 router.get('/me', protect, getCurrentUser);
 router.get('/:id', protect, getUserById);  
+router.get('/', getAllUsers);
+
  
 export default router;
