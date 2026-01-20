@@ -1,0 +1,108 @@
+import type { Professional } from "../types";
+
+export const mockProfessionals: Professional[] = [
+  {
+    _id: '1',
+    nom: 'Dr. Sarah Johnson',
+    specialite: 'Dentist',
+    adresse: 'New York, NY',
+    photo: '/dentist1.jpg',
+  },
+  {
+    _id: '2',
+    nom: 'Dr. Mike Chen',
+    specialite: 'Cardiologist',
+    adresse: 'Los Angeles, CA',
+    photo: '/cardiologist1.jpg',
+  },
+  {
+    _id: '3',
+    nom: 'Dr. Emily Davis',
+    specialite: 'Dermatologist',
+    adresse: 'Chicago, IL',
+    photo: '/dermatologist1.jpg',
+  },
+  {
+    _id: '4',
+    nom: 'Dr. James Wilson',
+    specialite: 'Pediatrician',
+    adresse: 'Miami, FL',
+    photo: '/pediatrician1.jpg',
+  },
+  {
+    _id: '5',
+    nom: 'Dr. Olivia Martinez',
+    specialite: 'Neurologist',
+    adresse: 'Houston, TX',
+    photo: '/neurologist1.jpg',
+  },
+  {
+    _id: '6',
+    nom: 'Dr. Ethan Brown',
+    specialite: 'Dentist',
+    adresse: 'Los Angeles, CA',
+    photo: '/dentist2.jpg',
+  },
+  {
+    _id: '7',
+    nom: 'Dr. Sophia Lee',
+    specialite: 'Dermatologist',
+    adresse: 'New York, NY',
+    photo: '/dermatologist2.jpg',
+  },
+  {
+    _id: '8',
+    nom: 'Dr. Liam Walker',
+    specialite: 'Cardiologist',
+    adresse: 'Chicago, IL',
+    photo: '/cardiologist2.jpg',
+  },
+   {
+    _id: '9',
+    nom: 'Dr. Amanda Rodriguez',
+    specialite: 'Pediatrician',
+    adresse: 'Miami, FL',
+  },
+  {
+    _id: '10',
+    nom: 'Dr. Robert Kim',
+    specialite: 'Neurologist',
+    adresse: 'Houston, TX',
+  },
+  {
+    _id: '11',
+    nom: 'Dr. Lisa Thompson',
+    specialite: 'Dermatologist',
+    adresse: 'Chicago, IL',
+  },
+  {
+    _id: '12',
+    nom: 'Dr. David Wilson',
+    specialite: 'Cardiologist',
+    adresse: 'Los Angeles, CA',
+  },
+  {
+    _id: '13',
+    nom: 'Dr. Maria Garcia',
+    specialite: 'Dentist',
+    adresse: 'New York, NY',
+  },
+  {
+    _id: '14',
+    nom: 'Dr. Kevin Patel',
+    specialite: 'Pediatrician',
+    adresse: 'Miami, FL',
+  },
+  {
+    _id: '15',
+    nom: 'Dr. Jennifer Lee',
+    specialite: 'Neurologist',
+    adresse: 'Houston, TX',
+  },
+  {
+    _id: '16',
+    nom: 'Dr. Thomas Brown',
+    specialite: 'Dermatologist',
+    adresse: 'Chicago, IL',
+  },
+];

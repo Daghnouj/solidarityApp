@@ -1,0 +1,79 @@
+import { Search } from 'lucide-react';
+import NotificationsMenu from '../menus/NotificationsMenu';
+import UserMenu from '../menus/UserMenu';
+import MobileMenu from '../menus/MobileMenu';
+
+const Header = () => {
+  const user = {
+    name: "Omar Ben Ali",
+    email: "omar@solidarity.com",
+    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Omar",
+    isPremium: true,
+  };
+
+  const handleLogout = () => {
+    console.log("Logging out...");
+  };
+
+  return (
+    <header className="bg-white border-b border-gray-200 px-4 md:px-8 py-4 sticky top-0 z-40 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+
+        {/* LEFT */}
+        <div className="flex items-center gap-4 min-w-0">
+          {/* Mobile menu */}
+          <div className="md:hidden">
+            <MobileMenu
+              userName={user.name}
+              userAvatar={user.avatar}
+              isPremium={user.isPremium}
+              onLogout={handleLogout}
+            />
+          </div>
+
+          <div className="truncate">
+            <h1 className="text-lg md:text-2xl font-bold text-blue-900 truncate">
+              Welcome back, {user.name.split(" ")[0]}
+            </h1>
+            <p className="text-gray-600 text-xs md:text-sm mt-1 hidden sm:block">
+              Here's what's happening with your dashboard
+            </p>
+          </div>
+        </div>
+
+        {/* RIGHT */}
+        <div className="flex items-center gap-3">
+
+          {/* Search (desktop only) */}
+          <div className="relative hidden lg:block max-w-xs">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
+            />
+          </div>
+
+          <NotificationsMenu />
+
+          {/* User menu (desktop only) */}
+          <div className="hidden md:block">
+            <UserMenu
+              userName={user.name}
+              userEmail={user.email}
+              userAvatar={user.avatar}
+              isPremium={user.isPremium}
+              onLogout={handleLogout}
+            />
+          </div>
+
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export default Header;

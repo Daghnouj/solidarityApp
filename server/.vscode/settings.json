@@ -1,0 +1,15 @@
+{
+  "typescript.preferences.autoImportFileExcludePatterns": [
+    "**/node_modules/**"
+  ],
+  "typescript.suggest.autoImports": true,
+  "typescript.updateImportsOnFileMove.enabled": "always",
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "typescript.validate.enable": true,
+  "javascript.validate.enable": true,
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  }
+}
