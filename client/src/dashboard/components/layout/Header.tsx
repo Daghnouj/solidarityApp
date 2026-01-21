@@ -1,18 +1,58 @@
 import { Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import NotificationsMenu from '../menus/NotificationsMenu';
 import UserMenu from '../menus/UserMenu';
 import MobileMenu from '../menus/MobileMenu';
 
 const Header = () => {
+  const navigate = useNavigate();
+  const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+  // Get admin data from localStorage
+  const adminDataString = localStorage.getItem('adminData');
+  const adminData = adminDataString ? JSON.parse(adminDataString) : null;
+
   const user = {
-    name: "Omar Ben Ali",
-    email: "omar@solidarity.com",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Omar",
+    name: adminData?.nom || "Admin",
+    email: adminData?.email || "admin@solidarity.com",
+    avatar: adminData?.photo || "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin",
     isPremium: true,
   };
 
-  const handleLogout = () => {
-    console.log("Logging out...");
+  const handleLogout = async () => {
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      
+      // Call logout API
+      if (adminToken && API_BASE_URL) {
+        try {
+          await fetch(`${API_BASE_URL}/admin/auth/logout`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${adminToken}`,
+              'Content-Type': 'application/json',
+            },
+            credentials: 'include',
+          });
+        } catch (error) {
+          // Continue with logout even if API call fails
+          console.error('Logout API error:', error);
+        }
+      }
+
+      // Clear admin data from localStorage
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminData');
+
+      // Redirect to login page
+      navigate('/admin/login');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Even if there's an error, clear local storage and redirect
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('adminData');
+      navigate('/admin/login');
+    }
   };
 
   return (
