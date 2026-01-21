@@ -49,6 +49,18 @@ interface EditUserData {
   adresse?: string;
 }
 
+// Interface pour les données de création d'utilisateur
+interface AddUserData {
+  nom: string;
+  email: string;
+  mdp: string;
+  telephone: string;
+  role: 'patient' | 'professional';
+  dateNaissance?: string;
+  adresse?: string;
+  specialite?: string;
+}
+
 // Interface pour le frontend
 interface User {
   id: string;
@@ -67,6 +79,7 @@ const UsersPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'suspended' | 'pending'>('all');
   const [users, setUsers] = useState<User[]>([]);
+  const [backendUsers, setBackendUsers] = useState<BackendUser[]>([]); // Store raw backend data
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,6 +98,18 @@ const UsersPage: React.FC = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editUserData, setEditUserData] = useState<EditUserData | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [addUserData, setAddUserData] = useState<AddUserData>({
+    nom: '',
+    email: '',
+    mdp: '',
+    telephone: '',
+    role: 'patient',
+    dateNaissance: '',
+    adresse: '',
+    specialite: ''
+  });
+  const [addUserLoading, setAddUserLoading] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     type: 'activate' | 'suspend' | 'delete' | null;
@@ -158,14 +183,14 @@ const UsersPage: React.FC = () => {
         throw new Error('API URL is not configured. Please check your .env file.');
       }
       
-      // Récupérer le token d'authentification depuis localStorage
-      const token = localStorage.getItem('token');
+      // Récupérer le token admin depuis localStorage
+      const adminToken = localStorage.getItem('adminToken');
       
       // Appel API au backend avec l'URL dynamique
       const response = await fetch(`${API_BASE_URL}/users`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${adminToken}`,
           'Content-Type': 'application/json',
         },
       });
@@ -175,6 +200,9 @@ const UsersPage: React.FC = () => {
       }
       
       const data = await response.json();
+      
+      // Store raw backend data for editing
+      setBackendUsers(data.data || []);
       
       // Convertir les données backend vers le format frontend
       const mappedUsers = data.data.map(mapBackendToFrontend);
@@ -292,7 +320,7 @@ const UsersPage: React.FC = () => {
   // Fonction pour mettre à jour le statut d'un utilisateur
   const updateUserStatus = async (userId: string, action: 'activate' | 'deactivate' | 'delete') => {
     try {
-      const token = localStorage.getItem('token');
+      const adminToken = localStorage.getItem('adminToken');
       
       let endpoint = '';
       let method = 'PUT';
@@ -313,7 +341,7 @@ const UsersPage: React.FC = () => {
       const response = await fetch(endpoint, {
         method,
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${adminToken}`,
           'Content-Type': 'application/json',
         },
         ...(action === 'deactivate' && {
@@ -338,36 +366,30 @@ const UsersPage: React.FC = () => {
   };
 
   // Fonction pour éditer un utilisateur
-  const handleEditUser = async (userId: string) => {
+  const handleEditUser = (userId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Clear any previous errors
+      setError(null);
       
-      if (response.ok) {
-        const result = await response.json();
-        const userData = result.data;
-        
-        // Set edit form data
-        setEditUserData({
-          nom: userData.nom || '',
-          email: userData.email || '',
-          telephone: userData.telephone || '',
-          dateNaissance: userData.dateNaissance ? new Date(userData.dateNaissance).toISOString().split('T')[0] : '',
-          adresse: userData.adresse || ''
-        });
-        setEditingUserId(userId);
-        setEditModalOpen(true);
-      } else {
-        throw new Error('Failed to fetch user data');
+      // Find user from already loaded backend data
+      const userData = backendUsers.find(user => user._id === userId);
+      
+      if (!userData) {
+        throw new Error('Utilisateur non trouvé dans les données chargées');
       }
+      
+      // Set edit form data from backend user data
+      setEditUserData({
+        nom: userData.nom || '',
+        email: userData.email || '',
+        telephone: userData.telephone || '',
+        dateNaissance: userData.dateNaissance ? new Date(userData.dateNaissance).toISOString().split('T')[0] : '',
+        adresse: userData.adresse || ''
+      });
+      setEditingUserId(userId);
+      setEditModalOpen(true);
     } catch (err: any) {
-      console.error('Error fetching user data:', err);
+      console.error('Error loading user data:', err);
       setError(err.message || 'Failed to load user data');
     }
   };
@@ -376,12 +398,29 @@ const UsersPage: React.FC = () => {
   const handleSaveUser = async () => {
     if (!editingUserId || !editUserData) return;
 
+    // Validation
+    if (!editUserData.nom || editUserData.nom.trim() === '') {
+      setError('Le nom est requis');
+      return;
+    }
+
+    if (!editUserData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editUserData.email)) {
+      setError('Email invalide');
+      return;
+    }
+
+    if (!editUserData.telephone || editUserData.telephone.trim() === '') {
+      setError('Le téléphone est requis');
+      return;
+    }
+
     try {
-      const token = localStorage.getItem('token');
+      setError(null);
+      const adminToken = localStorage.getItem('adminToken');
       const response = await fetch(`${API_BASE_URL}/users/profile/${editingUserId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${adminToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(editUserData)
@@ -392,11 +431,20 @@ const UsersPage: React.FC = () => {
         throw new Error(errorData.message || 'Failed to update user');
       }
 
+      await response.json();
+      
       // Close modal and refresh users
       setEditModalOpen(false);
       setEditUserData(null);
       setEditingUserId(null);
-      fetchUsers();
+      
+      // Show success message
+      setError(null);
+      // Refresh users list
+      await fetchUsers();
+      
+      // Success notification
+      alert('Utilisateur mis à jour avec succès!');
     } catch (err: any) {
       console.error('Error updating user:', err);
       setError(err.message || 'Failed to update user');
@@ -411,6 +459,99 @@ const UsersPage: React.FC = () => {
       userId,
       userName
     });
+  };
+
+  // Fonction pour créer un nouvel utilisateur
+  const handleAddUser = async () => {
+    // Validation
+    if (!addUserData.nom || addUserData.nom.trim() === '') {
+      setError('Le nom est requis');
+      return;
+    }
+
+    if (!addUserData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addUserData.email)) {
+      setError('Email invalide');
+      return;
+    }
+
+    if (!addUserData.mdp || addUserData.mdp.length < 8) {
+      setError('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    if (!addUserData.telephone || addUserData.telephone.trim() === '') {
+      setError('Le téléphone est requis');
+      return;
+    }
+
+    if (addUserData.role === 'professional' && (!addUserData.specialite || addUserData.specialite.trim() === '')) {
+      setError('La spécialité est requise pour les professionnels');
+      return;
+    }
+
+    try {
+      setAddUserLoading(true);
+      setError(null);
+
+      const adminToken = localStorage.getItem('adminToken');
+      
+      // Préparer les données pour l'API
+      const userPayload: any = {
+        nom: addUserData.nom,
+        email: addUserData.email,
+        mdp: addUserData.mdp,
+        telephone: addUserData.telephone,
+        role: addUserData.role,
+        dateNaissance: addUserData.dateNaissance || undefined,
+        adresse: addUserData.adresse || undefined,
+      };
+
+      if (addUserData.role === 'professional' && addUserData.specialite) {
+        userPayload.specialite = addUserData.specialite;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userPayload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create user');
+      }
+
+      await response.json();
+      
+      // Close modal and refresh users
+      setAddModalOpen(false);
+      setAddUserData({
+        nom: '',
+        email: '',
+        mdp: '',
+        telephone: '',
+        role: 'patient',
+        dateNaissance: '',
+        adresse: '',
+        specialite: ''
+      });
+      
+      // Show success message
+      setError(null);
+      // Refresh users list
+      await fetchUsers();
+      
+      // Success notification
+      alert('Utilisateur créé avec succès!');
+    } catch (err: any) {
+      console.error('Error creating user:', err);
+      setError(err.message || 'Failed to create user');
+    } finally {
+      setAddUserLoading(false);
+    }
   };
 
   // Fonction pour confirmer l'action
@@ -487,7 +628,24 @@ const UsersPage: React.FC = () => {
             <span className="hidden sm:inline">Refresh</span>
             <span className="sm:hidden">Refresh</span>
           </Button>
-          <Button icon={<UserPlus size={16} className="sm:w-[18px] sm:h-[18px]" />} className="text-xs sm:text-sm">
+          <Button 
+            icon={<UserPlus size={16} className="sm:w-[18px] sm:h-[18px]" />} 
+            className="text-xs sm:text-sm"
+            onClick={() => {
+              setAddModalOpen(true);
+              setError(null);
+              setAddUserData({
+                nom: '',
+                email: '',
+                mdp: '',
+                telephone: '',
+                role: 'patient',
+                dateNaissance: '',
+                adresse: '',
+                specialite: ''
+              });
+            }}
+          >
             <span className="hidden sm:inline">Add New User</span>
             <span className="sm:hidden">Add</span>
           </Button>
@@ -501,9 +659,8 @@ const UsersPage: React.FC = () => {
           <p className="text-red-600">{error}</p>
           <Button 
             variant="ghost" 
-            size="sm" 
             onClick={() => setError(null)}
-            className="ml-auto"
+            className="ml-auto text-sm"
           >
             Dismiss
           </Button>
@@ -763,6 +920,7 @@ const UsersPage: React.FC = () => {
                   setEditModalOpen(false);
                   setEditUserData(null);
                   setEditingUserId(null);
+                  setError(null); // Clear error when closing modal
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
@@ -771,68 +929,74 @@ const UsersPage: React.FC = () => {
             </div>
 
             <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+              {/* Error message in modal */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Name
+                  Nom <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={editUserData.nom}
                   onChange={(e) => setEditUserData({ ...editUserData, nom: e.target.value })}
-                  disabled
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="Entrez le nom"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Email
+                  Email <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="email"
                   value={editUserData.email}
                   onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
-                  disabled
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="email@example.com"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Phone
+                  Téléphone <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
                   value={editUserData.telephone}
                   onChange={(e) => setEditUserData({ ...editUserData, telephone: e.target.value })}
-                  disabled
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="+216 XX XXX XXX"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Date of Birth
+                  Date de naissance
                 </label>
                 <input
                   type="date"
                   value={editUserData.dateNaissance || ''}
                   onChange={(e) => setEditUserData({ ...editUserData, dateNaissance: e.target.value })}
-                  disabled
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Address
+                  Adresse
                 </label>
                 <textarea
                   value={editUserData.adresse || ''}
                   onChange={(e) => setEditUserData({ ...editUserData, adresse: e.target.value })}
                   rows={3}
-                  disabled
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 resize-none bg-gray-50 cursor-not-allowed opacity-60"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 resize-none transition-colors"
+                  placeholder="Entrez l'adresse complète"
                 />
               </div>
             </div>
@@ -844,18 +1008,196 @@ const UsersPage: React.FC = () => {
                   setEditModalOpen(false);
                   setEditUserData(null);
                   setEditingUserId(null);
+                  setError(null); // Clear error when canceling
                 }}
                 className="w-full sm:w-auto text-sm"
               >
-                Cancel
+                Annuler
               </Button>
               <Button
                 icon={<Save size={18} />}
                 onClick={handleSaveUser}
-                disabled
-                className="opacity-50 cursor-not-allowed w-full sm:w-auto text-sm"
+                className="w-full sm:w-auto text-sm"
               >
-                Save Changes
+                Enregistrer les modifications
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Ajouter un nouvel utilisateur</h2>
+              <button
+                onClick={() => {
+                  setAddModalOpen(false);
+                  setError(null);
+                  setAddUserData({
+                    nom: '',
+                    email: '',
+                    mdp: '',
+                    telephone: '',
+                    role: 'patient',
+                    dateNaissance: '',
+                    adresse: '',
+                    specialite: ''
+                  });
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={18} className="sm:w-5 sm:h-5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+              {/* Error message in modal */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Nom <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={addUserData.nom}
+                  onChange={(e) => setAddUserData({ ...addUserData, nom: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="Entrez le nom"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={addUserData.email}
+                  onChange={(e) => setAddUserData({ ...addUserData, email: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Mot de passe <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={addUserData.mdp}
+                  onChange={(e) => setAddUserData({ ...addUserData, mdp: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="Minimum 8 caractères"
+                />
+                <p className="text-xs text-gray-500 mt-1">Le mot de passe doit contenir au moins 8 caractères</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Téléphone <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={addUserData.telephone}
+                  onChange={(e) => setAddUserData({ ...addUserData, telephone: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  placeholder="+216 XX XXX XXX"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Rôle <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={addUserData.role}
+                  onChange={(e) => setAddUserData({ ...addUserData, role: e.target.value as 'patient' | 'professional', specialite: e.target.value === 'patient' ? '' : addUserData.specialite })}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                >
+                  <option value="patient">Patient</option>
+                  <option value="professional">Professionnel</option>
+                </select>
+              </div>
+
+              {addUserData.role === 'professional' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Spécialité <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={addUserData.specialite || ''}
+                    onChange={(e) => setAddUserData({ ...addUserData, specialite: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                    placeholder="Ex: Psychologie, Psychiatrie..."
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Date de naissance
+                </label>
+                <input
+                  type="date"
+                  value={addUserData.dateNaissance || ''}
+                  onChange={(e) => setAddUserData({ ...addUserData, dateNaissance: e.target.value })}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Adresse
+                </label>
+                <textarea
+                  value={addUserData.adresse || ''}
+                  onChange={(e) => setAddUserData({ ...addUserData, adresse: e.target.value })}
+                  rows={3}
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 resize-none transition-colors"
+                  placeholder="Entrez l'adresse complète"
+                />
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setAddModalOpen(false);
+                  setError(null);
+                  setAddUserData({
+                    nom: '',
+                    email: '',
+                    mdp: '',
+                    telephone: '',
+                    role: 'patient',
+                    dateNaissance: '',
+                    adresse: '',
+                    specialite: ''
+                  });
+                }}
+                className="w-full sm:w-auto text-sm"
+                disabled={addUserLoading}
+              >
+                Annuler
+              </Button>
+              <Button
+                icon={<UserPlus size={18} />}
+                onClick={handleAddUser}
+                disabled={addUserLoading}
+                className="w-full sm:w-auto text-sm"
+              >
+                {addUserLoading ? 'Création...' : 'Créer l\'utilisateur'}
               </Button>
             </div>
           </div>
