@@ -9,8 +9,10 @@ const AdminLayout: React.FC = () => {
   return (
     <ProtectedAdminRoute>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-orange-50/20">
-        {/* Sidebar - Fixed */}
-        <Sidebar />
+        {/* Sidebar - Fixed, hidden on mobile */}
+        <div className="hidden md:block">
+          <Sidebar />
+        </div>
         
         {/* Main Content Area */}
         <div className="md:ml-72">
@@ -18,13 +20,15 @@ const AdminLayout: React.FC = () => {
           <Header />
           
           {/* Page Content - Child routes render here via Outlet */}
-          <main className="p-4 md:p-8">
+          <main className="p-3 sm:p-4 md:p-6 lg:p-8">
             <Outlet />
           </main>
         </div>
 
-        {/* Floating Quick Actions */}
-        <QuickActionsMenu position="bottom-right" />
+        {/* Floating Quick Actions - Hidden on mobile */}
+        <div className="hidden md:block">
+          <QuickActionsMenu position="bottom-right" />
+        </div>
       </div>
     </ProtectedAdminRoute>
   );
