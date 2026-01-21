@@ -14,7 +14,9 @@ import {
   Calendar,
   UserPlus,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  X,
+  Save
 } from 'lucide-react';
 
 // Utilisation exclusive de la variable d'environnement VITE_API_URL
@@ -34,6 +36,17 @@ interface BackendUser {
   lastLogin: string | null;
   deactivatedAt: string | null;
   specialite?: string;
+  dateNaissance?: string;
+  adresse?: string;
+}
+
+// Interface pour les données d'édition
+interface EditUserData {
+  nom: string;
+  email: string;
+  telephone: string;
+  dateNaissance?: string;
+  adresse?: string;
 }
 
 // Interface pour le frontend
@@ -62,6 +75,26 @@ const UsersPage: React.FC = () => {
     active: 0,
     pending: 0,
     suspended: 0
+  });
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Modal states
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editUserData, setEditUserData] = useState<EditUserData | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    type: 'activate' | 'suspend' | 'delete' | null;
+    userId: string | null;
+    userName: string | null;
+  }>({
+    open: false,
+    type: null,
+    userId: null,
+    userName: null
   });
 
   // Fonction pour convertir l'utilisateur backend vers frontend
@@ -252,6 +285,8 @@ const UsersPage: React.FC = () => {
     }
     
     setFilteredUsers(filtered);
+    // Reset to first page when filters change
+    setCurrentPage(1);
   };
 
   // Fonction pour mettre à jour le statut d'un utilisateur
@@ -260,17 +295,17 @@ const UsersPage: React.FC = () => {
       const token = localStorage.getItem('token');
       
       let endpoint = '';
-      let method = 'POST';
+      let method = 'PUT';
       
       switch (action) {
         case 'activate':
-          endpoint = `${API_BASE_URL}/users/${userId}/activate`;
+          endpoint = `${API_BASE_URL}/users/profile/${userId}/activate`;
           break;
         case 'deactivate':
-          endpoint = `${API_BASE_URL}/users/${userId}/deactivate`;
+          endpoint = `${API_BASE_URL}/users/profile/${userId}/deactivate`;
           break;
         case 'delete':
-          endpoint = `${API_BASE_URL}/users/${userId}`;
+          endpoint = `${API_BASE_URL}/users/profile/${userId}`;
           method = 'DELETE';
           break;
       }
@@ -289,6 +324,9 @@ const UsersPage: React.FC = () => {
       if (!response.ok) {
         throw new Error(`Action failed: ${response.status} ${response.statusText}`);
       }
+      
+      // Close confirmation dialog
+      setConfirmDialog({ open: false, type: null, userId: null, userName: null });
       
       // Rafraîchir la liste des utilisateurs
       fetchUsers();
@@ -312,13 +350,77 @@ const UsersPage: React.FC = () => {
       });
       
       if (response.ok) {
-        const userData = await response.json();
-        console.log('User data:', userData);
-        // Ouvrir un modal avec les données de l'utilisateur
-        // Vous pouvez implémenter un modal ici
+        const result = await response.json();
+        const userData = result.data;
+        
+        // Set edit form data
+        setEditUserData({
+          nom: userData.nom || '',
+          email: userData.email || '',
+          telephone: userData.telephone || '',
+          dateNaissance: userData.dateNaissance ? new Date(userData.dateNaissance).toISOString().split('T')[0] : '',
+          adresse: userData.adresse || ''
+        });
+        setEditingUserId(userId);
+        setEditModalOpen(true);
+      } else {
+        throw new Error('Failed to fetch user data');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching user data:', err);
+      setError(err.message || 'Failed to load user data');
+    }
+  };
+
+  // Fonction pour sauvegarder les modifications
+  const handleSaveUser = async () => {
+    if (!editingUserId || !editUserData) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${API_BASE_URL}/users/profile/${editingUserId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editUserData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to update user');
+      }
+
+      // Close modal and refresh users
+      setEditModalOpen(false);
+      setEditUserData(null);
+      setEditingUserId(null);
+      fetchUsers();
+    } catch (err: any) {
+      console.error('Error updating user:', err);
+      setError(err.message || 'Failed to update user');
+    }
+  };
+
+  // Fonction pour ouvrir le dialogue de confirmation
+  const openConfirmDialog = (type: 'activate' | 'suspend' | 'delete', userId: string, userName: string) => {
+    setConfirmDialog({
+      open: true,
+      type,
+      userId,
+      userName
+    });
+  };
+
+  // Fonction pour confirmer l'action
+  const handleConfirmAction = () => {
+    if (confirmDialog.userId && confirmDialog.type) {
+      if (confirmDialog.type === 'suspend') {
+        updateUserStatus(confirmDialog.userId, 'deactivate');
+      } else {
+        updateUserStatus(confirmDialog.userId, confirmDialog.type);
+      }
     }
   };
 
@@ -330,6 +432,12 @@ const UsersPage: React.FC = () => {
   useEffect(() => {
     filterUsers();
   }, [searchQuery, filterStatus, users]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   // Fonctions d'aide pour les styles
   const getStatusColor = (status: string) => {
@@ -364,22 +472,24 @@ const UsersPage: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-blue-900">Users Management</h1>
-          <p className="text-gray-600 text-sm md:text-base mt-1">View and manage all platform users</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">Users Management</h1>
+          <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1">View and manage all platform users</p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="ghost" 
-            icon={<RefreshCw size={18} />} 
+            icon={<RefreshCw size={16} className="sm:w-[18px] sm:h-[18px]" />} 
             onClick={fetchUsers}
-            className="text-sm"
+            className="text-xs sm:text-sm"
           >
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh</span>
           </Button>
-          <Button icon={<UserPlus size={18} />}>
-            Add New User
+          <Button icon={<UserPlus size={16} className="sm:w-[18px] sm:h-[18px]" />} className="text-xs sm:text-sm">
+            <span className="hidden sm:inline">Add New User</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
       </div>
@@ -401,32 +511,32 @@ const UsersPage: React.FC = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-100">
-          <p className="text-sm text-gray-600 mb-1">Total Users</p>
-          <p className="text-3xl font-bold text-blue-900">{stats.total}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <Card className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-blue-50 to-white border-2 border-blue-100">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Total Users</p>
+          <p className="text-2xl sm:text-3xl font-bold text-blue-900">{stats.total}</p>
           <p className="text-xs text-gray-600 mt-2">
             {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% active rate
           </p>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-br from-green-50 to-white border-2 border-green-100">
-          <p className="text-sm text-gray-600 mb-1">Active Users</p>
-          <p className="text-3xl font-bold text-green-900">{stats.active}</p>
+        <Card className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-green-50 to-white border-2 border-green-100">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Active Users</p>
+          <p className="text-2xl sm:text-3xl font-bold text-green-900">{stats.active}</p>
           <p className="text-xs text-gray-600 mt-2">
             {stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0}% of total
           </p>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-br from-orange-50 to-white border-2 border-orange-100">
-          <p className="text-sm text-gray-600 mb-1">Pending</p>
-          <p className="text-3xl font-bold text-orange-900">{stats.pending}</p>
+        <Card className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-orange-50 to-white border-2 border-orange-100">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Pending</p>
+          <p className="text-2xl sm:text-3xl font-bold text-orange-900">{stats.pending}</p>
           <p className="text-xs text-orange-600 mt-2">Awaiting approval</p>
         </Card>
 
-        <Card className="p-6 bg-gradient-to-br from-red-50 to-white border-2 border-red-100">
-          <p className="text-sm text-gray-600 mb-1">Suspended</p>
-          <p className="text-3xl font-bold text-red-900">{stats.suspended}</p>
+        <Card className="p-4 sm:p-5 md:p-6 bg-gradient-to-br from-red-50 to-white border-2 border-red-100">
+          <p className="text-xs sm:text-sm text-gray-600 mb-1">Suspended</p>
+          <p className="text-2xl sm:text-3xl font-bold text-red-900">{stats.suspended}</p>
           <p className="text-xs text-gray-600 mt-2">
             {stats.total > 0 ? Math.round((stats.suspended / stats.total) * 100) : 0}% of total
           </p>
@@ -434,40 +544,43 @@ const UsersPage: React.FC = () => {
       </div>
 
       {/* Filters & Search */}
-      <Card className="p-4 md:p-6">
-        <div className="flex flex-col md:flex-row gap-4">
+      <Card className="p-3 sm:p-4 md:p-6">
+        <div className="flex flex-col gap-3 sm:gap-4">
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by name, email, or phone..."
-              className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
             />
           </div>
 
-          {/* Status Filter */}
-          <div className="flex gap-2">
-            {['all', 'active', 'suspended', 'pending'].map((status) => (
-              <button
-                key={status}
-                onClick={() => setFilterStatus(status as any)}
-                className={`px-4 py-3 rounded-xl font-semibold transition-all ${
-                  filterStatus === status
-                    ? 'bg-orange-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </button>
-            ))}
-          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            {/* Status Filter */}
+            <div className="flex gap-2 flex-wrap">
+              {['all', 'active', 'suspended', 'pending'].map((status) => (
+                <button
+                  key={status}
+                  onClick={() => setFilterStatus(status as any)}
+                  className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
+                    filterStatus === status
+                      ? 'bg-orange-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </button>
+              ))}
+            </div>
 
-          <Button variant="ghost" icon={<Filter size={18} />} className="px-4">
-            More Filters
-          </Button>
+            <Button variant="ghost" icon={<Filter size={18} />} className="px-3 sm:px-4 text-sm">
+              <span className="hidden sm:inline">More Filters</span>
+              <span className="sm:hidden">Filters</span>
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -480,124 +593,120 @@ const UsersPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full min-w-[800px]">
                 <thead className="bg-gradient-to-r from-blue-900 to-blue-800">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">User</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Contact</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Role</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Status</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Joined</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Last Active</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-white">Actions</th>
+                    <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white">User</th>
+                    <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white hidden md:table-cell">Contact</th>
+                    <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white">Role</th>
+                    <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white">Status</th>
+                    <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white hidden lg:table-cell">Joined</th>
+                    <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white hidden lg:table-cell">Last Active</th>
+                    <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {filteredUsers.map((user) => (
+                  {paginatedUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-blue-50/50 transition-colors">
                       {/* User Info */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
                           <img
                             src={user.avatar}
                             alt={user.name}
-                            className="w-10 h-10 rounded-full border-2 border-orange-500 object-cover"
+                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-orange-500 object-cover flex-shrink-0"
                           />
-                          <div>
-                            <p className="font-semibold text-blue-900">{user.name}</p>
-                            <p className="text-sm text-gray-600">{user.email}</p>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-blue-900 text-sm sm:text-base truncate">{user.name}</p>
+                            <p className="text-xs sm:text-sm text-gray-600 truncate">{user.email}</p>
                             {user.specialite && (
-                              <p className="text-xs text-blue-600 mt-1">{user.specialite}</p>
+                              <p className="text-xs text-blue-600 mt-1 truncate">{user.specialite}</p>
                             )}
                           </div>
                         </div>
                       </td>
 
-                      {/* Contact */}
-                      <td className="px-6 py-4">
+                      {/* Contact - Hidden on mobile */}
+                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 hidden md:table-cell">
                         <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2 text-sm text-gray-700">
-                            <Mail size={14} className="text-blue-600" />
-                            <span className="truncate max-w-[200px]">{user.email}</span>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700">
+                            <Mail size={12} className="text-blue-600 flex-shrink-0" />
+                            <span className="truncate max-w-[150px] lg:max-w-[200px]">{user.email}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-700">
-                            <Phone size={14} className="text-orange-600" />
-                            <span>{user.phone}</span>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700">
+                            <Phone size={12} className="text-orange-600 flex-shrink-0" />
+                            <span className="truncate">{user.phone}</span>
                           </div>
                         </div>
                       </td>
 
                       {/* Role */}
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadge(user.role)}`}>
+                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                        <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold ${getRoleBadge(user.role)}`}>
                           {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
                         </span>
                       </td>
 
                       {/* Status */}
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(user.status)}`}>
+                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                        <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-semibold border ${getStatusColor(user.status)}`}>
                           {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                         </span>
                       </td>
 
-                      {/* Joined Date */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2 text-sm text-gray-700">
-                          <Calendar size={14} className="text-teal-600" />
+                      {/* Joined Date - Hidden on mobile/tablet */}
+                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 hidden lg:table-cell">
+                        <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-700">
+                          <Calendar size={12} className="text-teal-600 flex-shrink-0" />
                           <span>{new Date(user.joinedDate).toLocaleDateString()}</span>
                         </div>
                       </td>
 
-                      {/* Last Active */}
-                      <td className="px-6 py-4">
-                        <span className="text-sm text-gray-600">{user.lastActive}</span>
+                      {/* Last Active - Hidden on mobile/tablet */}
+                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 hidden lg:table-cell">
+                        <span className="text-xs sm:text-sm text-gray-600">{user.lastActive}</span>
                       </td>
 
                       {/* Actions */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
+                      <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+                        <div className="flex items-center gap-1 sm:gap-2">
                           <button 
-                            className="p-2 rounded-lg hover:bg-blue-100 transition-colors" 
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-100 transition-colors" 
                             title="Edit"
                             onClick={() => handleEditUser(user.id)}
                           >
-                            <Edit size={16} className="text-blue-600" />
+                            <Edit size={14} className="sm:w-4 sm:h-4 text-blue-600" />
                           </button>
                           
                           {user.status === 'active' ? (
                             <button 
-                              className="p-2 rounded-lg hover:bg-orange-100 transition-colors" 
+                              className="p-1.5 sm:p-2 rounded-lg hover:bg-orange-100 transition-colors" 
                               title="Suspend"
-                              onClick={() => updateUserStatus(user.id, 'deactivate')}
+                              onClick={() => openConfirmDialog('suspend', user.id, user.name)}
                             >
-                              <Ban size={16} className="text-orange-600" />
+                              <Ban size={14} className="sm:w-4 sm:h-4 text-orange-600" />
                             </button>
                           ) : (
                             <button 
-                              className="p-2 rounded-lg hover:bg-green-100 transition-colors" 
+                              className="p-1.5 sm:p-2 rounded-lg hover:bg-green-100 transition-colors" 
                               title="Activate"
-                              onClick={() => updateUserStatus(user.id, 'activate')}
+                              onClick={() => openConfirmDialog('activate', user.id, user.name)}
                             >
-                              <CheckCircle size={16} className="text-green-600" />
+                              <CheckCircle size={14} className="sm:w-4 sm:h-4 text-green-600" />
                             </button>
                           )}
                           
                           <button 
-                            className="p-2 rounded-lg hover:bg-red-100 transition-colors" 
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-red-100 transition-colors" 
                             title="Delete"
-                            onClick={() => {
-                              if (window.confirm(`Are you sure you want to delete ${user.name}?`)) {
-                                updateUserStatus(user.id, 'delete');
-                              }
-                            }}
+                            onClick={() => openConfirmDialog('delete', user.id, user.name)}
                           >
-                            <Trash2 size={16} className="text-red-600" />
+                            <Trash2 size={14} className="sm:w-4 sm:h-4 text-red-600" />
                           </button>
                           
-                          <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
-                            <MoreVertical size={16} className="text-gray-600" />
+                          <button className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors hidden sm:block">
+                            <MoreVertical size={14} className="sm:w-4 sm:h-4 text-gray-600" />
                           </button>
                         </div>
                       </td>
@@ -608,20 +717,32 @@ const UsersPage: React.FC = () => {
             </div>
 
             {/* Pagination */}
-            <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
+            <div className="bg-gray-50 px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
+                <p className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                   Showing{' '}
                   <span className="font-semibold text-blue-900">
-                    {filteredUsers.length > 0 ? 1 : 0}-{filteredUsers.length}
+                    {filteredUsers.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredUsers.length)}
                   </span>{' '}
-                  of <span className="font-semibold text-blue-900">{stats.total}</span> users
+                  of <span className="font-semibold text-blue-900">{filteredUsers.length}</span> users
+                  {filteredUsers.length !== stats.total && (
+                    <span className="text-gray-500 hidden sm:inline"> (filtered from {stats.total} total)</span>
+                  )}
                 </p>
-                <div className="flex gap-2">
-                  <Button variant="ghost" className="text-sm py-2" disabled={filteredUsers.length <= 5}>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button 
+                    variant="ghost" 
+                    className="text-xs sm:text-sm py-2 flex-1 sm:flex-initial" 
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
                     Previous
                   </Button>
-                  <Button className="text-sm py-2" disabled={filteredUsers.length <= 5}>
+                  <Button 
+                    className="text-xs sm:text-sm py-2 flex-1 sm:flex-initial" 
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage >= totalPages}
+                  >
                     Next
                   </Button>
                 </div>
@@ -630,6 +751,179 @@ const UsersPage: React.FC = () => {
           </>
         )}
       </Card>
+
+      {/* Edit User Modal */}
+      {editModalOpen && editUserData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Edit User</h2>
+              <button
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditUserData(null);
+                  setEditingUserId(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={18} className="sm:w-5 sm:h-5 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={editUserData.nom}
+                  onChange={(e) => setEditUserData({ ...editUserData, nom: e.target.value })}
+                  disabled
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editUserData.email}
+                  onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                  disabled
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Phone
+                </label>
+                <input
+                  type="tel"
+                  value={editUserData.telephone}
+                  onChange={(e) => setEditUserData({ ...editUserData, telephone: e.target.value })}
+                  disabled
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Date of Birth
+                </label>
+                <input
+                  type="date"
+                  value={editUserData.dateNaissance || ''}
+                  onChange={(e) => setEditUserData({ ...editUserData, dateNaissance: e.target.value })}
+                  disabled
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 bg-gray-50 cursor-not-allowed opacity-60"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Address
+                </label>
+                <textarea
+                  value={editUserData.adresse || ''}
+                  onChange={(e) => setEditUserData({ ...editUserData, adresse: e.target.value })}
+                  rows={3}
+                  disabled
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 resize-none bg-gray-50 cursor-not-allowed opacity-60"
+                />
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setEditModalOpen(false);
+                  setEditUserData(null);
+                  setEditingUserId(null);
+                }}
+                className="w-full sm:w-auto text-sm"
+              >
+                Cancel
+              </Button>
+              <Button
+                icon={<Save size={18} />}
+                onClick={handleSaveUser}
+                disabled
+                className="opacity-50 cursor-not-allowed w-full sm:w-auto text-sm"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl max-w-md w-full mx-2 sm:mx-0">
+            <div className="p-4 sm:p-6">
+              <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                {confirmDialog.type === 'delete' && (
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <Trash2 size={20} className="sm:w-6 sm:h-6 text-red-600" />
+                  </div>
+                )}
+                {(confirmDialog.type === 'activate' || confirmDialog.type === 'suspend') && (
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full ${confirmDialog.type === 'activate' ? 'bg-green-100' : 'bg-orange-100'} flex items-center justify-center flex-shrink-0`}>
+                    {confirmDialog.type === 'activate' ? (
+                      <CheckCircle size={20} className="sm:w-6 sm:h-6 text-green-600" />
+                    ) : (
+                      <Ban size={20} className="sm:w-6 sm:h-6 text-orange-600" />
+                    )}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">
+                    {confirmDialog.type === 'delete' && 'Delete User'}
+                    {confirmDialog.type === 'activate' && 'Activate User'}
+                    {confirmDialog.type === 'suspend' && 'Suspend User'}
+                  </h3>
+                </div>
+              </div>
+
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
+                {confirmDialog.type === 'delete' && (
+                  <>Are you sure you want to delete <span className="font-semibold text-gray-900">{confirmDialog.userName}</span>? This action cannot be undone.</>
+                )}
+                {confirmDialog.type === 'activate' && (
+                  <>Are you sure you want to activate <span className="font-semibold text-gray-900">{confirmDialog.userName}</span>?</>
+                )}
+                {confirmDialog.type === 'suspend' && (
+                  <>Are you sure you want to suspend <span className="font-semibold text-gray-900">{confirmDialog.userName}</span>?</>
+                )}
+              </p>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={() => setConfirmDialog({ open: false, type: null, userId: null, userName: null })}
+                  className="w-full sm:w-auto text-sm"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className={`${confirmDialog.type === 'delete' ? 'bg-red-600 hover:bg-red-700' : ''} w-full sm:w-auto text-sm`}
+                  onClick={handleConfirmAction}
+                >
+                  {confirmDialog.type === 'delete' && 'Delete'}
+                  {confirmDialog.type === 'activate' && 'Activate'}
+                  {confirmDialog.type === 'suspend' && 'Suspend'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
