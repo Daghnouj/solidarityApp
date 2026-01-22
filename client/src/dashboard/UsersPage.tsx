@@ -356,7 +356,7 @@ const UsersPage: React.FC = () => {
       // Close confirmation dialog
       setConfirmDialog({ open: false, type: null, userId: null, userName: null });
       
-      // Rafraîchir la liste des utilisateurs
+      // Refresh users list
       fetchUsers();
       
     } catch (err: any) {
@@ -375,7 +375,7 @@ const UsersPage: React.FC = () => {
       const userData = backendUsers.find(user => user._id === userId);
       
       if (!userData) {
-        throw new Error('Utilisateur non trouvé dans les données chargées');
+        throw new Error('User not found in loaded data');
       }
       
       // Set edit form data from backend user data
@@ -400,17 +400,17 @@ const UsersPage: React.FC = () => {
 
     // Validation
     if (!editUserData.nom || editUserData.nom.trim() === '') {
-      setError('Le nom est requis');
+      setError('Name is required');
       return;
     }
 
     if (!editUserData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editUserData.email)) {
-      setError('Email invalide');
+      setError('Invalid email');
       return;
     }
 
     if (!editUserData.telephone || editUserData.telephone.trim() === '') {
-      setError('Le téléphone est requis');
+      setError('Phone is required');
       return;
     }
 
@@ -444,7 +444,7 @@ const UsersPage: React.FC = () => {
       await fetchUsers();
       
       // Success notification
-      alert('Utilisateur mis à jour avec succès!');
+      alert('User updated successfully!');
     } catch (err: any) {
       console.error('Error updating user:', err);
       setError(err.message || 'Failed to update user');
@@ -465,27 +465,27 @@ const UsersPage: React.FC = () => {
   const handleAddUser = async () => {
     // Validation
     if (!addUserData.nom || addUserData.nom.trim() === '') {
-      setError('Le nom est requis');
+      setError('Name is required');
       return;
     }
 
     if (!addUserData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addUserData.email)) {
-      setError('Email invalide');
+      setError('Invalid email');
       return;
     }
 
     if (!addUserData.mdp || addUserData.mdp.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
+      setError('Password must contain at least 8 characters');
       return;
     }
 
     if (!addUserData.telephone || addUserData.telephone.trim() === '') {
-      setError('Le téléphone est requis');
+      setError('Phone is required');
       return;
     }
 
     if (addUserData.role === 'professional' && (!addUserData.specialite || addUserData.specialite.trim() === '')) {
-      setError('La spécialité est requise pour les professionnels');
+      setError('Specialty is required for professionals');
       return;
     }
 
@@ -545,7 +545,7 @@ const UsersPage: React.FC = () => {
       await fetchUsers();
       
       // Success notification
-      alert('Utilisateur créé avec succès!');
+      alert('User created successfully!');
     } catch (err: any) {
       console.error('Error creating user:', err);
       setError(err.message || 'Failed to create user');
@@ -938,14 +938,14 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nom <span className="text-red-500">*</span>
+                  Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={editUserData.nom}
                   onChange={(e) => setEditUserData({ ...editUserData, nom: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
-                  placeholder="Entrez le nom"
+                  placeholder="Enter name"
                 />
               </div>
 
@@ -964,7 +964,7 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Téléphone <span className="text-red-500">*</span>
+                  Phone <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -977,7 +977,7 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Date de naissance
+                  Date of Birth
                 </label>
                 <input
                   type="date"
@@ -989,14 +989,14 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Adresse
+                  Address
                 </label>
                 <textarea
                   value={editUserData.adresse || ''}
                   onChange={(e) => setEditUserData({ ...editUserData, adresse: e.target.value })}
                   rows={3}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 resize-none transition-colors"
-                  placeholder="Entrez l'adresse complète"
+                  placeholder="Enter full address"
                 />
               </div>
             </div>
@@ -1012,14 +1012,14 @@ const UsersPage: React.FC = () => {
                 }}
                 className="w-full sm:w-auto text-sm"
               >
-                Annuler
+                Cancel
               </Button>
               <Button
                 icon={<Save size={18} />}
                 onClick={handleSaveUser}
                 className="w-full sm:w-auto text-sm"
               >
-                Enregistrer les modifications
+                Save Changes
               </Button>
             </div>
           </div>
@@ -1031,7 +1031,7 @@ const UsersPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Ajouter un nouvel utilisateur</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Add New User</h2>
               <button
                 onClick={() => {
                   setAddModalOpen(false);
@@ -1063,14 +1063,14 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nom <span className="text-red-500">*</span>
+                  Name <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={addUserData.nom}
                   onChange={(e) => setAddUserData({ ...addUserData, nom: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
-                  placeholder="Entrez le nom"
+                  placeholder="Enter name"
                 />
               </div>
 
@@ -1089,21 +1089,21 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Mot de passe <span className="text-red-500">*</span>
+                  Password <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="password"
                   value={addUserData.mdp}
                   onChange={(e) => setAddUserData({ ...addUserData, mdp: e.target.value })}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
-                  placeholder="Minimum 8 caractères"
+                  placeholder="Minimum 8 characters"
                 />
-                <p className="text-xs text-gray-500 mt-1">Le mot de passe doit contenir au moins 8 caractères</p>
+                <p className="text-xs text-gray-500 mt-1">Password must contain at least 8 characters</p>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Téléphone <span className="text-red-500">*</span>
+                  Phone <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -1116,7 +1116,7 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Rôle <span className="text-red-500">*</span>
+                  Role <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={addUserData.role}
@@ -1124,28 +1124,28 @@ const UsersPage: React.FC = () => {
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
                 >
                   <option value="patient">Patient</option>
-                  <option value="professional">Professionnel</option>
+                  <option value="professional">Professional</option>
                 </select>
               </div>
 
               {addUserData.role === 'professional' && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Spécialité <span className="text-red-500">*</span>
+                    Specialty <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={addUserData.specialite || ''}
                     onChange={(e) => setAddUserData({ ...addUserData, specialite: e.target.value })}
                     className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
-                    placeholder="Ex: Psychologie, Psychiatrie..."
+                    placeholder="Ex: Psychology, Psychiatry..."
                   />
                 </div>
               )}
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Date de naissance
+                  Date of Birth
                 </label>
                 <input
                   type="date"
@@ -1157,14 +1157,14 @@ const UsersPage: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Adresse
+                  Address
                 </label>
                 <textarea
                   value={addUserData.adresse || ''}
                   onChange={(e) => setAddUserData({ ...addUserData, adresse: e.target.value })}
                   rows={3}
                   className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 resize-none transition-colors"
-                  placeholder="Entrez l'adresse complète"
+                  placeholder="Enter full address"
                 />
               </div>
             </div>
@@ -1189,7 +1189,7 @@ const UsersPage: React.FC = () => {
                 className="w-full sm:w-auto text-sm"
                 disabled={addUserLoading}
               >
-                Annuler
+                Cancel
               </Button>
               <Button
                 icon={<UserPlus size={18} />}
@@ -1197,7 +1197,7 @@ const UsersPage: React.FC = () => {
                 disabled={addUserLoading}
                 className="w-full sm:w-auto text-sm"
               >
-                {addUserLoading ? 'Création...' : 'Créer l\'utilisateur'}
+                {addUserLoading ? 'Creating...' : 'Create User'}
               </Button>
             </div>
           </div>

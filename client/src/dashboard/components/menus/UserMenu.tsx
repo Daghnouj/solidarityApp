@@ -1,21 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   User, 
   Settings, 
   HelpCircle, 
   LogOut, 
-  Crown,
   Bell,
   Moon,
   Sun,
   ChevronRight
 } from 'lucide-react';
+import { useDarkMode } from '../../hooks/useDarkMode';
 
 interface UserMenuProps {
   userName?: string;
   userEmail?: string;
   userAvatar?: string;
-  isPremium?: boolean;
   onLogout?: () => void;
 }
 
@@ -23,11 +23,11 @@ const UserMenu: React.FC<UserMenuProps> = ({
   userName = "Omar Ben Ali",
   userEmail = "omar@solidarity.com",
   userAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=Omar",
-  isPremium = true,
   onLogout
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { isDarkMode, toggleDarkMode } = useDarkMode();
+  const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Close menu when clicking outside
@@ -51,7 +51,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
     {
       icon: User,
       label: 'My Profile',
-      href: '/profile',
+      href: '/admin/profile',
       description: 'View and edit your profile'
     },
     {
@@ -89,15 +89,12 @@ const UserMenu: React.FC<UserMenuProps> = ({
         />
         <div className="hidden lg:block text-left">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-semibold text-blue-900 group-hover:text-orange-600 transition-colors">
+            <p className="text-sm font-semibold text-blue-900 dark:text-white group-hover:text-orange-600 transition-colors">
               {userName}
             </p>
-            {isPremium && (
-              <Crown className="text-orange-500" size={14} />
-            )}
           </div>
-          <p className="text-xs text-gray-500">
-            {isPremium ? 'Premium Member' : 'Free Member'}
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Admin
           </p>
         </div>
         <ChevronRight 
@@ -108,9 +105,9 @@ const UserMenu: React.FC<UserMenuProps> = ({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-slideDown">
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50 animate-slideDown">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-900 to-blue-800 p-6">
+          <div className="bg-gradient-to-r from-blue-900 to-blue-800 dark:from-gray-900 dark:to-gray-800 p-6">
             <div className="flex items-center gap-3">
               <img 
                 src={userAvatar}
@@ -120,14 +117,8 @@ const UserMenu: React.FC<UserMenuProps> = ({
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-white font-bold">{userName}</h3>
-                  {isPremium && (
-                    <div className="flex items-center gap-1 px-2 py-0.5 bg-orange-500 rounded-full">
-                      <Crown size={12} className="text-white" />
-                      <span className="text-xs text-white font-semibold">Pro</span>
-                    </div>
-                  )}
                 </div>
-                <p className="text-blue-200 text-sm">{userEmail}</p>
+                <p className="text-blue-200 dark:text-gray-300 text-sm">{userEmail}</p>
               </div>
             </div>
           </div>
@@ -135,47 +126,50 @@ const UserMenu: React.FC<UserMenuProps> = ({
           {/* Menu Items */}
           <div className="p-2">
             {menuItems.map((item, index) => (
-              <a
+              <button
                 key={index}
-                href={item.href}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 transition-all duration-200 group relative"
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate(item.href);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-blue-50 dark:hover:bg-gray-700 transition-all duration-200 group relative"
               >
-                <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-blue-100 transition-colors">
-                  <item.icon size={18} className="text-blue-900 group-hover:text-orange-600 transition-colors" />
+                <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 group-hover:bg-blue-100 dark:group-hover:bg-gray-600 transition-colors">
+                  <item.icon size={18} className="text-blue-900 dark:text-white group-hover:text-orange-600 transition-colors" />
                 </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-blue-900 text-sm group-hover:text-orange-600 transition-colors">
+                <div className="flex-1 text-left">
+                  <p className="font-semibold text-blue-900 dark:text-white text-sm group-hover:text-orange-600 transition-colors">
                     {item.label}
                   </p>
-                  <p className="text-xs text-gray-500">{item.description}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{item.description}</p>
                 </div>
                 {item.badge && (
                   <span className="px-2 py-1 bg-orange-500 text-white text-xs font-bold rounded-full">
                     {item.badge}
                   </span>
                 )}
-                <ChevronRight size={16} className="text-gray-400 group-hover:text-orange-600 transition-colors" />
-              </a>
+                <ChevronRight size={16} className="text-gray-400 dark:text-gray-500 group-hover:text-orange-600 transition-colors" />
+              </button>
             ))}
           </div>
 
           {/* Dark Mode Toggle */}
           <div className="px-2 pb-2">
             <button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-gray-100 transition-all duration-200 group"
+              onClick={toggleDarkMode}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 group"
             >
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-blue-100 transition-colors">
+                <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 group-hover:bg-blue-100 dark:group-hover:bg-gray-600 transition-colors">
                   {isDarkMode ? (
-                    <Moon size={18} className="text-blue-900" />
+                    <Moon size={18} className="text-blue-900 dark:text-white" />
                   ) : (
                     <Sun size={18} className="text-orange-600" />
                   )}
                 </div>
                 <div>
-                  <p className="font-semibold text-blue-900 text-sm">Dark Mode</p>
-                  <p className="text-xs text-gray-500">Toggle theme</p>
+                  <p className="font-semibold text-blue-900 dark:text-white text-sm">Dark Mode</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Toggle theme</p>
                 </div>
               </div>
               <div className={`w-12 h-6 rounded-full transition-colors ${isDarkMode ? 'bg-orange-500' : 'bg-gray-300'} relative`}>
@@ -185,7 +179,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
           </div>
 
           {/* Divider */}
-          <div className="border-t border-gray-200 mx-2"></div>
+          <div className="border-t border-gray-200 dark:border-gray-700 mx-2"></div>
 
           {/* Logout */}
           <div className="p-2">
@@ -194,14 +188,14 @@ const UserMenu: React.FC<UserMenuProps> = ({
                 setIsOpen(false);
                 onLogout?.();
               }}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 transition-all duration-200 group"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 group"
             >
-              <div className="p-2 rounded-lg bg-red-100 group-hover:bg-red-200 transition-colors">
-                <LogOut size={18} className="text-red-600" />
+              <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30 group-hover:bg-red-200 dark:group-hover:bg-red-900/40 transition-colors">
+                <LogOut size={18} className="text-red-600 dark:text-red-400" />
               </div>
               <div className="flex-1 text-left">
-                <p className="font-semibold text-red-600 text-sm">Logout</p>
-                <p className="text-xs text-gray-500">Sign out of your account</p>
+                <p className="font-semibold text-red-600 dark:text-red-400 text-sm">Logout</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Sign out of your account</p>
               </div>
             </button>
           </div>

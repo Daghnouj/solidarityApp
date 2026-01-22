@@ -61,23 +61,23 @@ const ProtectedAdminRoute: React.FC<ProtectedAdminRouteProps> = ({ children }) =
           </div>
           
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            Accès Refusé
+            Access Denied
           </h1>
           
           <p className="text-gray-600 mb-6">
-            Vous devez être connecté en tant qu'administrateur pour accéder à cette page.
+            You must be logged in as an administrator to access this page.
           </p>
           
           <div className="flex items-center justify-center gap-2 text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-6">
             <AlertCircle className="w-5 h-5" />
-            <span>Authentification requise</span>
+            <span>Authentication required</span>
           </div>
           
           <Link
             to="/admin/login"
             className="inline-flex items-center justify-center w-full px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
-            Se connecter
+            Sign In
           </Link>
         </div>
       </div>

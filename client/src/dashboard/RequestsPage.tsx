@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
 import { 
@@ -10,9 +10,50 @@ import {
   Clock,
   Calendar,
   FileText,
-  Download
+  Download,
+  RefreshCw,
+  AlertCircle,
+  X,
+  Mail,
+  Phone,
+  MapPin,
+  GraduationCap,
+  FileDown
 } from 'lucide-react';
 
+// Utilisation exclusive de la variable d'environnement VITE_API_URL
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+// Interface correspondant au backend
+interface BackendRequest {
+  _id: string;
+  professional: {
+    _id: string;
+    nom: string;
+    email: string;
+    telephone?: string;
+    photo?: string;
+    role: string;
+    is_verified: boolean;
+    verification_status?: 'pending' | 'approved' | 'rejected';
+    rejection_reason?: string;
+    dateNaissance?: string;
+    adresse?: string;
+  };
+  specialite: string;
+  situation_professionnelle?: string;
+  intitule_diplome?: string;
+  nom_etablissement?: string;
+  date_obtention_diplome?: string;
+  biographie?: string;
+  document?: string;
+  services?: string[];
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Interface pour le frontend
 interface Request {
   id: string;
   applicant: {
@@ -20,76 +61,309 @@ interface Request {
     email: string;
     phone: string;
     avatar: string;
+    id: string;
+    dateNaissance?: string;
+    adresse?: string;
   };
   type: 'therapist' | 'center' | 'user';
   submittedDate: string;
   status: 'pending' | 'approved' | 'rejected';
   documents: string[];
   description: string;
+  specialite: string;
+  professionalId: string;
+  situation_professionnelle?: string;
+  intitule_diplome?: string;
+  nom_etablissement?: string;
+  date_obtention_diplome?: string;
+  services?: string[];
 }
 
 const RequestsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [searchQuery, setSearchQuery] = useState('');
+  const [requests, setRequests] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  const requests: Request[] = [
-    {
-      id: '1',
-      applicant: {
-        name: 'Dr. Karim Ferjani',
-        email: 'karim.ferjani@example.com',
-        phone: '+216 98 123 456',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Karim'
-      },
-      type: 'therapist',
-      submittedDate: '2026-01-16',
-      status: 'pending',
-      documents: ['license.pdf', 'certificate.pdf', 'cv.pdf'],
-      description: 'Experienced CBT therapist with 10 years of practice. Specialized in anxiety and depression treatment.'
-    },
-    {
-      id: '2',
-      applicant: {
-        name: 'Wellness Center Sousse',
-        email: 'contact@wellness-sousse.tn',
-        phone: '+216 73 456 789',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wellness'
-      },
-      type: 'center',
-      submittedDate: '2026-01-15',
-      status: 'pending',
-      documents: ['business_license.pdf', 'facility_photos.zip', 'insurance.pdf'],
-      description: 'Mental health wellness center offering group therapy, meditation, and counseling services.'
-    },
-    {
-      id: '3',
-      applicant: {
-        name: 'Nour El Houda',
-        email: 'nour.houda@example.com',
-        phone: '+216 99 876 543',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Nour'
-      },
-      type: 'therapist',
-      submittedDate: '2026-01-14',
-      status: 'pending',
-      documents: ['diploma.pdf', 'recommendation.pdf'],
-      description: 'Licensed clinical psychologist specializing in family therapy and relationship counseling.'
-    },
-    {
-      id: '4',
-      applicant: {
-        name: 'Mindfulness Hub Tunis',
-        email: 'info@mindfulness-hub.tn',
-        phone: '+216 71 234 567',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mindfulness'
-      },
-      type: 'center',
-      submittedDate: '2026-01-13',
-      status: 'approved',
-      documents: ['registration.pdf', 'staff_credentials.pdf'],
-      description: 'Mindfulness and meditation center with certified instructors and modern facilities.'
+  // Fonction pour convertir les données backend vers frontend
+  const mapBackendToFrontend = (backendRequest: BackendRequest): Request => {
+    const professional = backendRequest.professional;
+    const avatar = professional.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${professional.nom}`;
+    
+    // Déterminer le statut - priorité à verification_status, puis status, puis is_verified
+    let status: 'pending' | 'approved' | 'rejected' = 'pending';
+    if (backendRequest.status) {
+      status = backendRequest.status;
+    } else if (professional.verification_status) {
+      status = professional.verification_status;
+    } else if (professional.is_verified) {
+      status = 'approved';
+    } else {
+      status = 'pending';
     }
-  ];
+    
+    // Documents
+    const documents: string[] = [];
+    if (backendRequest.document) {
+      documents.push(backendRequest.document);
+    }
+    
+    // Description
+    const description = backendRequest.biographie || 
+      `Professionnel en ${backendRequest.specialite}${backendRequest.situation_professionnelle ? `. ${backendRequest.situation_professionnelle}` : ''}`;
+
+    return {
+      id: backendRequest._id,
+      applicant: {
+        name: professional.nom,
+        email: professional.email,
+        phone: professional.telephone || 'Not provided',
+        avatar,
+        id: professional._id,
+        dateNaissance: professional.dateNaissance,
+        adresse: professional.adresse
+      },
+      type: 'therapist',
+      submittedDate: new Date(backendRequest.createdAt).toISOString().split('T')[0],
+      status,
+      documents,
+      description,
+      specialite: backendRequest.specialite,
+      professionalId: professional._id,
+      situation_professionnelle: backendRequest.situation_professionnelle,
+      intitule_diplome: backendRequest.intitule_diplome,
+      nom_etablissement: backendRequest.nom_etablissement,
+      date_obtention_diplome: backendRequest.date_obtention_diplome,
+      services: backendRequest.services
+    };
+  };
+
+  // Fonction pour récupérer les requêtes
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (!API_BASE_URL) {
+        throw new Error('API URL is not configured. Please check your .env file.');
+      }
+      
+      const adminToken = localStorage.getItem('adminToken');
+      
+      const response = await fetch(`${API_BASE_URL}/admin/verification/all-requests`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch requests: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      // Convertir les données backend vers le format frontend
+      const mappedRequests = data.requests.map(mapBackendToFrontend);
+      setRequests(mappedRequests);
+      
+    } catch (err: any) {
+      console.error('Error fetching requests:', err);
+      setError(err.message || 'Failed to load requests. Please try again.');
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fonction pour récupérer les détails d'une requête
+  const fetchRequestDetails = async (requestId: string) => {
+    try {
+      setError(null);
+      const adminToken = localStorage.getItem('adminToken');
+      
+      const response = await fetch(`${API_BASE_URL}/admin/verification/request/${requestId}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch request details');
+      }
+      
+      const data = await response.json();
+      const mappedRequest = mapBackendToFrontend(data.request);
+      setSelectedRequest(mappedRequest);
+      setDetailsModalOpen(true);
+    } catch (err: any) {
+      console.error('Error fetching request details:', err);
+      setError(err.message || 'Failed to load request details');
+    }
+  };
+
+  // Fonction pour approuver une requête
+  const handleApprove = async (professionalId: string, requestId: string) => {
+    if (!confirm('Are you sure you want to approve this request?')) {
+      return;
+    }
+
+    try {
+      setProcessingId(requestId);
+      setError(null);
+      
+      const adminToken = localStorage.getItem('adminToken');
+      
+      const response = await fetch(`${API_BASE_URL}/admin/verification/verify/${professionalId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to approve request');
+      }
+      
+      // Rafraîchir la liste
+      await fetchRequests();
+      alert('Request approved successfully!');
+    } catch (err: any) {
+      console.error('Error approving request:', err);
+      setError(err.message || 'Failed to approve request');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Fonction pour rejeter une requête
+  const handleReject = async (professionalId: string, requestId: string) => {
+    const reason = prompt('Please enter the rejection reason:');
+    if (!reason || reason.trim() === '') {
+      return;
+    }
+
+    try {
+      setProcessingId(requestId);
+      setError(null);
+      
+      const adminToken = localStorage.getItem('adminToken');
+      
+      const response = await fetch(`${API_BASE_URL}/admin/verification/reject/${professionalId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: reason.trim() })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to reject request');
+      }
+      
+      // Rafraîchir la liste
+      await fetchRequests();
+      alert('Request rejected successfully!');
+    } catch (err: any) {
+      console.error('Error rejecting request:', err);
+      setError(err.message || 'Failed to reject request');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  // Fonction pour exporter les requêtes
+  const handleExport = async (format: 'pdf' | 'zip') => {
+    try {
+      setExportLoading(true);
+      setError(null);
+      
+      const adminToken = localStorage.getItem('adminToken');
+      const statusFilter = activeTab !== 'pending' && activeTab !== 'approved' && activeTab !== 'rejected' 
+        ? '' 
+        : `&status=${activeTab}`;
+      
+      const response = await fetch(`${API_BASE_URL}/admin/verification/export?format=${format}${statusFilter}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to export requests');
+      }
+
+      // Récupérer les données
+      const data = await response.json();
+      
+      // Créer le contenu selon le format
+      let blob: Blob;
+      let filename: string;
+      
+      if (format === 'pdf') {
+        // Pour PDF, créer un JSON formaté (peut être amélioré avec une bibliothèque PDF côté client)
+        const content = JSON.stringify(data, null, 2);
+        blob = new Blob([content], { type: 'application/json' });
+        filename = `requests-${activeTab}-${new Date().toISOString().split('T')[0]}.json`;
+      } else {
+        // Pour ZIP, créer un JSON formaté (peut être amélioré avec jszip côté client)
+        const content = JSON.stringify(data, null, 2);
+        blob = new Blob([content], { type: 'application/json' });
+        filename = `requests-${activeTab}-${new Date().toISOString().split('T')[0]}.json`;
+      }
+      
+      // Télécharger le fichier
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      alert(`Requests exported successfully! (${data.totalRequests || data.requests?.length || 0} requests)`);
+    } catch (err: any) {
+      console.error('Error exporting requests:', err);
+      setError(err.message || 'Failed to export requests');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  // Close export menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuOpen) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.relative')) {
+          setExportMenuOpen(false);
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [exportMenuOpen]);
 
   const getTypeColor = (type: string) => {
     switch(type) {
@@ -100,18 +374,52 @@ const RequestsPage: React.FC = () => {
     }
   };
 
+  // Filtrer les requêtes par statut
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const approvedRequests = requests.filter(r => r.status === 'approved');
   const rejectedRequests = requests.filter(r => r.status === 'rejected');
 
-  const getRequestCount = () => {
-    switch(activeTab) {
-      case 'pending': return pendingRequests.length;
-      case 'approved': return approvedRequests.length;
-      case 'rejected': return rejectedRequests.length;
-      default: return 0;
-    }
+  // Filtrer par recherche
+  const filterRequests = (requestList: Request[]) => {
+    if (!searchQuery) return requestList;
+    const query = searchQuery.toLowerCase();
+    return requestList.filter(request =>
+      request.applicant.name.toLowerCase().includes(query) ||
+      request.applicant.email.toLowerCase().includes(query) ||
+      request.specialite.toLowerCase().includes(query) ||
+      request.description.toLowerCase().includes(query) ||
+      (request.applicant.phone && request.applicant.phone.toLowerCase().includes(query))
+    );
   };
+
+  const getFilteredRequests = () => {
+    let filtered: Request[] = [];
+    switch(activeTab) {
+      case 'pending':
+        filtered = pendingRequests;
+        break;
+      case 'approved':
+        filtered = approvedRequests;
+        break;
+      case 'rejected':
+        filtered = rejectedRequests;
+        break;
+    }
+    return filterRequests(filtered);
+  };
+
+  const filteredRequests = getFilteredRequests();
+
+  if (loading && requests.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
+          <p className="mt-4 text-gray-600">Loading requests...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -121,10 +429,68 @@ const RequestsPage: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-blue-900">Activation Requests</h1>
           <p className="text-gray-600 text-sm md:text-base mt-1">Review and approve account activation requests</p>
         </div>
-        <Button variant="ghost" icon={<Download size={18} />}>
-          Export Requests
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="ghost" 
+            icon={<RefreshCw size={18} />}
+            onClick={fetchRequests}
+            disabled={loading}
+          >
+            Refresh
+          </Button>
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              icon={<Download size={18} />} 
+              disabled={exportLoading}
+              onClick={() => setExportMenuOpen(!exportMenuOpen)}
+            >
+              {exportLoading ? 'Exporting...' : 'Export Requests'}
+            </Button>
+            {exportMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                <button
+                  onClick={() => {
+                    handleExport('pdf');
+                    setExportMenuOpen(false);
+                  }}
+                  disabled={exportLoading}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileDown size={16} />
+                  Export as PDF/JSON
+                </button>
+                <button
+                  onClick={() => {
+                    handleExport('zip');
+                    setExportMenuOpen(false);
+                  }}
+                  disabled={exportLoading}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileDown size={16} />
+                  Export as ZIP/JSON
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="text-red-600" size={20} />
+          <p className="text-red-600">{error}</p>
+          <Button 
+            variant="ghost" 
+            onClick={() => setError(null)}
+            className="ml-auto text-sm"
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -180,7 +546,11 @@ const RequestsPage: React.FC = () => {
                     : 'text-gray-600 hover:text-blue-900'
                 }`}
               >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)} ({getRequestCount()})
+                {tab.charAt(0).toUpperCase() + tab.slice(1)} (
+                  {tab === 'pending' ? pendingRequests.length :
+                   tab === 'approved' ? approvedRequests.length :
+                   rejectedRequests.length}
+                )
               </button>
             ))}
           </div>
@@ -205,9 +575,7 @@ const RequestsPage: React.FC = () => {
 
       {/* Requests List */}
       <div className="space-y-4">
-        {(activeTab === 'pending' ? pendingRequests : 
-          activeTab === 'approved' ? approvedRequests : 
-          rejectedRequests).map((request) => (
+        {filteredRequests.map((request) => (
           <Card key={request.id} className="p-6">
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Applicant Info */}
@@ -215,7 +583,7 @@ const RequestsPage: React.FC = () => {
                 <img
                   src={request.applicant.avatar}
                   alt={request.applicant.name}
-                  className="w-16 h-16 rounded-xl border-2 border-orange-500 shadow-md"
+                  className="w-16 h-16 rounded-xl border-2 border-orange-500 shadow-md object-cover"
                 />
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -229,23 +597,37 @@ const RequestsPage: React.FC = () => {
                     </span>
                   </div>
 
+                  {/* Specialité */}
+                  <div className="mb-2">
+                    <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                      {request.specialite}
+                    </span>
+                  </div>
+
                   <p className="text-gray-700 mb-4">{request.description}</p>
 
                   {/* Documents */}
-                  <div className="mb-4">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">Attached Documents:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {request.documents.map((doc, idx) => (
-                        <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-                          <FileText size={14} className="text-blue-600" />
-                          <span className="text-sm text-blue-900">{doc}</span>
-                          <button className="text-blue-600 hover:text-blue-700">
-                            <Download size={14} />
-                          </button>
-                        </div>
-                      ))}
+                  {request.documents.length > 0 && (
+                    <div className="mb-4">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Attached Documents:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {request.documents.map((doc, idx) => (
+                          <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                            <FileText size={14} className="text-blue-600" />
+                            <span className="text-sm text-blue-900">{doc.split('/').pop() || doc}</span>
+                            <a 
+                              href={doc} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700"
+                            >
+                              <Download size={14} />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Calendar size={14} className="text-teal-600" />
@@ -260,6 +642,7 @@ const RequestsPage: React.FC = () => {
                   variant="ghost" 
                   icon={<Eye size={18} />}
                   className="flex-1 lg:flex-none"
+                  onClick={() => fetchRequestDetails(request.id)}
                 >
                   View Details
                 </Button>
@@ -270,15 +653,19 @@ const RequestsPage: React.FC = () => {
                       variant="secondary"
                       icon={<CheckCircle size={18} />}
                       className="flex-1 lg:flex-none bg-green-600 hover:bg-green-700"
+                      onClick={() => handleApprove(request.professionalId, request.id)}
+                      disabled={processingId === request.id}
                     >
-                      Approve
+                      {processingId === request.id ? 'Processing...' : 'Approve'}
                     </Button>
                     <Button 
                       variant="ghost"
                       icon={<XCircle size={18} />}
                       className="flex-1 lg:flex-none border-red-300 text-red-600 hover:bg-red-50"
+                      onClick={() => handleReject(request.professionalId, request.id)}
+                      disabled={processingId === request.id}
                     >
-                      Reject
+                      {processingId === request.id ? 'Processing...' : 'Reject'}
                     </Button>
                   </>
                 )}
@@ -303,18 +690,208 @@ const RequestsPage: React.FC = () => {
       </div>
 
       {/* Empty State */}
-      {getRequestCount() === 0 && (
+      {filteredRequests.length === 0 && !loading && (
         <Card className="p-12 text-center">
           <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="text-gray-400" size={40} />
           </div>
           <h3 className="text-xl font-bold text-gray-700 mb-2">
-            No {activeTab} requests
+            {searchQuery ? 'No requests found' : `No ${activeTab} requests`}
           </h3>
           <p className="text-gray-500">
-            There are no {activeTab} requests at the moment.
+            {searchQuery 
+              ? 'Try adjusting your search query.'
+              : `There are no ${activeTab} requests at the moment.`}
           </p>
         </Card>
+      )}
+
+      {/* Details Modal */}
+      {detailsModalOpen && selectedRequest && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-blue-900">Request Details</h2>
+              <button
+                onClick={() => {
+                  setDetailsModalOpen(false);
+                  setSelectedRequest(null);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X size={20} className="text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Professional Info */}
+              <div className="flex items-start gap-4">
+                <img
+                  src={selectedRequest.applicant.avatar}
+                  alt={selectedRequest.applicant.name}
+                  className="w-20 h-20 rounded-xl border-2 border-orange-500 shadow-md object-cover"
+                />
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-blue-900 mb-2">{selectedRequest.applicant.name}</h3>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Mail size={16} />
+                      <span>{selectedRequest.applicant.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Phone size={16} />
+                      <span>{selectedRequest.applicant.phone}</span>
+                    </div>
+                    {selectedRequest.applicant.adresse && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <MapPin size={16} />
+                        <span>{selectedRequest.applicant.adresse}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <span className={`px-4 py-2 rounded-full text-sm font-semibold border ${getTypeColor(selectedRequest.type)}`}>
+                  {selectedRequest.type.charAt(0).toUpperCase() + selectedRequest.type.slice(1)}
+                </span>
+              </div>
+
+              {/* Speciality */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">Speciality</h4>
+                <p className="text-gray-900">{selectedRequest.specialite}</p>
+              </div>
+
+              {/* Biography */}
+              {selectedRequest.description && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Biography</h4>
+                  <p className="text-gray-900">{selectedRequest.description}</p>
+                </div>
+              )}
+
+              {/* Professional Situation */}
+              {selectedRequest.situation_professionnelle && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Professional Situation</h4>
+                  <p className="text-gray-900">{selectedRequest.situation_professionnelle}</p>
+                </div>
+              )}
+
+              {/* Education */}
+              {(selectedRequest.intitule_diplome || selectedRequest.nom_etablissement || selectedRequest.date_obtention_diplome) && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                    <GraduationCap size={16} />
+                    Education
+                  </h4>
+                  <div className="space-y-1">
+                    {selectedRequest.intitule_diplome && (
+                      <p className="text-gray-900"><strong>Degree:</strong> {selectedRequest.intitule_diplome}</p>
+                    )}
+                    {selectedRequest.nom_etablissement && (
+                      <p className="text-gray-900"><strong>Institution:</strong> {selectedRequest.nom_etablissement}</p>
+                    )}
+                    {selectedRequest.date_obtention_diplome && (
+                      <p className="text-gray-900"><strong>Date:</strong> {new Date(selectedRequest.date_obtention_diplome).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Services */}
+              {selectedRequest.services && selectedRequest.services.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Services</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRequest.services.map((service, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                        {service}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Documents */}
+              {selectedRequest.documents.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Attached Documents</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedRequest.documents.map((doc, idx) => (
+                      <a
+                        key={idx}
+                        href={doc}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+                      >
+                        <FileText size={16} className="text-blue-600" />
+                        <span className="text-sm text-blue-900">{doc.split('/').pop() || doc}</span>
+                        <Download size={14} className="text-blue-600" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-1">Submitted</h4>
+                  <p className="text-gray-600">{new Date(selectedRequest.submittedDate).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-1">Status</h4>
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    selectedRequest.status === 'approved' ? 'bg-green-100 text-green-700' :
+                    selectedRequest.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                    'bg-orange-100 text-orange-700'
+                  }`}>
+                    {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setDetailsModalOpen(false);
+                  setSelectedRequest(null);
+                }}
+              >
+                Close
+              </Button>
+              {selectedRequest.status === 'pending' && (
+                <>
+                  <Button
+                    variant="secondary"
+                    icon={<CheckCircle size={18} />}
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={() => {
+                      handleApprove(selectedRequest.professionalId, selectedRequest.id);
+                      setDetailsModalOpen(false);
+                    }}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    icon={<XCircle size={18} />}
+                    className="border-red-300 text-red-600 hover:bg-red-50"
+                    onClick={() => {
+                      handleReject(selectedRequest.professionalId, selectedRequest.id);
+                      setDetailsModalOpen(false);
+                    }}
+                  >
+                    Reject
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

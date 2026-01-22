@@ -19,6 +19,8 @@ export interface IUser {
   oauthProvider: 'local' | 'google' | 'facebook';
   oauthId?: string;
   is_verified: boolean;
+  verification_status?: 'pending' | 'approved' | 'rejected';
+  rejection_reason?: string;
   specialite?: string;
   stripeCustomerId?: string;
   subscriptionStatus: 'active' | 'inactive' | 'trialing' | 'canceled';
