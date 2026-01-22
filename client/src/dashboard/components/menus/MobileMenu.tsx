@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Menu,
   X,
@@ -12,23 +12,21 @@ import {
   Heart,
   User,
   LogOut,
-  Crown,
   ChevronRight
 } from 'lucide-react';
 
 interface MobileMenuProps {
   userName?: string;
   userAvatar?: string;
-  isPremium?: boolean;
   onLogout?: () => void;
 }
 
 const MobileMenu: React.FC<MobileMenuProps> = ({
   userName = "Omar Ben Ali",
   userAvatar = "https://api.dicebear.com/7.x/avataaars/svg?seed=Omar",
-  isPremium = true,
   onLogout
 }) => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
   // Prevent body scroll when menu is open
@@ -53,7 +51,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   ];
 
   const quickActions = [
-    { icon: User, label: 'My Profile', path: '/profile' },
+    { icon: User, label: 'My Profile', path: '/admin/profile' },
     { icon: Settings, label: 'Settings', path: '/settings' }
   ];
 
@@ -108,12 +106,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             <div className="flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-white font-bold text-sm">{userName}</p>
-                {isPremium && (
-                  <Crown className="text-orange-400" size={14} />
-                )}
               </div>
               <p className="text-blue-200 text-xs">
-                {isPremium ? 'Premium Member' : 'Free Member'}
+                Admin
               </p>
             </div>
           </div>
@@ -155,18 +150,20 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             </p>
             <div className="space-y-1">
               {quickActions.map((action) => (
-                <a
+                <button
                   key={action.path}
-                  href={action.path}
-                  onClick={() => setIsOpen(false)}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-gray-100 transition-all duration-200"
+                  onClick={() => {
+                    setIsOpen(false);
+                    navigate(action.path);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200"
                 >
-                  <div className="p-2 rounded-lg bg-gray-100">
-                    <action.icon size={16} className="text-blue-900" />
+                  <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700">
+                    <action.icon size={16} className="text-blue-900 dark:text-white" />
                   </div>
-                  <span className="font-medium flex-1">{action.label}</span>
+                  <span className="font-medium flex-1 text-left">{action.label}</span>
                   <ChevronRight size={16} className="text-gray-400" />
-                </a>
+                </button>
               ))}
             </div>
           </div>

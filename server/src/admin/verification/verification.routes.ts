@@ -19,7 +19,10 @@ router.use(protectAdmin);
 // Routes de vérification
 router.put('/verify/:professionalId', VerificationController.verifyProfessional);
 router.put('/reject/:professionalId', validate(rejectProfessionalSchema), VerificationController.rejectProfessional);
-router.get('/unverified-requests',VerificationController.getUnverifiedProfessionalsRequests);
+router.get('/unverified-requests', VerificationController.getUnverifiedProfessionalsRequests);
+router.get('/all-requests', VerificationController.getAllRequests);
+router.get('/request/:requestId', VerificationController.getRequestDetails);
+router.get('/export', VerificationController.exportRequests);
 router.get('/professional/:professionalId', VerificationController.getProfessionalDetails);
 
 export const verificationRouter = router;

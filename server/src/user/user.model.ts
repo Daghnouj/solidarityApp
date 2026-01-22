@@ -85,6 +85,17 @@ const UserSchema: Schema<UserDocument> = new mongoose.Schema({
       return this.role === "professional" ? false : true; 
     } 
   },
+  verification_status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: function(this: IUser) {
+      return this.role === "professional" ? 'pending' : 'approved';
+    }
+  },
+  rejection_reason: {
+    type: String,
+    default: null
+  },
   specialite: { 
     type: String,
     required: function(this: IUser) {
