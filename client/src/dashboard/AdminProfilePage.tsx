@@ -31,33 +31,33 @@ const AdminProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-blue-900">Admin Profile</h1>
-          <p className="text-gray-600 text-sm md:text-base mt-1">Manage your account settings and preferences</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">Admin Profile</h1>
+          <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1">Manage your account settings and preferences</p>
         </div>
       </div>
 
       {/* Profile Card */}
-      <Card className="p-6 md:p-8">
-        <div className="flex flex-col md:flex-row gap-8">
+      <Card className="p-4 sm:p-6 md:p-8">
+        <div className="flex flex-col md:flex-row gap-6 sm:gap-8">
           {/* Avatar Section */}
           <div className="flex flex-col items-center">
             <div className="relative">
               <img
                 src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin"
                 alt="Admin Profile"
-                className="w-32 h-32 rounded-2xl border-4 border-orange-500 shadow-lg"
+                className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-orange-500 shadow-lg"
               />
-              <button className="absolute bottom-2 right-2 p-2 bg-orange-500 rounded-lg text-white shadow-lg hover:bg-orange-600 transition-colors">
-                <Camera size={16} />
+              <button className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 p-1.5 sm:p-2 bg-orange-500 rounded-lg text-white shadow-lg hover:bg-orange-600 transition-colors">
+                <Camera size={14} className="sm:w-4 sm:h-4" />
               </button>
             </div>
-            <div className="mt-4 text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
-                <Shield size={14} />
+            <div className="mt-3 sm:mt-4 text-center">
+              <div className="inline-flex items-center gap-2 px-2 sm:px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs sm:text-sm font-semibold">
+                <Shield size={12} className="sm:w-3.5 sm:h-3.5" />
                 Super Admin
               </div>
             </div>
@@ -65,25 +65,25 @@ const AdminProfilePage: React.FC = () => {
 
           {/* Profile Information */}
           <div className="flex-1">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-blue-900">Profile Information</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-blue-900">Profile Information</h2>
               {!isEditing ? (
-                <Button onClick={() => setIsEditing(true)}>
+                <Button onClick={() => setIsEditing(true)} className="text-xs sm:text-sm w-full sm:w-auto">
                   Edit Profile
                 </Button>
               ) : (
-                <div className="flex gap-2">
-                  <Button variant="ghost" onClick={() => setIsEditing(false)} icon={<X size={18} />}>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button variant="ghost" onClick={() => setIsEditing(false)} icon={<X size={16} className="sm:w-[18px] sm:h-[18px]" />} className="text-xs sm:text-sm flex-1 sm:flex-initial">
                     Cancel
                   </Button>
-                  <Button onClick={handleSave} icon={<Save size={18} />}>
-                    Save Changes
+                  <Button onClick={handleSave} icon={<Save size={16} className="sm:w-[18px] sm:h-[18px]" />} className="text-xs sm:text-sm flex-1 sm:flex-initial">
+                    Save
                   </Button>
                 </div>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Full Name */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
