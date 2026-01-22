@@ -1031,7 +1031,7 @@ const UsersPage: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-xl sm:rounded-2xl shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Ajouter un nouvel utilisateurrrrrrrr</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Ajouter un nouvel utilisateur</h2>
               <button
                 onClick={() => {
                   setAddModalOpen(false);
