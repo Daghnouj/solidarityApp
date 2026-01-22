@@ -45,7 +45,7 @@ const Sidebar: React.FC = () => {
     }
   ];
 
-  return (
+  return ( 
     <aside className="fixed left-0 top-0 h-full w-20 md:w-72 bg-gradient-to-b from-blue-900 to-blue-800 text-white p-3 md:p-4 lg:p-6 shadow-2xl z-50 overflow-y-auto">
       {/* Logo */}
       <div className="flex items-center gap-2 md:gap-3 mb-8 md:mb-12">
