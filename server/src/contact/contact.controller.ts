@@ -1,20 +1,21 @@
 import { Request, Response } from 'express';
 import { ContactRequest, ContactResponse } from './contact.types';
 import { contactService } from './contact.service';
+import { getIOInstance } from '../socket';
 
 export const createContact = async (
-  req: Request<{}, {}, ContactRequest>, 
+  req: Request<{}, {}, ContactRequest>,
   res: Response<ContactResponse>
 ): Promise<void> => {
   try {
-    const result = await contactService.createContact(req.body, req.io);
-    
+    const result = await contactService.createContact(req.body, getIOInstance());
+
     const statusCode = result.success ? 201 : 400;
     res.status(statusCode).json(result);
 
   } catch (error: any) {
     console.error('Erreur dans le contrôleur contact:', error);
-    
+
     res.status(500).json({
       success: false,
       message: 'Erreur serveur inattendue'
