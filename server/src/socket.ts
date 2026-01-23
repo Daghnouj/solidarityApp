@@ -17,24 +17,41 @@ export const initSocket = (io: Server): void => {
       const token = socket.handshake.auth.token;
       const isAdmin = socket.handshake.auth.isAdmin === 'true' || socket.handshake.auth.isAdmin === true;
       
-      if (!token) throw new Error('Auth error');
-
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
-      
-      if (isAdmin) {
-        // Admin authentication
-        const admin = await Admin.findById(decoded.id);
-        if (!admin) throw new Error('Admin not found');
-        socket.admin = admin;
-      } else {
-        // User authentication
-        const user = await User.findById(decoded.id);
-        if (!user) throw new Error('User not found');
-        socket.user = user;
+      if (!token) {
+        console.log('❌ Socket connection rejected: No token provided');
+        return next(new Error('No token provided'));
       }
-      
-      next();
-    } catch (error) {
+
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+        
+        if (isAdmin) {
+          // Admin authentication
+          const admin = await Admin.findById(decoded.id);
+          if (!admin) {
+            console.log(`❌ Socket connection rejected: Admin not found for ID ${decoded.id}`);
+            return next(new Error('Admin not found'));
+          }
+          socket.admin = admin;
+          console.log(`✅ Admin authenticated: ${admin.email}`);
+        } else {
+          // User authentication
+          const user = await User.findById(decoded.id);
+          if (!user) {
+            console.log(`❌ Socket connection rejected: User not found for ID ${decoded.id}`);
+            return next(new Error('User not found'));
+          }
+          socket.user = user;
+          console.log(`✅ User authenticated: ${user.email}`);
+        }
+        
+        next();
+      } catch (jwtError: any) {
+        console.log('❌ Socket connection rejected: JWT verification failed', jwtError.message);
+        return next(new Error('Invalid token'));
+      }
+    } catch (error: any) {
+      console.log('❌ Socket connection rejected: Unexpected error', error.message);
       next(new Error('Authentication failed'));
     }
   });
