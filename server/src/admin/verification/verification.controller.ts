@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { VerificationService } from './verification.service';
 import { AdminRequest } from '../admin.types';
+import { getIOInstance } from '../../socket';
 
 export class VerificationController {
   static async verifyProfessional(req: AdminRequest, res: Response) {
@@ -10,10 +11,10 @@ export class VerificationController {
       }
 
       const { professionalId } = req.params;
-      const user = await VerificationService.verifyProfessional(professionalId, req.io);
-      
-      res.json({ 
-        message: 'Professionnel validé et email envoyé', 
+      const user = await VerificationService.verifyProfessional(professionalId, getIOInstance());
+
+      res.json({
+        message: 'Professionnel validé et email envoyé',
         user: {
           id: user._id,
           nom: user.nom,
@@ -22,9 +23,9 @@ export class VerificationController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Erreur lors de la validation du professionnel',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -36,7 +37,7 @@ export class VerificationController {
       }
 
       const requests = await VerificationService.getUnverifiedProfessionalsRequests();
-      res.json({ 
+      res.json({
         requests: requests.map(request => ({
           id: request._id,
           professional: request.professional,
@@ -46,9 +47,9 @@ export class VerificationController {
         }))
       });
     } catch (error: any) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Erreur lors de la récupération des demandes',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -66,10 +67,10 @@ export class VerificationController {
         return res.status(400).json({ message: "La raison du refus est requise" });
       }
 
-      const user = await VerificationService.rejectProfessional(professionalId, reason, req.io);
-      
-      res.json({ 
-        message: 'Professionnel refusé et email envoyé', 
+      const user = await VerificationService.rejectProfessional(professionalId, reason, getIOInstance());
+
+      res.json({
+        message: 'Professionnel refusé et email envoyé',
         user: {
           id: user._id,
           nom: user.nom,
@@ -78,9 +79,9 @@ export class VerificationController {
         }
       });
     } catch (error: any) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Erreur lors du refus du professionnel',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -93,12 +94,12 @@ export class VerificationController {
 
       const { professionalId } = req.params;
       const professional = await VerificationService.getProfessionalDetails(professionalId);
-      
+
       res.json({ professional });
     } catch (error: any) {
-      res.status(500).json({ 
+      res.status(500).json({
         message: 'Erreur lors de la récupération des détails du professionnel',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -110,11 +111,11 @@ export class VerificationController {
       }
 
       const requests = await VerificationService.getAllRequests();
-      
+
       // Mapper les requêtes avec les informations complètes
       const mappedRequests = requests.map(request => {
         const professional = request.professional as any;
-        
+
         // Déterminer le statut basé sur verification_status ou is_verified
         let status: 'pending' | 'approved' | 'rejected' = 'pending';
         if (professional.verification_status) {
@@ -124,7 +125,7 @@ export class VerificationController {
         } else {
           status = 'pending';
         }
-        
+
         return {
           _id: request._id,
           professional: {
@@ -151,16 +152,16 @@ export class VerificationController {
           updatedAt: request.updatedAt
         };
       });
-      
-      res.json({ 
+
+      res.json({
         success: true,
-        requests: mappedRequests 
+        requests: mappedRequests
       });
     } catch (error: any) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: 'Erreur lors de la récupération des demandes',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -173,9 +174,9 @@ export class VerificationController {
 
       const { requestId } = req.params;
       const request = await VerificationService.getRequestById(requestId);
-      
+
       const professional = request.professional as any;
-      
+
       // Déterminer le statut basé sur verification_status ou is_verified
       let status: 'pending' | 'approved' | 'rejected' = 'pending';
       if (professional.verification_status) {
@@ -185,7 +186,7 @@ export class VerificationController {
       } else {
         status = 'pending';
       }
-      
+
       const requestData = {
         _id: request._id,
         professional: {
@@ -213,16 +214,16 @@ export class VerificationController {
         createdAt: request.createdAt,
         updatedAt: request.updatedAt
       };
-      
-      res.json({ 
+
+      res.json({
         success: true,
-        request: requestData 
+        request: requestData
       });
     } catch (error: any) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: 'Erreur lors de la récupération des détails de la requête',
-        error: error.message 
+        error: error.message
       });
     }
   }
@@ -235,7 +236,7 @@ export class VerificationController {
 
       const { format, status } = req.query; // 'pdf', 'zip', or 'json', and optional status filter
       const requests = await VerificationService.getAllRequests();
-      
+
       // Filtrer par statut si spécifié
       let filteredRequests = requests;
       if (status === 'pending' || status === 'approved' || status === 'rejected') {
@@ -253,7 +254,7 @@ export class VerificationController {
           return requestStatus === status;
         });
       }
-      
+
       // Mapper les requêtes avec toutes les informations
       const mappedRequests = filteredRequests.map(request => {
         const professional = request.professional as any;
@@ -293,38 +294,38 @@ export class VerificationController {
         // Export as JSON for now (can be enhanced with pdfkit later)
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', `attachment; filename=${filename}.json`);
-        res.json({ 
+        res.json({
           success: true,
           exportDate: new Date().toISOString(),
           totalRequests: mappedRequests.length,
-          requests: mappedRequests 
+          requests: mappedRequests
         });
       } else if (format === 'zip') {
         // Export as JSON for now (can be enhanced with jszip later)
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', `attachment; filename=${filename}.json`);
-        res.json({ 
+        res.json({
           success: true,
           exportDate: new Date().toISOString(),
           totalRequests: mappedRequests.length,
-          requests: mappedRequests 
+          requests: mappedRequests
         });
       } else {
         // Default JSON export
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', `attachment; filename=${filename}.json`);
-        res.json({ 
+        res.json({
           success: true,
           exportDate: new Date().toISOString(),
           totalRequests: mappedRequests.length,
-          requests: mappedRequests 
+          requests: mappedRequests
         });
       }
     } catch (error: any) {
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
         message: 'Erreur lors de l\'export des demandes',
-        error: error.message 
+        error: error.message
       });
     }
   }

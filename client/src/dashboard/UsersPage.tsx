@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
-import { 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Edit, 
-  Trash2, 
-  Ban, 
+import {
+  Search,
+  Filter,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Ban,
   CheckCircle,
   Mail,
   Phone,
@@ -129,7 +129,7 @@ const UsersPage: React.FC = () => {
     if (backendUser.role === 'professional') {
       role = 'therapist';
     }
-    
+
     // Déterminer le statut
     let status: 'active' | 'suspended' | 'pending' = 'active';
     if (!backendUser.isActive) {
@@ -137,17 +137,17 @@ const UsersPage: React.FC = () => {
     } else if (backendUser.role === 'professional' && !backendUser.is_verified) {
       status = 'pending';
     }
-    
+
     // Générer une avatar par défaut si nécessaire
     const avatar = backendUser.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${backendUser.nom}`;
-    
+
     // Formater la dernière activité
     let lastActive = 'Never';
     if (backendUser.lastLogin) {
       const lastLoginDate = new Date(backendUser.lastLogin);
       const now = new Date();
       const diffHours = Math.floor((now.getTime() - lastLoginDate.getTime()) / (1000 * 60 * 60));
-      
+
       if (diffHours < 1) {
         lastActive = 'Just now';
       } else if (diffHours < 24) {
@@ -157,7 +157,7 @@ const UsersPage: React.FC = () => {
         lastActive = `${diffDays} days ago`;
       }
     }
-    
+
     return {
       id: backendUser._id,
       name: backendUser.nom,
@@ -177,15 +177,15 @@ const UsersPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Vérification que l'URL de l'API est définie
       if (!API_BASE_URL) {
         throw new Error('API URL is not configured. Please check your .env file.');
       }
-      
+
       // Récupérer le token admin depuis localStorage
       const adminToken = localStorage.getItem('adminToken');
-      
+
       // Appel API au backend avec l'URL dynamique
       const response = await fetch(`${API_BASE_URL}/users`, {
         method: 'GET',
@@ -194,27 +194,27 @@ const UsersPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Store raw backend data for editing
       setBackendUsers(data.data || []);
-      
+
       // Convertir les données backend vers le format frontend
       const mappedUsers = data.data.map(mapBackendToFrontend);
       setUsers(mappedUsers);
-      
+
       // Calculer les statistiques
       calculateStats(mappedUsers);
-      
+
     } catch (err: any) {
       console.error('Error fetching users:', err);
       setError(err.message || 'Failed to load users. Please try again.');
-      
+
       // Données de démonstration en cas d'erreur
       const demoUsers: User[] = [
         {
@@ -296,7 +296,7 @@ const UsersPage: React.FC = () => {
   // Fonction pour filtrer les utilisateurs
   const filterUsers = () => {
     let filtered = [...users];
-    
+
     // Filtre par recherche
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -306,12 +306,12 @@ const UsersPage: React.FC = () => {
         user.phone.toLowerCase().includes(query)
       );
     }
-    
+
     // Filtre par statut
     if (filterStatus !== 'all') {
       filtered = filtered.filter(user => user.status === filterStatus);
     }
-    
+
     setFilteredUsers(filtered);
     // Reset to first page when filters change
     setCurrentPage(1);
@@ -321,10 +321,10 @@ const UsersPage: React.FC = () => {
   const updateUserStatus = async (userId: string, action: 'activate' | 'deactivate' | 'delete') => {
     try {
       const adminToken = localStorage.getItem('adminToken');
-      
+
       let endpoint = '';
       let method = 'PUT';
-      
+
       switch (action) {
         case 'activate':
           endpoint = `${API_BASE_URL}/users/profile/${userId}/activate`;
@@ -337,7 +337,7 @@ const UsersPage: React.FC = () => {
           method = 'DELETE';
           break;
       }
-      
+
       const response = await fetch(endpoint, {
         method,
         headers: {
@@ -348,17 +348,17 @@ const UsersPage: React.FC = () => {
           body: JSON.stringify({ password: '' })
         })
       });
-      
+
       if (!response.ok) {
         throw new Error(`Action failed: ${response.status} ${response.statusText}`);
       }
-      
+
       // Close confirmation dialog
       setConfirmDialog({ open: false, type: null, userId: null, userName: null });
-      
+
       // Refresh users list
       fetchUsers();
-      
+
     } catch (err: any) {
       console.error('Error updating user:', err);
       setError(err.message || 'Failed to update user status');
@@ -370,14 +370,14 @@ const UsersPage: React.FC = () => {
     try {
       // Clear any previous errors
       setError(null);
-      
+
       // Find user from already loaded backend data
       const userData = backendUsers.find(user => user._id === userId);
-      
+
       if (!userData) {
         throw new Error('User not found in loaded data');
       }
-      
+
       // Set edit form data from backend user data
       setEditUserData({
         nom: userData.nom || '',
@@ -432,17 +432,17 @@ const UsersPage: React.FC = () => {
       }
 
       await response.json();
-      
+
       // Close modal and refresh users
       setEditModalOpen(false);
       setEditUserData(null);
       setEditingUserId(null);
-      
+
       // Show success message
       setError(null);
       // Refresh users list
       await fetchUsers();
-      
+
       // Success notification
       alert('User updated successfully!');
     } catch (err: any) {
@@ -494,7 +494,7 @@ const UsersPage: React.FC = () => {
       setError(null);
 
       const adminToken = localStorage.getItem('adminToken');
-      
+
       // Préparer les données pour l'API
       const userPayload: any = {
         nom: addUserData.nom,
@@ -525,7 +525,7 @@ const UsersPage: React.FC = () => {
       }
 
       await response.json();
-      
+
       // Close modal and refresh users
       setAddModalOpen(false);
       setAddUserData({
@@ -538,12 +538,12 @@ const UsersPage: React.FC = () => {
         adresse: '',
         specialite: ''
       });
-      
+
       // Show success message
       setError(null);
       // Refresh users list
       await fetchUsers();
-      
+
       // Success notification
       alert('User created successfully!');
     } catch (err: any) {
@@ -582,7 +582,7 @@ const UsersPage: React.FC = () => {
 
   // Fonctions d'aide pour les styles
   const getStatusColor = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'active': return 'bg-green-100 text-green-700 border-green-200';
       case 'suspended': return 'bg-red-100 text-red-700 border-red-200';
       case 'pending': return 'bg-orange-100 text-orange-700 border-orange-200';
@@ -591,7 +591,7 @@ const UsersPage: React.FC = () => {
   };
 
   const getRoleBadge = (role: string) => {
-    switch(role) {
+    switch (role) {
       case 'admin': return 'bg-purple-100 text-purple-700';
       case 'therapist': return 'bg-blue-100 text-blue-700';
       case 'user': return 'bg-gray-100 text-gray-700';
@@ -619,17 +619,17 @@ const UsersPage: React.FC = () => {
           <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1">View and manage all platform users</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            icon={<RefreshCw size={16} className="sm:w-[18px] sm:h-[18px]" />} 
+          <Button
+            variant="ghost"
+            icon={<RefreshCw size={16} className="sm:w-[18px] sm:h-[18px]" />}
             onClick={fetchUsers}
             className="text-xs sm:text-sm"
           >
             <span className="hidden sm:inline">Refresh</span>
             <span className="sm:hidden">Refresh</span>
           </Button>
-          <Button 
-            icon={<UserPlus size={16} className="sm:w-[18px] sm:h-[18px]" />} 
+          <Button
+            icon={<UserPlus size={16} className="sm:w-[18px] sm:h-[18px]" />}
             className="text-xs sm:text-sm"
             onClick={() => {
               setAddModalOpen(true);
@@ -657,8 +657,8 @@ const UsersPage: React.FC = () => {
         <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg">
           <AlertCircle className="text-red-600" size={20} />
           <p className="text-red-600">{error}</p>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => setError(null)}
             className="ml-auto text-sm"
           >
@@ -722,11 +722,10 @@ const UsersPage: React.FC = () => {
                 <button
                   key={status}
                   onClick={() => setFilterStatus(status as any)}
-                  className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${
-                    filterStatus === status
+                  className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${filterStatus === status
                       ? 'bg-orange-500 text-white shadow-md'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
                 </button>
@@ -828,40 +827,40 @@ const UsersPage: React.FC = () => {
                       {/* Actions */}
                       <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-1 sm:gap-2">
-                          <button 
-                            className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-100 transition-colors" 
+                          <button
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-blue-100 transition-colors"
                             title="Edit"
                             onClick={() => handleEditUser(user.id)}
                           >
                             <Edit size={14} className="sm:w-4 sm:h-4 text-blue-600" />
                           </button>
-                          
+
                           {user.status === 'active' ? (
-                            <button 
-                              className="p-1.5 sm:p-2 rounded-lg hover:bg-orange-100 transition-colors" 
+                            <button
+                              className="p-1.5 sm:p-2 rounded-lg hover:bg-orange-100 transition-colors"
                               title="Suspend"
                               onClick={() => openConfirmDialog('suspend', user.id, user.name)}
                             >
                               <Ban size={14} className="sm:w-4 sm:h-4 text-orange-600" />
                             </button>
                           ) : (
-                            <button 
-                              className="p-1.5 sm:p-2 rounded-lg hover:bg-green-100 transition-colors" 
+                            <button
+                              className="p-1.5 sm:p-2 rounded-lg hover:bg-green-100 transition-colors"
                               title="Activate"
                               onClick={() => openConfirmDialog('activate', user.id, user.name)}
                             >
                               <CheckCircle size={14} className="sm:w-4 sm:h-4 text-green-600" />
                             </button>
                           )}
-                          
-                          <button 
-                            className="p-1.5 sm:p-2 rounded-lg hover:bg-red-100 transition-colors" 
+
+                          <button
+                            className="p-1.5 sm:p-2 rounded-lg hover:bg-red-100 transition-colors"
                             title="Delete"
                             onClick={() => openConfirmDialog('delete', user.id, user.name)}
                           >
                             <Trash2 size={14} className="sm:w-4 sm:h-4 text-red-600" />
                           </button>
-                          
+
                           <button className="p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 transition-colors hidden sm:block">
                             <MoreVertical size={14} className="sm:w-4 sm:h-4 text-gray-600" />
                           </button>
@@ -887,16 +886,16 @@ const UsersPage: React.FC = () => {
                   )}
                 </p>
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <Button 
-                    variant="ghost" 
-                    className="text-xs sm:text-sm py-2 flex-1 sm:flex-initial" 
+                  <Button
+                    variant="ghost"
+                    className="text-xs sm:text-sm py-2 flex-1 sm:flex-initial"
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
                   >
                     Previous
                   </Button>
-                  <Button 
-                    className="text-xs sm:text-sm py-2 flex-1 sm:flex-initial" 
+                  <Button
+                    className="text-xs sm:text-sm py-2 flex-1 sm:flex-initial"
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage >= totalPages}
                   >
@@ -1036,6 +1035,8 @@ const UsersPage: React.FC = () => {
 
               <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Ajouter un nouvel utilisateur</h2>
 
+              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Add New User</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-blue-900">Ajouter un nouvel utilisateur</h2>
               <button
                 onClick={() => {
                   setAddModalOpen(false);

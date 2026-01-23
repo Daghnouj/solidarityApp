@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import authService from "./auth.service";
 import { ProtectedRequest } from '../types/express';
+import { getIOInstance } from '../socket';
 
 // ✅ Export nommé de chaque fonction
 export const signup = async (req: Request, res: Response): Promise<void> => {
@@ -13,9 +14,9 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
       mimetype: req.file.mimetype,
       size: req.file.size
     } : 'Aucun fichier');
-       
-    const file = req.file; 
-    const result = await authService.signup(req.body, file, req.io);
+
+    const file = req.file;
+    const result = await authService.signup(req.body, file, getIOInstance());
     res.status(201).json(result);
   } catch (error: any) {
     console.error("Erreur signup:", error);
@@ -25,7 +26,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await authService.login(req.body, req.io);
+    const result = await authService.login(req.body, getIOInstance());
     res.json(result);
   } catch (error: any) {
     console.error("Erreur login:", error);
@@ -39,8 +40,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
 export const submitRequest = async (req: ProtectedRequest, res: Response): Promise<void> => {
   try {
-    const file = req.file; 
-    const result = await authService.submitRequest(req.body, req.user._id.toString(), file, req.io);
+    const file = req.file;
+    const result = await authService.submitRequest(req.body, req.user._id.toString(), file, getIOInstance());
     res.status(201).json(result);
   } catch (error: any) {
     console.error("Erreur submitRequest:", error);

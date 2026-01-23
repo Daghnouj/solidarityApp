@@ -16,9 +16,18 @@ const io = new SocketIOServer(server, {
     origin: ["http://localhost:3000", "http://localhost:5173"],
     methods: ["GET", "POST"],
     credentials: true
-  }
+  },
+  transports: ['websocket', 'polling'], // Ajoutez ceci
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  cookie: true,
+  allowEIO3: true // Pour compatibilité
 });
 
+// Ajoutez ce middleware pour logger les erreurs de connexion
+io.engine.on("connection_error", (err) => {
+  console.log("Socket.IO connection error:", err);
+});
 // Initialize socket handlers
 initSocket(io);
 
@@ -29,11 +38,7 @@ setIOInstance(io);
 // Make io instance globally accessible
 app.set('io', io);
 
-// Middleware to attach io to requests
-app.use((req, res, next) => {
-  req.io = io;
-  next();
-});
+
 
 // Connexion MongoDB
 connectDB();

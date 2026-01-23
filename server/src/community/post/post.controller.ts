@@ -1,17 +1,18 @@
 import { Request, Response } from 'express';
 import { PostService } from './post.service';
 import { SocketIORequest } from '../community.types';
+import { getIOInstance } from '../../socket';
 
 export const createPost = async (req: SocketIORequest, res: Response): Promise<void> => {
   try {
     const { content } = req.body as { content: string };
-    
+
     if (!req.user) {
       res.status(401).json({ message: 'Non autorisé' });
       return;
     }
 
-    const post = await PostService.createPost({ content }, req.user, req.io);
+    const post = await PostService.createPost({ content }, req.user, getIOInstance());
 
     res.status(201).json({
       success: true,
@@ -31,7 +32,7 @@ export const createPost = async (req: SocketIORequest, res: Response): Promise<v
       error: error.message,
       user: req.user?._id
     });
-    
+
     res.status(500).json({
       success: false,
       message: 'Erreur serveur',
@@ -59,7 +60,7 @@ export const addLike = async (req: SocketIORequest, res: Response): Promise<void
       return;
     }
 
-    const post = await PostService.addLike(postId, userId, req.io);
+    const post = await PostService.addLike(postId, userId, getIOInstance());
 
     res.json({
       success: true,
@@ -72,9 +73,9 @@ export const addLike = async (req: SocketIORequest, res: Response): Promise<void
       postId,
       userId: req.user?._id
     });
-    
+
     const status = error.message === 'Post introuvable' ? 404 : 500;
-    res.status(status).json({ 
+    res.status(status).json({
       success: false,
       message: error.message || 'Erreur serveur'
     });
@@ -107,18 +108,18 @@ export const updatePost = async (req: SocketIORequest, res: Response): Promise<v
     // Correction : récupérer le post avec les données utilisateur
     const populatedPost = await post.populate('user', 'nom photo role');
 
-    res.json({ 
+    res.json({
       success: true,
       post: populatedPost
     });
 
   } catch (error: any) {
     console.error('Erreur modification post:', error);
-    
-    const status = error.message === 'Post non trouvé' ? 404 : 
-                  error.message === 'Non autorisé' ? 403 : 500;
-    
-    res.status(status).json({ 
+
+    const status = error.message === 'Post non trouvé' ? 404 :
+      error.message === 'Non autorisé' ? 403 : 500;
+
+    res.status(status).json({
       success: false,
       message: error.message || 'Erreur serveur'
     });
@@ -137,18 +138,18 @@ export const deletePost = async (req: SocketIORequest, res: Response): Promise<v
 
     await PostService.deletePost(postId, userId);
 
-    res.json({ 
-      success: true, 
-      message: 'Post supprimé avec succès' 
+    res.json({
+      success: true,
+      message: 'Post supprimé avec succès'
     });
 
   } catch (error: any) {
     console.error('Erreur suppression post:', error);
-    
-    const status = error.message === 'Post non trouvé' ? 404 : 
-                  error.message === 'Non autorisé' ? 403 : 500;
-    
-    res.status(status).json({ 
+
+    const status = error.message === 'Post non trouvé' ? 404 :
+      error.message === 'Non autorisé' ? 403 : 500;
+
+    res.status(status).json({
       success: false,
       message: error.message || 'Erreur serveur'
     });
@@ -162,7 +163,7 @@ export const searchPosts = async (req: Request, res: Response): Promise<void> =>
       res.status(400).json({ message: 'Le paramètre query est requis' });
       return;
     }
-    
+
     const posts = await PostService.searchPosts(query);
     res.json(posts);
   } catch (error: any) {
@@ -177,7 +178,7 @@ export const getPopularHashtags = async (req: Request, res: Response): Promise<v
     res.json(hashtags);
   } catch (error: any) {
     console.error('Erreur récupération hashtags:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       message: 'Erreur serveur'
     });
