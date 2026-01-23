@@ -29,13 +29,20 @@ export const useAdminNotifications = (): UseAdminNotificationsReturn => {
     const API_BASE_URL = import.meta.env.VITE_API_URL;
 
     if (!adminToken || !API_BASE_URL) {
-      console.warn('Admin token or API URL not found');
+      console.warn('Admin token or API URL not found', {
+        hasToken: !!adminToken,
+        hasApiUrl: !!API_BASE_URL,
+        apiUrl: API_BASE_URL
+      });
       setLoading(false);
       return;
     }
 
     // Normalize API_BASE_URL for Socket.IO (remove /api if present, Socket.IO uses root path)
     const socketUrl = API_BASE_URL?.replace(/\/api\/?$/, '') || API_BASE_URL;
+
+    console.log('🔌 Attempting Socket.IO connection to:', socketUrl);
+    console.log('🔑 Using admin token:', adminToken.substring(0, 20) + '...');
 
     // Create Socket.IO connection
     const socket = io(socketUrl, {
@@ -47,26 +54,54 @@ export const useAdminNotifications = (): UseAdminNotificationsReturn => {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
       autoConnect: true,
+      forceNew: false,
     });
 
     socketRef.current = socket;
 
     // Connection event handlers
     socket.on('connect', () => {
-      console.log('✅ Admin Socket.IO connected');
+      console.log('✅ Admin Socket.IO connected successfully');
       setIsConnected(true);
+      setError(null);
     });
 
-    socket.on('disconnect', () => {
-      console.log('❌ Admin Socket.IO disconnected');
+    socket.on('disconnect', (reason) => {
+      console.log('❌ Admin Socket.IO disconnected:', reason);
       setIsConnected(false);
+      
+      // If disconnected due to authentication, don't try to reconnect
+      if (reason === 'io server disconnect' || reason === 'transport close') {
+        console.log('Disconnection reason suggests authentication issue');
+      }
     });
 
     socket.on('connect_error', (err) => {
       console.error('Socket.IO connection error:', err);
-      setError('Failed to connect to notification server');
+      console.error('Error details:', {
+        message: err.message,
+        type: err.type,
+        description: err.description,
+      });
+      
+      // More specific error messages
+      if (err.message.includes('Authentication failed') || err.message.includes('Invalid token')) {
+        setError('Authentication failed. Please log in again.');
+      } else if (err.message.includes('No token provided')) {
+        setError('No authentication token found.');
+      } else {
+        setError(`Connection failed: ${err.message}`);
+      }
       setIsConnected(false);
+    });
+
+    // Listen for connection errors with more details
+    socket.on('error', (error: any) => {
+      console.error('Socket.IO error event:', error);
+      setError(`Socket error: ${error.message || 'Unknown error'}`);
     });
 
     // Listen for new admin notifications

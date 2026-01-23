@@ -10,6 +10,13 @@ module.exports = {
        fontFamily: {
         sans: ['Poppins', 'sans-serif'],
       },
+      colors: {
+        solidarity: {
+          blue: '#4FB2E5',
+          orange: '#F5A146',
+          pink: '#FF90BC',
+        },
+      },
     },
   },
   plugins: [],

@@ -2,54 +2,63 @@ import React from "react";
 import { Link } from "react-router-dom";
 import ForgotPasswordForm from "./components/ForgotPasswordForm";
 
-const ForgotPasswordPage: React.FC = () => (
-  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-950 to-black p-4">
-    <div className="w-full max-w-md">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-2xl mb-4 shadow-lg">
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-          </svg>
-        </div>
-        <h1 className="text-3xl font-bold text-white mb-2">Forgot Password?</h1>
-        <p className="text-gray-400">No worries, we'll send you reset instructions</p>
-      </div>
-
-      {/* Form Card */}
-      <div className="bg-gray-900/50 backdrop-blur-sm p-8 rounded-3xl border border-gray-800 shadow-2xl">
-        <ForgotPasswordForm />
-        
-        {/* Back to Login Link */}
-        <div className="mt-6">
-          <Link 
-            to="/auth/login"
-            className="flex items-center justify-center text-sm text-gray-400 hover:text-white transition-colors"
-          >
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+const ForgotPasswordPage: React.FC = () => {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-teal-50 p-6">
+      <div className="w-full max-w-md">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-solidarity-blue to-teal-500 rounded-3xl mb-6">
+            <svg
+              className="w-10 h-10 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4"
+              />
             </svg>
-            Back to login
-          </Link>
-        </div>
-      </div>
-
-      {/* Help Text */}
-      <div className="mt-8 p-4 bg-gray-900/30 rounded-2xl border border-gray-800">
-        <div className="flex items-start">
-          <svg className="w-5 h-5 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <p className="text-sm text-gray-400">
-              Enter your email address and we'll send you a link to reset your password. 
-              The link will expire in 1 hour for security reasons.
-            </p>
           </div>
+
+          <h1 className="text-4xl font-bold text-slate-800 mb-3">
+            Forgot Password?
+          </h1>
+          <p className="text-slate-600 text-lg">
+            We'll send you an OTP to reset your password
+          </p>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white p-8 rounded-3xl shadow-xl">
+          <ForgotPasswordForm />
+
+          <div className="mt-6 text-center">
+            <Link
+              to="/login"
+              className="text-solidarity-blue font-medium hover:underline"
+            >
+              ← Back to login
+            </Link>
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="mt-8 bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+          <p className="text-sm text-blue-700 font-medium mb-1">
+            How it works
+          </p>
+          <p className="text-sm text-blue-600">
+            Enter your email and we’ll send you a one-time password (OTP).
+            The OTP expires in 10 minutes for security.
+          </p>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default ForgotPasswordPage;
