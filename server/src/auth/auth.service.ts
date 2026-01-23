@@ -1,6 +1,7 @@
 // auth.service.ts - CORRIGÉ
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { Server } from "socket.io";
 import User from "../user/user.model";
 import Request from "../request/request.model";
 import { 
@@ -11,9 +12,10 @@ import {
 } from "./auth.types";
 import { CloudinaryFile } from "../../config/cloudinary/cloudinary.types";
 import { env } from "../../config/env";
+import { AdminNotificationService } from "../admin/adminNotification/adminNotification.service";
 
 class AuthService {
- async signup(userData: SignupData, file: CloudinaryFile | null = null): Promise<AuthResponse> {
+ async signup(userData: SignupData, file: CloudinaryFile | null = null, io?: Server | null): Promise<AuthResponse> {
     console.log('📨 Données reçues dans le service:', userData);
     
     const { 
@@ -72,6 +74,27 @@ class AuthService {
     const user = new User(userPayload);
     await user.save();
 
+    // Emit admin notification for new user signup
+    if (io) {
+      try {
+        await AdminNotificationService.createNotification({
+          type: 'user_signup',
+          title: 'Nouvel utilisateur inscrit',
+          message: `${nom} (${email}) s'est inscrit en tant que ${role === 'professional' ? 'professionnel' : 'patient'}`,
+          data: {
+            userId: user._id.toString(),
+            userName: nom,
+            userEmail: email,
+            userRole: role
+          },
+          io
+        });
+      } catch (notifError) {
+        console.error('Error creating admin notification for signup:', notifError);
+        // Don't fail the signup if notification fails
+      }
+    }
+
     // Gestion des professionnels
     if (role === "professional") {
       if (!file) {
@@ -107,7 +130,7 @@ class AuthService {
       userType: 'patient'
     };
   }
-  async login(loginData: LoginData): Promise<{ 
+  async login(loginData: LoginData, io?: Server | null): Promise<{ 
     success: boolean; 
     token: string; 
     role: string; 
@@ -177,6 +200,27 @@ class AuthService {
     // Retour des informations sans le mot de passe
     const userWithoutPassword = await User.findById(user._id).select('-mdp');
 
+    // Emit admin notification for user login
+    if (io) {
+      try {
+        await AdminNotificationService.createNotification({
+          type: 'user_login',
+          title: 'Utilisateur connecté',
+          message: `${user.nom} (${user.email}) s'est connecté`,
+          data: {
+            userId: user._id.toString(),
+            userName: user.nom,
+            userEmail: user.email,
+            userRole: user.role
+          },
+          io
+        });
+      } catch (notifError) {
+        console.error('Error creating admin notification for login:', notifError);
+        // Don't fail the login if notification fails
+      }
+    }
+
     return { 
       success: true,
       token, 
@@ -185,7 +229,7 @@ class AuthService {
     };
   }
 
-  async submitRequest(requestData: RequestData, userId: string, file: CloudinaryFile | null = null): Promise<{ 
+  async submitRequest(requestData: RequestData, userId: string, file: CloudinaryFile | null = null, io?: Server | null): Promise<{ 
     success: boolean;
     message: string;
   }> {
@@ -232,6 +276,31 @@ class AuthService {
     });
 
     await requestDoc.save();
+
+    // Emit admin notification for verification request submission
+    if (io) {
+      try {
+        const user = await User.findById(userId);
+        if (user) {
+          await AdminNotificationService.createNotification({
+            type: 'verification_request',
+            title: 'Nouvelle demande de vérification',
+            message: `${user.nom} (${user.email}) a soumis une demande de vérification professionnelle`,
+            data: {
+              requestId: requestDoc._id.toString(),
+              professionalId: userId,
+              professionalName: user.nom,
+              professionalEmail: user.email,
+              specialite: specialite
+            },
+            io
+          });
+        }
+      } catch (notifError) {
+        console.error('Error creating admin notification for verification request:', notifError);
+        // Don't fail the request submission if notification fails
+      }
+    }
     
     return { 
       success: true,

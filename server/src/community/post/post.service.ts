@@ -1,12 +1,14 @@
 import { Types } from 'mongoose';
+import { Server } from 'socket.io';
 import Post from './post.model';
 import Hashtag from '../community.models';
 import { IPost, CreatePostRequest, UpdatePostRequest } from './post.types';
 import { extractHashtags } from '../utils/hashtagUtils';
 import { NotificationService } from '../notification/notification.service';
+import { AdminNotificationService } from '../../admin/adminNotification/adminNotification.service';
 
 export class PostService {
- static async createPost(data: CreatePostRequest, user: any): Promise<IPost> {
+ static async createPost(data: CreatePostRequest, user: any, io?: Server | null): Promise<IPost> {
   const hashtags = extractHashtags(data.content);
   
   const newPost = new Post({
@@ -19,6 +21,29 @@ export class PostService {
   });
 
   await newPost.save();
+
+  // Emit admin notification for new post
+  if (io) {
+    try {
+      await AdminNotificationService.createNotification({
+        type: 'new_post',
+        title: 'Nouveau post publié',
+        message: `${user.nom} a publié un nouveau post`,
+        data: {
+          postId: newPost._id.toString(),
+          userId: user._id.toString(),
+          userName: user.nom,
+          userRole: user.role,
+          postContent: data.content.substring(0, 100) + (data.content.length > 100 ? '...' : ''),
+          hashtags: hashtags
+        },
+        io
+      });
+    } catch (notifError) {
+      console.error('Error creating admin notification for new post:', notifError);
+      // Don't fail the post creation if notification fails
+    }
+  }
 
   if (hashtags.length > 0) {
     try {

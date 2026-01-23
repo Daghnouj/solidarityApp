@@ -1,8 +1,8 @@
 import { Request } from 'express';
-import { Document, ObjectId, Model } from 'mongoose';
+import { Document, Types, Model } from 'mongoose';
 
 export interface IAdmin extends Document {
-  _id: ObjectId;
+  _id: Types.ObjectId;
   nom: string;
   email: string;
   mdp: string;
@@ -30,6 +30,7 @@ export interface AdminRequest extends Request {
     id: string;
     role: string;
   };
+  io?: any; // Socket.IO instance
 }
 
 // DTOs

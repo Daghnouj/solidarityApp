@@ -1,9 +1,11 @@
+import { Server } from 'socket.io';
 import User from '../../user/user.model'; 
 import Request from '../../request/request.model'; 
 import { emailService } from '../../email/email.service';
+import { AdminNotificationService } from '../adminNotification/adminNotification.service';
 
 export class VerificationService {
-  static async verifyProfessional(professionalId: string) {
+  static async verifyProfessional(professionalId: string, io?: Server | null) {
     const user = await User.findByIdAndUpdate(
       professionalId,
       { 
@@ -20,6 +22,27 @@ export class VerificationService {
 
     // Utilisation du service d'email
     await emailService.sendVerificationEmail(user.email, user.nom);
+
+    // Emit admin notification for verification update
+    if (io) {
+      try {
+        await AdminNotificationService.createNotification({
+          type: 'verification_update',
+          title: 'Professionnel vérifié',
+          message: `${user.nom} (${user.email}) a été vérifié avec succès`,
+          data: {
+            professionalId: user._id.toString(),
+            professionalName: user.nom,
+            professionalEmail: user.email,
+            status: 'approved'
+          },
+          io
+        });
+      } catch (notifError) {
+        console.error('Error creating admin notification for verification:', notifError);
+      }
+    }
+
     return user;
   }
 
@@ -66,7 +89,7 @@ export class VerificationService {
     return request;
   }
 
-  static async rejectProfessional(professionalId: string, reason: string) {
+  static async rejectProfessional(professionalId: string, reason: string, io?: Server | null) {
     const user = await User.findByIdAndUpdate(
       professionalId,
       { 
@@ -83,6 +106,28 @@ export class VerificationService {
 
     // Utilisation du service d'email
     await emailService.sendRejectionEmail(user.email, user.nom, reason);
+
+    // Emit admin notification for verification rejection
+    if (io) {
+      try {
+        await AdminNotificationService.createNotification({
+          type: 'verification_update',
+          title: 'Professionnel rejeté',
+          message: `${user.nom} (${user.email}) a été rejeté: ${reason}`,
+          data: {
+            professionalId: user._id.toString(),
+            professionalName: user.nom,
+            professionalEmail: user.email,
+            status: 'rejected',
+            rejectionReason: reason
+          },
+          io
+        });
+      } catch (notifError) {
+        console.error('Error creating admin notification for rejection:', notifError);
+      }
+    }
+
     return user;
   }
 

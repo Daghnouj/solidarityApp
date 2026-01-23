@@ -10,7 +10,7 @@ export class VerificationController {
       }
 
       const { professionalId } = req.params;
-      const user = await VerificationService.verifyProfessional(professionalId);
+      const user = await VerificationService.verifyProfessional(professionalId, req.io);
       
       res.json({ 
         message: 'Professionnel validé et email envoyé', 
@@ -66,7 +66,7 @@ export class VerificationController {
         return res.status(400).json({ message: "La raison du refus est requise" });
       }
 
-      const user = await VerificationService.rejectProfessional(professionalId, reason);
+      const user = await VerificationService.rejectProfessional(professionalId, reason, req.io);
       
       res.json({ 
         message: 'Professionnel refusé et email envoyé', 
