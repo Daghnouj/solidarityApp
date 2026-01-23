@@ -45,7 +45,7 @@ const RegisterPage: React.FC = () => (
 
     {/* Right Panel - Register Form (50%) */}
     <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-16 bg-white overflow-y-auto">
-      <div className="w-full max-w-2xl space-y-6">
+      <div className="w-full max-w-2xl mt-auto ">
         {/* Mobile Logo */}
         <div className="lg:hidden text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-solidarity-blue to-teal-500 rounded-2xl mb-4 shadow-lg">
