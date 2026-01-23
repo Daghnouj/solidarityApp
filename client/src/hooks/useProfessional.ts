@@ -1,50 +1,70 @@
 import { useState, useEffect } from 'react';
-import type { Professional } from '../pages/Professionals/types';
-import { mockProfessionals } from '../pages/Professionals/data/mockProfessionals';
 
-interface UseProfessionalResult {
-  professional: Professional | null;
-  loading: boolean;
-  error: string | null;
+interface Professional {
+    id: string;
+    name: string;
+    specialty: string;
+    bio?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+    experience?: string;
+    education?: string;
+    languages?: string[];
+    services?: Array<{
+        name: string;
+        description: string;
+        price?: string;
+    }>;
+    availability?: string;
+    image?: string;
+    rating?: number;
+    reviewsCount?: number;
 }
 
-export const useProfessional = (id: string | undefined): UseProfessionalResult => {
-  const [state, setState] = useState<UseProfessionalResult>({
-    professional: null,
-    loading: true,
-    error: null,
-  });
+interface UseProfessionalReturn {
+    professional: Professional | null;
+    loading: boolean;
+    error: string | null;
+}
 
-  useEffect(() => {
-    if (!id) {
-      setState({ professional: null, loading: false, error: 'No professional ID provided' });
-      return;
-    }
+export const useProfessional = (id: string | undefined): UseProfessionalReturn => {
+    const [professional, setProfessional] = useState<Professional | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const fetchProfessional = async () => {
-      try {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const foundProfessional = mockProfessionals.find(pro => pro._id === id);
-        
-        if (!foundProfessional) {
-          setState({ professional: null, loading: false, error: 'Professional not found' });
-          return;
-        }
+    useEffect(() => {
+        const fetchProfessional = async () => {
+            if (!id) {
+                setError('No professional ID provided');
+                setLoading(false);
+                return;
+            }
 
-        setState({ professional: foundProfessional, loading: false, error: null });
-      } catch (err) {
-        setState({ 
-          professional: null, 
-          loading: false, 
-          error: err instanceof Error ? err.message : 'Failed to load professional' 
-        });
-      }
-    };
+            try {
+                setLoading(true);
+                setError(null);
 
-    fetchProfessional();
-  }, [id]);
+                const API_BASE_URL = import.meta.env.VITE_API_URL;
+                const response = await fetch(`${API_BASE_URL}/professionals/${id}`);
 
-  return state;
+                if (!response.ok) {
+                    throw new Error('Failed to fetch professional');
+                }
+
+                const data = await response.json();
+                setProfessional(data);
+            } catch (err) {
+                console.error('Error fetching professional:', err);
+                setError(err instanceof Error ? err.message : 'An error occurred');
+                setProfessional(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProfessional();
+    }, [id]);
+
+    return { professional, loading, error };
 };

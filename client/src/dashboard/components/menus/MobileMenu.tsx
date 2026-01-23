@@ -43,11 +43,12 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   }, [isOpen]);
 
   const navigationItems = [
-    { icon: BarChart3, label: 'Overview', path: '/dashboard' },
-    { icon: Calendar, label: 'Appointments', path: '/dashboard/appointments' },
-    { icon: MessageSquare, label: 'Community', path: '/dashboard/community' },
-    { icon: Users, label: 'Therapists', path: '/dashboard/therapists' },
-    { icon: Activity, label: 'Analytics', path: '/dashboard/analytics' }
+    { icon: BarChart3, label: 'Overview', path: '/admin', end: true },
+    { icon: Users, label: 'Users', path: '/admin/users' },
+    { icon: MessageSquare, label: 'Requests', path: '/admin/requests' },
+    { icon: Activity, label: 'Activities & Centers', path: '/admin/activities-centers' },
+    { icon: Calendar, label: 'Gallery', path: '/admin/gallery' },
+    { icon: User, label: 'Profile', path: '/admin/profile' }
   ];
 
   const quickActions = [
@@ -75,9 +76,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
 
       {/* Slide-out Menu */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 lg:hidden ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 transform transition-transform duration-300 lg:hidden ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-900 to-blue-800 p-6">
@@ -126,12 +126,12 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 <NavLink
                   key={item.path}
                   to={item.path}
+                  end={item.end}
                   onClick={() => setIsOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                      isActive
-                        ? 'bg-orange-500 text-white shadow-lg transform scale-105'
-                        : 'text-gray-700 hover:bg-blue-50 hover:text-blue-900'
+                    `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${isActive
+                      ? 'bg-orange-500 text-white shadow-lg transform scale-105'
+                      : 'text-gray-700 hover:bg-blue-50 hover:text-blue-900'
                     }`
                   }
                 >
@@ -206,7 +206,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             </div>
             <span className="font-semibold flex-1 text-left">Logout</span>
           </button>
-          
+
           <div className="text-xs text-gray-400 text-center mt-4">
             v2.0 • Solidarity Platform
           </div>
