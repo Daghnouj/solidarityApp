@@ -1,7 +1,7 @@
 import express from 'express';
 import { authAdminRouter } from './authAdmin/authAdmin.routes';
 import { adminOverviewRoutes } from './adminOverview/adminOverview.routes';
-import { basicSecurity } from '../../middlewares';
+import { basicSecurity } from '../../middlewares/security';
 
 const router = express.Router();
 
@@ -12,5 +12,5 @@ router.use('/overview', adminOverviewRoutes);
 
 // Export des types et modèles
 export { Admin } from './admin.model';
-export type { IAdmin, IAdminRequest, AdminSignupDTO, AdminLoginDTO } from './admin.types';
+export type { IAdmin, AdminRequest, AdminSignupDTO, AdminLoginDTO } from './admin.types';
 export type { AdminOverviewData, AdminSearchResult } from './adminOverview/adminOverview.types';

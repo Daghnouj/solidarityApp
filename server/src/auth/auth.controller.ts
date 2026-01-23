@@ -15,7 +15,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     } : 'Aucun fichier');
        
     const file = req.file; 
-    const result = await authService.signup(req.body, file);
+    const result = await authService.signup(req.body, file, req.io);
     res.status(201).json(result);
   } catch (error: any) {
     console.error("Erreur signup:", error);
@@ -25,7 +25,7 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const result = await authService.login(req.body);
+    const result = await authService.login(req.body, req.io);
     res.json(result);
   } catch (error: any) {
     console.error("Erreur login:", error);
@@ -40,7 +40,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const submitRequest = async (req: ProtectedRequest, res: Response): Promise<void> => {
   try {
     const file = req.file; 
-    const result = await authService.submitRequest(req.body, req.user._id.toString(), file);
+    const result = await authService.submitRequest(req.body, req.user._id.toString(), file, req.io);
     res.status(201).json(result);
   } catch (error: any) {
     console.error("Erreur submitRequest:", error);

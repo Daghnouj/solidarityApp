@@ -11,7 +11,7 @@ export const createPost = async (req: SocketIORequest, res: Response): Promise<v
       return;
     }
 
-    const post = await PostService.createPost({ content }, req.user);
+    const post = await PostService.createPost({ content }, req.user, req.io);
 
     res.status(201).json({
       success: true,

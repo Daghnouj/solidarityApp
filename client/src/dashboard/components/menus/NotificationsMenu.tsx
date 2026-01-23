@@ -1,82 +1,35 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bell, 
-  Calendar, 
-  MessageSquare, 
-  Award, 
   AlertCircle,
   Check,
   X,
-  Settings as SettingsIcon
+  Settings as SettingsIcon,
+  UserPlus,
+  Mail,
+  FileCheck,
+  FileText,
+  Wifi,
+  WifiOff
 } from 'lucide-react';
+import { useAdminNotifications } from '../../hooks/useAdminNotifications';
+import type { AdminNotification } from '../../services/adminNotification.service';
 
-interface Notification {
-  id: string;
-  type: 'appointment' | 'message' | 'achievement' | 'alert';
-  title: string;
-  message: string;
-  timestamp: string;
-  read: boolean;
-  actionUrl?: string;
-}
+interface NotificationsMenuProps {}
 
-interface NotificationsMenuProps {
-  notifications?: Notification[];
-  onMarkAsRead?: (id: string) => void;
-  onMarkAllAsRead?: () => void;
-  onClearNotification?: (id: string) => void;
-}
-
-const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
-  notifications = [],
-  onMarkAsRead,
-  onMarkAllAsRead,
-  onClearNotification
-}) => {
+const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // Default notifications if none provided
-  const defaultNotifications: Notification[] = [
-    {
-      id: '1',
-      type: 'appointment',
-      title: 'Upcoming Session',
-      message: 'Your therapy session with Dr. Lina is tomorrow at 10:00 AM',
-      timestamp: '2 hours ago',
-      read: false,
-      actionUrl: '/appointments'
-    },
-    {
-      id: '2',
-      type: 'achievement',
-      title: 'Goal Achieved! 🎉',
-      message: 'You completed 7 days of mindfulness practice',
-      timestamp: '5 hours ago',
-      read: false
-    },
-    {
-      id: '3',
-      type: 'message',
-      title: 'New Community Post',
-      message: 'Coach Samir shared new breathing exercises',
-      timestamp: '1 day ago',
-      read: true,
-      actionUrl: '/community'
-    },
-    {
-      id: '4',
-      type: 'alert',
-      title: 'Subscription Expiring',
-      message: 'Your premium subscription expires in 7 days',
-      timestamp: '2 days ago',
-      read: true,
-      actionUrl: '/settings/billing'
-    }
-  ];
-
-  const notificationsList = notifications.length > 0 ? notifications : defaultNotifications;
-  const unreadCount = notificationsList.filter(n => !n.read).length;
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    isConnected
+  } = useAdminNotifications();
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -95,16 +48,49 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
     };
   }, [isOpen]);
 
-  const getNotificationIcon = (type: string) => {
+  // Format timestamp to relative time
+  const formatTimestamp = (dateString: string): string => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Get action URL based on notification type
+  const getActionUrl = (notification: AdminNotification): string | undefined => {
+    switch (notification.type) {
+      case 'user_login':
+      case 'user_signup':
+        return notification.data.userId ? `/admin/users?userId=${notification.data.userId}` : undefined;
+      case 'contact_request':
+        return notification.data.contactId ? `/admin/contacts?contactId=${notification.data.contactId}` : '/admin/contacts';
+      case 'verification_request':
+      case 'verification_update':
+        return notification.data.requestId ? `/admin/requests?requestId=${notification.data.requestId}` : '/admin/requests';
+      case 'new_post':
+        return notification.data.postId ? `/community?postId=${notification.data.postId}` : '/community';
+      default:
+        return undefined;
+    }
+  };
+
+  const getNotificationIcon = (type: AdminNotification['type']) => {
     switch (type) {
-      case 'appointment':
-        return { icon: Calendar, color: 'blue' };
-      case 'message':
-        return { icon: MessageSquare, color: 'teal' };
-      case 'achievement':
-        return { icon: Award, color: 'orange' };
-      case 'alert':
-        return { icon: AlertCircle, color: 'red' };
+      case 'user_login':
+      case 'user_signup':
+        return { icon: UserPlus, color: 'blue' };
+      case 'contact_request':
+        return { icon: Mail, color: 'teal' };
+      case 'verification_request':
+      case 'verification_update':
+        return { icon: FileCheck, color: 'orange' };
+      case 'new_post':
+        return { icon: FileText, color: 'purple' };
       default:
         return { icon: Bell, color: 'gray' };
     }
@@ -116,6 +102,7 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
       orange: { bg: 'bg-orange-100', text: 'text-orange-600', border: 'border-orange-200' },
       teal: { bg: 'bg-teal-100', text: 'text-teal-600', border: 'border-teal-200' },
       red: { bg: 'bg-red-100', text: 'text-red-600', border: 'border-red-200' },
+      purple: { bg: 'bg-purple-100', text: 'text-purple-600', border: 'border-purple-200' },
       gray: { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-200' }
     };
     return colors[color] || colors.gray;
@@ -145,14 +132,22 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
           <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-white font-bold text-lg">Notifications</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-white font-bold text-lg">Notifications</h3>
+                  {isConnected ? (
+                    <Wifi size={16} className="text-green-300" title="Connected" />
+                  ) : (
+                    <WifiOff size={16} className="text-red-300" title="Disconnected" />
+                  )}
+                </div>
                 <p className="text-blue-200 text-sm">
-                  {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+                  {loading ? 'Loading...' : unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
                 </p>
               </div>
               <button
-                onClick={onMarkAllAsRead}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white rounded-lg text-sm font-semibold transition-colors"
+                onClick={markAllAsRead}
+                disabled={unreadCount === 0 || loading}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors"
               >
                 Mark all read
               </button>
@@ -161,7 +156,22 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
 
           {/* Notifications List */}
           <div className="max-h-96 overflow-y-auto">
-            {notificationsList.length === 0 ? (
+            {loading ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <Bell className="text-gray-400" size={32} />
+                </div>
+                <p className="text-gray-500 font-medium">Loading notifications...</p>
+              </div>
+            ) : error ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="text-red-400" size={32} />
+                </div>
+                <p className="text-gray-500 font-medium">Error loading notifications</p>
+                <p className="text-gray-400 text-sm mt-2">{error}</p>
+              </div>
+            ) : notifications.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Bell className="text-gray-400" size={32} />
@@ -171,13 +181,15 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
               </div>
             ) : (
               <div className="divide-y divide-gray-100">
-                {notificationsList.map((notification) => {
+                {notifications.map((notification) => {
                   const { icon: Icon, color } = getNotificationIcon(notification.type);
                   const colorClasses = getColorClasses(color);
+                  const actionUrl = getActionUrl(notification);
+                  const notificationId = notification._id || notification.id || '';
 
                   return (
                     <div
-                      key={notification.id}
+                      key={notificationId}
                       className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer group relative ${
                         !notification.read ? 'bg-blue-50/30' : ''
                       }`}
@@ -203,11 +215,17 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
                           </p>
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-gray-500">
-                              {notification.timestamp}
+                              {formatTimestamp(notification.createdAt)}
                             </span>
-                            {notification.actionUrl && (
+                            {actionUrl && (
                               <a
-                                href={notification.actionUrl}
+                                href={actionUrl}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!notification.read) {
+                                    markAsRead(notificationId);
+                                  }
+                                }}
                                 className="text-xs text-orange-600 font-semibold hover:text-orange-700"
                               >
                                 View →
@@ -222,7 +240,7 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onMarkAsRead?.(notification.id);
+                                markAsRead(notificationId);
                               }}
                               className="p-1.5 rounded-lg hover:bg-green-100 transition-colors"
                               title="Mark as read"
@@ -233,7 +251,7 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              onClearNotification?.(notification.id);
+                              deleteNotification(notificationId);
                             }}
                             className="p-1.5 rounded-lg hover:bg-red-100 transition-colors"
                             title="Remove"

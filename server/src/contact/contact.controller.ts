@@ -7,7 +7,7 @@ export const createContact = async (
   res: Response<ContactResponse>
 ): Promise<void> => {
   try {
-    const result = await contactService.createContact(req.body);
+    const result = await contactService.createContact(req.body, req.io);
     
     const statusCode = result.success ? 201 : 400;
     res.status(statusCode).json(result);
