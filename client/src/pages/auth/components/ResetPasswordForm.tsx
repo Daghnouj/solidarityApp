@@ -29,7 +29,7 @@ const ResetPasswordForm: React.FC = () => {
     const { name, value } = e.target;
     setPasswords({ ...passwords, [name]: value });
     setPasswordMatchError(""); // Clear match error when user types
-    
+
     if (name === "password") {
       setValidationErrors(validatePassword(value));
     }
@@ -38,7 +38,7 @@ const ResetPasswordForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordMatchError("");
-    
+
     if (passwords.password !== passwords.confirmPassword) {
       setPasswordMatchError("Passwords do not match");
       return;
@@ -50,7 +50,7 @@ const ResetPasswordForm: React.FC = () => {
     }
 
     try {
-      await resetPassword("mock-token", passwords.password);
+      await resetPassword(passwords.password, passwords.confirmPassword);
       setSuccess(true);
       setTimeout(() => navigate("/login"), 3000);
     } catch (err) {
@@ -122,23 +122,22 @@ const ResetPasswordForm: React.FC = () => {
             )}
           </button>
         </div>
-        
+
         {/* Password Strength Indicator */}
         {passwords.password && (
           <div className="mt-3">
             <div className="flex gap-1.5 mb-2">
               {[1, 2, 3, 4].map((level) => {
-                const strength = validationErrors.length === 0 ? 4 : 
-                                validationErrors.length <= 1 ? 3 :
-                                validationErrors.length <= 2 ? 2 : 1;
+                const strength = validationErrors.length === 0 ? 4 :
+                  validationErrors.length <= 1 ? 3 :
+                    validationErrors.length <= 2 ? 2 : 1;
                 return (
                   <div
                     key={level}
-                    className={`h-2 flex-1 rounded-full transition-all ${
-                      level <= strength
+                    className={`h-2 flex-1 rounded-full transition-all ${level <= strength
                         ? strength === 4 ? "bg-green-500" : strength === 3 ? "bg-teal-500" : strength === 2 ? "bg-yellow-500" : "bg-red-500"
                         : "bg-slate-200"
-                    }`}
+                      }`}
                     aria-hidden="true"
                   />
                 );
@@ -179,13 +178,12 @@ const ResetPasswordForm: React.FC = () => {
             id="confirmPassword"
             name="confirmPassword"
             placeholder="Re-enter your new password"
-            className={`w-full pl-12 pr-12 py-3.5 bg-slate-50 border-2 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300 ${
-              passwordMatchError || (passwords.confirmPassword && passwords.password !== passwords.confirmPassword)
+            className={`w-full pl-12 pr-12 py-3.5 bg-slate-50 border-2 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300 ${passwordMatchError || (passwords.confirmPassword && passwords.password !== passwords.confirmPassword)
                 ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
                 : passwords.confirmPassword && passwords.password === passwords.confirmPassword
-                ? 'border-green-300'
-                : 'border-slate-200'
-            }`}
+                  ? 'border-green-300'
+                  : 'border-slate-200'
+              }`}
             onChange={handleChange}
             value={passwords.confirmPassword}
             required
@@ -233,7 +231,7 @@ const ResetPasswordForm: React.FC = () => {
       <button
         type="submit"
         disabled={loading || validationErrors.length > 0 || passwords.password !== passwords.confirmPassword || !passwords.password || !passwords.confirmPassword}
-          className="w-full bg-gradient-to-r from-solidarity-blue to-teal-500 hover:from-blue-600 hover:to-teal-600 py-4 rounded-xl text-white font-semibold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200/50 hover:shadow-xl hover:shadow-blue-300/50 focus:outline-none focus:ring-2 focus:ring-solidarity-blue focus:ring-offset-2 transform hover:scale-[1.02] active:scale-[0.98] disabled:transform-none"
+        className="w-full bg-gradient-to-r from-solidarity-blue to-teal-500 hover:from-blue-600 hover:to-teal-600 py-4 rounded-xl text-white font-semibold text-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-200/50 hover:shadow-xl hover:shadow-blue-300/50 focus:outline-none focus:ring-2 focus:ring-solidarity-blue focus:ring-offset-2 transform hover:scale-[1.02] active:scale-[0.98] disabled:transform-none"
         aria-label={loading ? "Resetting password, please wait" : "Reset your password"}
       >
         {loading ? (
@@ -250,8 +248,8 @@ const ResetPasswordForm: React.FC = () => {
       </button>
 
       {error && (
-        <div 
-          role="alert" 
+        <div
+          role="alert"
           aria-live="polite"
           className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3"
         >

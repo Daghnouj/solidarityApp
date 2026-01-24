@@ -13,16 +13,17 @@ const ForgotPasswordForm: React.FC = () => {
     try {
       await forgotPassword(email); // send OTP
       setStep("otp");
-    } catch {}
+    } catch { }
   };
 
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await verifyOtp({ email, otp }); // backend verification
-      // 👉 redirect to reset password page here
-      // navigate("/reset-password");
-    } catch {}
+      await verifyOtp(otp); // backend verification
+      // Redirect to reset password page here, or let the parent handle it
+      // For now, assume global state update is enough, but typically we route:
+      window.location.href = "/resetpass";
+    } catch { }
   };
 
   /* ================= EMAIL STEP ================= */
