@@ -32,6 +32,21 @@ import GalleryPage from "./dashboard/GalleryPage";
 import AdminProfilePage from "./dashboard/AdminProfilePage";
 import DashboardLoginPage from "./dashboard/DashboardLoginPage";
 
+// Pages - User Dashboard
+import UserLayout from "./dashboarduser/UserLayout";
+import UserOverview from "./dashboarduser/pages/UserOverview";
+import UserAppointments from "./dashboarduser/pages/UserAppointments";
+import UserFavorites from "./dashboarduser/pages/UserFavorites";
+import UserCommunity from "./dashboarduser/pages/UserCommunity";
+import UserProfile from "./dashboarduser/pages/UserProfile";
+
+// Pages - Professional Dashboard
+import ProfessionalLayout from "./dashboardprofessional/ProfessionalLayout";
+import ProfessionalOverview from "./dashboardprofessional/pages/ProfessionalOverview";
+import ProfessionalSchedule from "./dashboardprofessional/pages/ProfessionalSchedule";
+import ProfessionalAppointments from "./dashboardprofessional/pages/ProfessionalAppointments";
+import ProfessionalProfileDashboard from "./dashboardprofessional/pages/ProfessionalProfile";
+
 // Components
 import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./pages/ProfessionalProfile/components/ErrorBoundary";
@@ -66,6 +81,23 @@ const App: React.FC = () => {
             <Route path="gallery" element={<GalleryPage />} />
             <Route path="profile" element={<AdminProfilePage />} />
             {/* Add more admin routes here later */}
+          </Route>
+
+          {/* ================= User Dashboard ================= */}
+          <Route path="/dashboard/user" element={<UserLayout />}>
+            <Route index element={<UserOverview />} />
+            <Route path="appointments" element={<UserAppointments />} />
+            <Route path="favorites" element={<UserFavorites />} />
+            <Route path="community" element={<UserCommunity />} />
+            <Route path="profile" element={<UserProfile />} />
+          </Route>
+
+          {/* ================= Professional Dashboard ================= */}
+          <Route path="/dashboard/professional" element={<ProfessionalLayout />}>
+            <Route index element={<ProfessionalOverview />} />
+            <Route path="requests" element={<ProfessionalAppointments />} />
+            <Route path="calendar" element={<ProfessionalSchedule />} />
+            <Route path="profile" element={<ProfessionalProfileDashboard />} />
           </Route>
 
           {/* ================= Admin Login (no dashboard layout) ================= */}
