@@ -1,44 +1,108 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, User, MessageCircle, FileText, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, CheckCircle, XCircle, User, MessageCircle, FileText, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const ProfessionalAppointments: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'pending' | 'upcoming'>('pending');
+    const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+    const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const requests = [
-        {
-            id: 1,
-            name: 'Sarah Parker',
-            type: 'Initial Consultation',
-            time: 'Tomorrow, 10:00 AM',
-            status: 'Pending',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
-            reason: 'Experiencing anxiety and sleep issues recently.'
-        },
-        {
-            id: 2,
-            name: 'James Wilson',
-            type: 'Follow-up Session',
-            time: 'Jan 26, 2:30 PM',
-            status: 'Pending',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=James',
-            reason: 'Progress check on cognitive behavioral therapy.'
-        },
-        {
-            id: 3,
-            name: 'Emma Thompson',
-            type: 'Urgent Care',
-            time: 'Jan 27, 09:15 AM',
-            status: 'Pending',
-            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Emma',
-            reason: 'Having panic attacks frequently this week.'
-        },
-    ];
+    const fetchAppointments = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem('token');
+            const headers = { 'Authorization': `Bearer ${token}` };
 
-    const upcoming = [
-        { id: 1, name: 'John Doe', type: 'Therapy Session', time: 'Today, 02:00 PM', duration: '1h', status: 'Confirmed', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John' },
-        { id: 2, name: 'Michael Chen', type: 'Check-up', time: 'Tomorrow, 11:30 AM', duration: '30m', status: 'Confirmed', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Michael' },
-        { id: 3, name: 'Lisa Anderson', type: 'Consultation', time: 'Jan 26, 04:00 PM', duration: '45m', status: 'Confirmed', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Lisa' },
-    ];
+            // Fetch Pending
+            const pendingRes = await fetch(`${API_BASE_URL}/appointments/professional?status=pending`, { headers });
+            if (!pendingRes.ok) throw new Error('Failed to fetch pending requests');
+            const pendingData = await pendingRes.json();
+
+            // Fetch Upcoming
+            const upcomingRes = await fetch(`${API_BASE_URL}/appointments/professional?status=upcoming`, { headers });
+            if (!upcomingRes.ok) throw new Error('Failed to fetch upcoming appointments');
+            const upcomingData = await upcomingRes.json();
+
+            setPendingRequests(pendingData);
+            setUpcomingAppointments(upcomingData);
+        } catch (err: any) {
+            console.error("Error fetching appointments:", err);
+            setError('Failed to load appointments');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStatusUpdate = async (id: string, status: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/appointments/${id}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+
+            if (response.ok) {
+                fetchAppointments(); // Refresh list
+            } else {
+                alert('Failed to update status');
+            }
+        } catch (error) {
+            console.error("Error updating status:", error);
+            alert('Error updating status');
+        }
+    };
+
+    useEffect(() => {
+        fetchAppointments();
+    }, []);
+
+    // Helper to format date/time
+    const formatDateTime = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const isToday = date.toDateString() === today.toDateString();
+        const isTomorrow = date.toDateString() === tomorrow.toDateString();
+
+        let dayStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        if (isToday) dayStr = 'Today';
+        if (isTomorrow) dayStr = 'Tomorrow';
+
+        const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return `${dayStr}, ${timeStr}`;
+    };
+
+    if (loading) return <div className="flex justify-center p-10"><RefreshCw className="animate-spin text-blue-500" /></div>;
+    if (error) return <div className="p-6 bg-red-50 text-red-600 rounded-xl flex items-center gap-2"><AlertCircle size={20} />{error}</div>;
+
+    const requests = pendingRequests.map(req => ({
+        id: req._id,
+        name: req.patient?.nom || 'Unknown User',
+        type: req.type || 'Consultation',
+        time: formatDateTime(req.time),
+        status: 'Pending',
+        avatar: req.patient?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.patient?.nom}`,
+        reason: req.reason || 'No reason provided'
+    }));
+
+    const upcoming = upcomingAppointments.map(apt => ({
+        id: apt._id,
+        name: apt.patient?.nom || 'Unknown User',
+        type: apt.type || 'Consultation',
+        time: formatDateTime(apt.time),
+        duration: '1h', // Placeholder as duration might not be in model
+        status: 'Confirmed',
+        avatar: apt.patient?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${apt.patient?.nom}`
+    }));
 
     return (
         <div className="space-y-6">
@@ -94,10 +158,16 @@ const ProfessionalAppointments: React.FC = () => {
                             </div>
 
                             <div className="flex gap-3">
-                                <button className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                                <button
+                                    onClick={() => handleStatusUpdate(req.id, 'confirmed')}
+                                    className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+                                >
                                     <CheckCircle size={18} /> Approve
                                 </button>
-                                <button className="flex-1 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                                <button
+                                    onClick={() => handleStatusUpdate(req.id, 'cancelled')}
+                                    className="flex-1 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
+                                >
                                     <XCircle size={18} /> Reject
                                 </button>
                                 <button className="p-2.5 bg-gray-100 text-gray-600 rounded-xl hover:bg-gray-200 transition-colors" title="View Details">

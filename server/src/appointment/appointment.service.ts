@@ -45,7 +45,12 @@ export class AppointmentService {
         if (status) {
             if (status === 'upcoming') {
                 query.status = 'confirmed';
-                query.time = { $gte: new Date() };
+                // Include appointments from the start of today, or just all confirmed? 
+                // User expects to see "Upcoming" (which usually means future), but if they test with old dates it's empty.
+                // Better approach: Show all 'confirmed' appointments sorted by date, or at least from 'today' 00:00.
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+                query.time = { $gte: startOfToday };
             } else if (status === 'pending') {
                 query.status = 'pending';
             } else {
