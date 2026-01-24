@@ -13,10 +13,14 @@ export const addComment = async (req: SocketIORequest, res: Response): Promise<v
     const { comment } = req.body as { comment: string };
     const userId = req.user._id;
 
+    console.log('💬 addComment called');
+    console.log('req.io exists:', !!req.io);
+    console.log('req.io type:', typeof req.io);
+
     const result = await CommentService.addComment(
-      postId, 
-      { comment }, 
-      userId, 
+      postId,
+      { comment },
+      userId,
       req.io
     );
 
@@ -27,11 +31,11 @@ export const addComment = async (req: SocketIORequest, res: Response): Promise<v
 
   } catch (error: any) {
     console.error('Erreur commentaire:', error);
-    
+
     const status = error.message === 'Post non trouvé' ? 404 : 500;
-    res.status(status).json({ 
-      success: false, 
-      message: error.message || 'Erreur serveur' 
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Erreur serveur'
     });
   }
 };
@@ -43,10 +47,10 @@ export const addReply = async (req: SocketIORequest, res: Response): Promise<voi
     const userId = req.user._id;
 
     const result = await CommentService.addReply(
-      postId, 
-      commentId, 
-      { replyText }, 
-      userId, 
+      postId,
+      commentId,
+      { replyText },
+      userId,
       req.io
     );
 
@@ -57,11 +61,11 @@ export const addReply = async (req: SocketIORequest, res: Response): Promise<voi
 
   } catch (error: any) {
     console.error('Erreur réponse:', error);
-    
+
     const status = error.message.includes('non trouvé') ? 404 : 500;
-    res.status(status).json({ 
-      success: false, 
-      message: error.message || 'Erreur serveur' 
+    res.status(status).json({
+      success: false,
+      message: error.message || 'Erreur serveur'
     });
   }
 };
@@ -73,24 +77,24 @@ export const updateComment = async (req: SocketIORequest, res: Response): Promis
     const userId = req.user._id;
 
     const result = await CommentService.updateComment(
-      postId, 
-      commentId, 
-      { newText }, 
+      postId,
+      commentId,
+      { newText },
       userId
     );
 
-    res.json({ 
+    res.json({
       success: true,
       comment: result
     });
 
   } catch (error: any) {
     console.error('Erreur modification commentaire:', error);
-    
-    const status = error.message === 'Non autorisé' ? 403 : 
-                  error.message.includes('non trouvé') ? 404 : 500;
-    
-    res.status(status).json({ 
+
+    const status = error.message === 'Non autorisé' ? 403 :
+      error.message.includes('non trouvé') ? 404 : 500;
+
+    res.status(status).json({
       success: false,
       message: error.message || 'Erreur serveur'
     });
@@ -104,18 +108,18 @@ export const deleteComment = async (req: SocketIORequest, res: Response): Promis
 
     await CommentService.deleteComment(postId, commentId, userId);
 
-    res.json({ 
-      success: true, 
-      message: 'Commentaire supprimé' 
+    res.json({
+      success: true,
+      message: 'Commentaire supprimé'
     });
 
   } catch (error: any) {
     console.error('Erreur suppression commentaire:', error);
-    
-    const status = error.message === 'Non autorisé' ? 403 : 
-                  error.message.includes('non trouvé') ? 404 : 500;
-    
-    res.status(status).json({ 
+
+    const status = error.message === 'Non autorisé' ? 403 :
+      error.message.includes('non trouvé') ? 404 : 500;
+
+    res.status(status).json({
       success: false,
       message: error.message || 'Erreur serveur'
     });
@@ -129,25 +133,25 @@ export const updateReply = async (req: SocketIORequest, res: Response): Promise<
     const userId = req.user._id;
 
     const result = await CommentService.updateReply(
-      postId, 
-      commentId, 
-      replyId, 
-      { newText }, 
+      postId,
+      commentId,
+      replyId,
+      { newText },
       userId
     );
 
-    res.json({ 
+    res.json({
       success: true,
       reply: result
     });
 
   } catch (error: any) {
     console.error('Erreur modification réponse:', error);
-    
-    const status = error.message === 'Non autorisé' ? 403 : 
-                  error.message.includes('non trouvé') ? 404 : 500;
-    
-    res.status(status).json({ 
+
+    const status = error.message === 'Non autorisé' ? 403 :
+      error.message.includes('non trouvé') ? 404 : 500;
+
+    res.status(status).json({
       success: false,
       message: error.message || 'Erreur serveur'
     });
@@ -161,18 +165,18 @@ export const deleteReply = async (req: SocketIORequest, res: Response): Promise<
 
     await CommentService.deleteReply(postId, commentId, replyId, userId);
 
-    res.json({ 
-      success: true, 
-      message: 'Réponse supprimée' 
+    res.json({
+      success: true,
+      message: 'Réponse supprimée'
     });
 
   } catch (error: any) {
     console.error('Erreur suppression réponse:', error);
-    
-    const status = error.message === 'Non autorisé' ? 403 : 
-                  error.message.includes('non trouvé') ? 404 : 500;
-    
-    res.status(status).json({ 
+
+    const status = error.message === 'Non autorisé' ? 403 :
+      error.message.includes('non trouvé') ? 404 : 500;
+
+    res.status(status).json({
       success: false,
       message: error.message || 'Erreur serveur'
     });

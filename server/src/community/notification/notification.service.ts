@@ -7,7 +7,8 @@ export class NotificationService {
     return await Notification.find({ recipient: userId })
       .sort('-createdAt')
       .populate('sender', 'nom photo')
-      .populate('post', 'content');
+      .populate('post', 'content')
+      .populate('appointment', 'time type status');
   }
 
   static async markAsRead(userId: Types.ObjectId): Promise<void> {
@@ -22,6 +23,7 @@ export class NotificationService {
     senderId,
     type,
     postId,
+    appointmentId,
     metadata,
     io
   }: CreateNotificationParams): Promise<INotification | null> {
@@ -34,22 +36,35 @@ export class NotificationService {
         recipient: recipientId,
         sender: senderId,
         type,
-        post: postId,
+        post: postId || undefined,
+        appointment: appointmentId || undefined,
         metadata
       });
 
+      // No need for separate assignment if passed in constructor correctly above, 
+      // but keeping logic clean:
+      if (postId) notification.post = new Types.ObjectId(postId);
+      if (appointmentId) notification.appointment = new Types.ObjectId(appointmentId);
+
       await notification.save();
-      
+
       const populated = await Notification.populate(notification, [
         { path: 'sender', select: 'nom photo' },
-        { path: 'post', select: 'content' }
+        { path: 'post', select: 'content' },
+        { path: 'appointment', select: 'time type status' }
       ]);
 
       if (io && typeof io.to === 'function') {
+        console.log(`🔔 Emitting notification to room: ${recipientId.toString()}`);
+        console.log(`📧 Notification type: ${type}`);
+        console.log(`👤 Sender: ${senderId.toString()}`);
         io.to(recipientId.toString())
           .emit('new_notification', populated);
+        console.log(`✅ Notification emitted successfully`);
       } else {
-        console.warn('Socket.IO non disponible pour notification');
+        console.warn('⚠️ Socket.IO non disponible pour notification');
+        console.warn('io object:', io);
+        console.warn('io.to function:', typeof io?.to);
       }
 
       return populated;
@@ -69,16 +84,18 @@ export class NotificationService {
 export const createNotification = (
   recipientId: Types.ObjectId,
   senderId: Types.ObjectId,
-  type: 'like' | 'comment' | 'reply',
-  postId: string,
+  type: 'like' | 'comment' | 'reply' | 'appointment_request' | 'appointment_confirmed' | 'appointment_cancelled',
+  postId: string | undefined, // Make optional
   metadata: any,
-  io?: any
+  io?: any,
+  appointmentId?: string // Add optional param
 ): Promise<INotification | null> => {
   return NotificationService.createNotification({
     recipientId,
     senderId,
     type,
     postId,
+    appointmentId,
     metadata,
     io
   });

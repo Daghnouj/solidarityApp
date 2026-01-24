@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { INotification } from './notification.types';
 
 const notificationSchema = new Schema({
-  recipient: { 
+  recipient: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -14,13 +14,18 @@ const notificationSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ['like', 'comment', 'reply'],
+    enum: ['like', 'comment', 'reply', 'appointment_request', 'appointment_confirmed', 'appointment_cancelled'],
     required: true
   },
   post: {
     type: Schema.Types.ObjectId,
     ref: 'Post',
-    required: true
+    required: false
+  },
+  appointment: {
+    type: Schema.Types.ObjectId,
+    ref: 'Appointment',
+    required: false
   },
   read: {
     type: Boolean,

@@ -35,7 +35,7 @@ initSocket(io);
 import { setIOInstance } from "./src/socket";
 setIOInstance(io);
 
-// Make io instance globally accessible
+// Make io instance globally accessible to app
 app.set('io', io);
 
 

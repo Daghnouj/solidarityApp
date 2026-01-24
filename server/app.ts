@@ -19,6 +19,7 @@ import availabilityRoutes from "./src/availability/availability.routes";
 import favoritesRoutes from "./src/community/favorites/favorites.routes";
 import professionnelRouter from "./src/professional/professional.routes";
 import appointmentRoutes from "./src/appointment/appointment.routes";
+import notificationRoutes from "./src/community/notification/notification.routes";
 import { authLimiter, basicSecurity, generalLimiter, noSqlInjectionMiddleware } from "./middlewares/security";
 import { requestLogger } from "./middlewares/logger";
 import { notFoundHandler, errorHandler } from "./middlewares/errorHandler";
@@ -53,6 +54,12 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // 🚫 5. Protection NoSQL (APRES les body parsers)
 app.use(noSqlInjectionMiddleware);
 
+// 🔌 5.5. Attach Socket.IO to requests (will be set by server.ts)
+app.use((req: any, res, next) => {
+  req.io = app.get('io');
+  next();
+});
+
 // 🛡️ 6. Rate limiting
 app.use("/api/auth/", authLimiter);
 app.use("/api/", generalLimiter);
@@ -77,6 +84,7 @@ app.use('/api/community', commentRoutes);
 app.use('/api/community/favorites', favoritesRoutes);
 app.use('/api/availabilities', availabilityRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/community/notifications', notificationRoutes);
 // 🏠 8. Route de test  
 app.get("/", (req: Request, res: Response) => {
   res.json({

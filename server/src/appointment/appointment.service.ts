@@ -2,6 +2,7 @@ import { Appointment, IAppointment } from './appointment.model';
 import { Types } from 'mongoose';
 import { Server } from 'socket.io';
 import User from '../user/user.model';
+import { NotificationService } from '../community/notification/notification.service';
 
 export class AppointmentService {
 
@@ -12,29 +13,33 @@ export class AppointmentService {
         });
         const savedAppointment = await appointment.save();
 
-        // Notify Professional via Socket.IO
-        if (io) {
-            try {
-                const patient = await User.findById(patientId).select('nom photo');
-                const professionalId = data.professional?.toString();
+        // Notify Professional via Socket.IO AND Persistent Notification
+        try {
+            const appointmentId = savedAppointment._id.toString();
+            const professionalId = data.professional?.toString();
 
-                if (professionalId && patient) {
-                    // Emit to specific professional room (assuming room name is user ID)
-                    io.to(professionalId).emit('notification', {
-                        type: 'appointment_request',
-                        title: 'New Appointment Request',
-                        message: `You have a new request from ${patient.nom}`,
-                        data: {
-                            appointmentId: savedAppointment._id,
-                            patientName: patient.nom,
-                            patientPhoto: patient.photo,
-                            time: savedAppointment.time
-                        }
-                    });
-                }
-            } catch (err) {
-                console.error('Socket notification error:', err);
+            console.log('📅 Creating appointment notification...');
+            console.log('Professional ID:', professionalId);
+            console.log('Patient ID:', patientId);
+            console.log('io available:', !!io);
+
+            if (professionalId) {
+                // Create persistent notification
+                await NotificationService.createNotification({
+                    recipientId: new Types.ObjectId(professionalId),
+                    senderId: new Types.ObjectId(patientId),
+                    type: 'appointment_request',
+                    postId: undefined,
+                    appointmentId: appointmentId,
+                    metadata: {
+                        message: 'New Appointment Request'
+                    },
+                    io: io
+                });
+                console.log('✅ Appointment notification created');
             }
+        } catch (err) {
+            console.error('❌ Notification error:', err);
         }
 
         return savedAppointment;
