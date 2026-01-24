@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
-import { 
-  Search, 
-  Filter, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Search,
+  Filter,
+  CheckCircle,
+  XCircle,
   Eye,
   Clock,
   Calendar,
@@ -39,6 +39,15 @@ interface BackendRequest {
     rejection_reason?: string;
     dateNaissance?: string;
     adresse?: string;
+    // New fields mapped from backend
+    bio?: string;
+    gender?: string;
+    licenseNumber?: string;
+    languages?: string[];
+    education?: { degree: string; field: string; school: string; year: string }[];
+    services?: { name: string; price: string; duration: string }[];
+    clinicName?: string;
+    clinicAddress?: string;
   };
   specialite: string;
   situation_professionnelle?: string;
@@ -64,6 +73,15 @@ interface Request {
     id: string;
     dateNaissance?: string;
     adresse?: string;
+    // New fields
+    bio?: string;
+    gender?: string;
+    licenseNumber?: string;
+    languages?: string[];
+    education?: { degree: string; field: string; school: string; year: string }[];
+    services?: { name: string; price: string; duration: string }[];
+    clinicName?: string;
+    clinicAddress?: string;
   };
   type: 'therapist' | 'center' | 'user';
   submittedDate: string;
@@ -95,7 +113,7 @@ const RequestsPage: React.FC = () => {
   const mapBackendToFrontend = (backendRequest: BackendRequest): Request => {
     const professional = backendRequest.professional;
     const avatar = professional.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${professional.nom}`;
-    
+
     // Déterminer le statut - priorité à verification_status, puis status, puis is_verified
     let status: 'pending' | 'approved' | 'rejected' = 'pending';
     if (backendRequest.status) {
@@ -107,15 +125,15 @@ const RequestsPage: React.FC = () => {
     } else {
       status = 'pending';
     }
-    
+
     // Documents
     const documents: string[] = [];
     if (backendRequest.document) {
       documents.push(backendRequest.document);
     }
-    
+
     // Description
-    const description = backendRequest.biographie || 
+    const description = backendRequest.biographie ||
       `Professionnel en ${backendRequest.specialite}${backendRequest.situation_professionnelle ? `. ${backendRequest.situation_professionnelle}` : ''}`;
 
     return {
@@ -127,7 +145,15 @@ const RequestsPage: React.FC = () => {
         avatar,
         id: professional._id,
         dateNaissance: professional.dateNaissance,
-        adresse: professional.adresse
+        adresse: professional.adresse,
+        bio: professional.bio,
+        gender: professional.gender,
+        licenseNumber: professional.licenseNumber,
+        languages: professional.languages,
+        education: professional.education,
+        services: professional.services,
+        clinicName: professional.clinicName,
+        clinicAddress: professional.clinicAddress
       },
       type: 'therapist',
       submittedDate: new Date(backendRequest.createdAt).toISOString().split('T')[0],
@@ -149,13 +175,13 @@ const RequestsPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       if (!API_BASE_URL) {
         throw new Error('API URL is not configured. Please check your .env file.');
       }
-      
+
       const adminToken = localStorage.getItem('adminToken');
-      
+
       const response = await fetch(`${API_BASE_URL}/admin/verification/all-requests`, {
         method: 'GET',
         headers: {
@@ -163,17 +189,17 @@ const RequestsPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to fetch requests: ${response.status} ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       // Convertir les données backend vers le format frontend
       const mappedRequests = data.requests.map(mapBackendToFrontend);
       setRequests(mappedRequests);
-      
+
     } catch (err: any) {
       console.error('Error fetching requests:', err);
       setError(err.message || 'Failed to load requests. Please try again.');
@@ -188,7 +214,7 @@ const RequestsPage: React.FC = () => {
     try {
       setError(null);
       const adminToken = localStorage.getItem('adminToken');
-      
+
       const response = await fetch(`${API_BASE_URL}/admin/verification/request/${requestId}`, {
         method: 'GET',
         headers: {
@@ -196,11 +222,11 @@ const RequestsPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch request details');
       }
-      
+
       const data = await response.json();
       const mappedRequest = mapBackendToFrontend(data.request);
       setSelectedRequest(mappedRequest);
@@ -220,9 +246,9 @@ const RequestsPage: React.FC = () => {
     try {
       setProcessingId(requestId);
       setError(null);
-      
+
       const adminToken = localStorage.getItem('adminToken');
-      
+
       const response = await fetch(`${API_BASE_URL}/admin/verification/verify/${professionalId}`, {
         method: 'PUT',
         headers: {
@@ -230,12 +256,12 @@ const RequestsPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to approve request');
       }
-      
+
       // Rafraîchir la liste
       await fetchRequests();
       alert('Request approved successfully!');
@@ -257,9 +283,9 @@ const RequestsPage: React.FC = () => {
     try {
       setProcessingId(requestId);
       setError(null);
-      
+
       const adminToken = localStorage.getItem('adminToken');
-      
+
       const response = await fetch(`${API_BASE_URL}/admin/verification/reject/${professionalId}`, {
         method: 'PUT',
         headers: {
@@ -268,12 +294,12 @@ const RequestsPage: React.FC = () => {
         },
         body: JSON.stringify({ reason: reason.trim() })
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to reject request');
       }
-      
+
       // Rafraîchir la liste
       await fetchRequests();
       alert('Request rejected successfully!');
@@ -290,12 +316,12 @@ const RequestsPage: React.FC = () => {
     try {
       setExportLoading(true);
       setError(null);
-      
+
       const adminToken = localStorage.getItem('adminToken');
-      const statusFilter = activeTab !== 'pending' && activeTab !== 'approved' && activeTab !== 'rejected' 
-        ? '' 
+      const statusFilter = activeTab !== 'pending' && activeTab !== 'approved' && activeTab !== 'rejected'
+        ? ''
         : `&status=${activeTab}`;
-      
+
       const response = await fetch(`${API_BASE_URL}/admin/verification/export?format=${format}${statusFilter}`, {
         method: 'GET',
         headers: {
@@ -303,18 +329,18 @@ const RequestsPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to export requests');
       }
 
       // Récupérer les données
       const data = await response.json();
-      
+
       // Créer le contenu selon le format
       let blob: Blob;
       let filename: string;
-      
+
       if (format === 'pdf') {
         // Pour PDF, créer un JSON formaté (peut être amélioré avec une bibliothèque PDF côté client)
         const content = JSON.stringify(data, null, 2);
@@ -326,7 +352,7 @@ const RequestsPage: React.FC = () => {
         blob = new Blob([content], { type: 'application/json' });
         filename = `requests-${activeTab}-${new Date().toISOString().split('T')[0]}.json`;
       }
-      
+
       // Télécharger le fichier
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -336,7 +362,7 @@ const RequestsPage: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       alert(`Requests exported successfully! (${data.totalRequests || data.requests?.length || 0} requests)`);
     } catch (err: any) {
       console.error('Error exporting requests:', err);
@@ -366,7 +392,7 @@ const RequestsPage: React.FC = () => {
   }, [exportMenuOpen]);
 
   const getTypeColor = (type: string) => {
-    switch(type) {
+    switch (type) {
       case 'therapist': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'center': return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'user': return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -394,7 +420,7 @@ const RequestsPage: React.FC = () => {
 
   const getFilteredRequests = () => {
     let filtered: Request[] = [];
-    switch(activeTab) {
+    switch (activeTab) {
       case 'pending':
         filtered = pendingRequests;
         break;
@@ -430,8 +456,8 @@ const RequestsPage: React.FC = () => {
           <p className="text-gray-600 text-sm md:text-base mt-1">Review and approve account activation requests</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             icon={<RefreshCw size={18} />}
             onClick={fetchRequests}
             disabled={loading}
@@ -439,9 +465,9 @@ const RequestsPage: React.FC = () => {
             Refresh
           </Button>
           <div className="relative">
-            <Button 
-              variant="ghost" 
-              icon={<Download size={18} />} 
+            <Button
+              variant="ghost"
+              icon={<Download size={18} />}
               disabled={exportLoading}
               onClick={() => setExportMenuOpen(!exportMenuOpen)}
             >
@@ -482,8 +508,8 @@ const RequestsPage: React.FC = () => {
         <div className="flex items-center gap-2 p-4 bg-red-50 border border-red-200 rounded-lg">
           <AlertCircle className="text-red-600" size={20} />
           <p className="text-red-600">{error}</p>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => setError(null)}
             className="ml-auto text-sm"
           >
@@ -540,16 +566,15 @@ const RequestsPage: React.FC = () => {
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
-                className={`flex-1 px-6 py-2.5 rounded-lg font-semibold transition-all ${
-                  activeTab === tab
+                className={`flex-1 px-6 py-2.5 rounded-lg font-semibold transition-all ${activeTab === tab
                     ? 'bg-white text-blue-900 shadow-md'
                     : 'text-gray-600 hover:text-blue-900'
-                }`}
+                  }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)} (
-                  {tab === 'pending' ? pendingRequests.length :
-                   tab === 'approved' ? approvedRequests.length :
-                   rejectedRequests.length}
+                {tab === 'pending' ? pendingRequests.length :
+                  tab === 'approved' ? approvedRequests.length :
+                    rejectedRequests.length}
                 )
               </button>
             ))}
@@ -615,9 +640,9 @@ const RequestsPage: React.FC = () => {
                           <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
                             <FileText size={14} className="text-blue-600" />
                             <span className="text-sm text-blue-900">{doc.split('/').pop() || doc}</span>
-                            <a 
-                              href={doc} 
-                              target="_blank" 
+                            <a
+                              href={doc}
+                              target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:text-blue-700"
                             >
@@ -638,18 +663,18 @@ const RequestsPage: React.FC = () => {
 
               {/* Actions */}
               <div className="flex lg:flex-col gap-2 lg:min-w-[200px]">
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   icon={<Eye size={18} />}
                   className="flex-1 lg:flex-none"
                   onClick={() => fetchRequestDetails(request.id)}
                 >
                   View Details
                 </Button>
-                
+
                 {request.status === 'pending' && (
                   <>
-                    <Button 
+                    <Button
                       variant="secondary"
                       icon={<CheckCircle size={18} />}
                       className="flex-1 lg:flex-none bg-green-600 hover:bg-green-700"
@@ -658,7 +683,7 @@ const RequestsPage: React.FC = () => {
                     >
                       {processingId === request.id ? 'Processing...' : 'Approve'}
                     </Button>
-                    <Button 
+                    <Button
                       variant="ghost"
                       icon={<XCircle size={18} />}
                       className="flex-1 lg:flex-none border-red-300 text-red-600 hover:bg-red-50"
@@ -699,7 +724,7 @@ const RequestsPage: React.FC = () => {
             {searchQuery ? 'No requests found' : `No ${activeTab} requests`}
           </h3>
           <p className="text-gray-500">
-            {searchQuery 
+            {searchQuery
               ? 'Try adjusting your search query.'
               : `There are no ${activeTab} requests at the moment.`}
           </p>
@@ -778,117 +803,91 @@ const RequestsPage: React.FC = () => {
               )}
 
               {/* Education */}
-              {(selectedRequest.intitule_diplome || selectedRequest.nom_etablissement || selectedRequest.date_obtention_diplome) && (
+              {(selectedRequest.intitule_diplome || selectedRequest.nom_etablissement || selectedRequest.date_obtention_diplome || (selectedRequest.applicant.education && selectedRequest.applicant.education.length > 0)) && (
                 <div>
                   <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                     <GraduationCap size={16} />
                     Education
                   </h4>
-                  <div className="space-y-1">
-                    {selectedRequest.intitule_diplome && (
-                      <p className="text-gray-900"><strong>Degree:</strong> {selectedRequest.intitule_diplome}</p>
+                  <div className="space-y-3">
+                    {/* Request Education Data */}
+                    {(selectedRequest.intitule_diplome || selectedRequest.nom_etablissement) && (
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <p className="font-semibold text-sm text-gray-800">Initial Request Data:</p>
+                        {selectedRequest.intitule_diplome && <p className="text-gray-900 text-sm"><strong>Degree:</strong> {selectedRequest.intitule_diplome}</p>}
+                        {selectedRequest.nom_etablissement && <p className="text-gray-900 text-sm"><strong>Institution:</strong> {selectedRequest.nom_etablissement}</p>}
+                        {selectedRequest.date_obtention_diplome && <p className="text-gray-900 text-sm"><strong>Date:</strong> {new Date(selectedRequest.date_obtention_diplome).toLocaleDateString()}</p>}
+                      </div>
                     )}
-                    {selectedRequest.nom_etablissement && (
-                      <p className="text-gray-900"><strong>Institution:</strong> {selectedRequest.nom_etablissement}</p>
+
+                    {/* User Profile Education Data */}
+                    {selectedRequest.applicant.education?.map((edu, idx) => (
+                      <div key={idx} className="p-3 bg-blue-50 rounded-lg">
+                        <p className="text-gray-900 font-bold">{edu.degree} in {edu.field}</p>
+                        <p className="text-sm text-gray-600">{edu.school} • {edu.year}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Clinic & Services (New Section) */}
+              {(selectedRequest.applicant.clinicName || (selectedRequest.applicant.services && selectedRequest.applicant.services.length > 0)) && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Clinic & Services</h4>
+                  <div className="p-4 bg-gray-50 rounded-xl space-y-4">
+                    {selectedRequest.applicant.clinicName && (
+                      <div>
+                        <p className="font-bold text-gray-900">{selectedRequest.applicant.clinicName}</p>
+                        <p className="text-sm text-gray-600 flex items-center gap-1"><MapPin size={12} /> {selectedRequest.applicant.clinicAddress || 'Address not provided'}</p>
+                      </div>
                     )}
-                    {selectedRequest.date_obtention_diplome && (
-                      <p className="text-gray-900"><strong>Date:</strong> {new Date(selectedRequest.date_obtention_diplome).toLocaleDateString()}</p>
+
+                    {selectedRequest.applicant.services && selectedRequest.applicant.services.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold text-gray-500 uppercase">Services:</p>
+                        {selectedRequest.applicant.services.map((svc, idx) => (
+                          <div key={idx} className="flex justify-between text-sm border-b border-gray-200 last:border-0 pb-1 last:pb-0">
+                            <span>{svc.name} <span className="text-gray-400 text-xs">({svc.duration})</span></span>
+                            <span className="font-semibold">{svc.price}</span>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </div>
               )}
 
-              {/* Services */}
-              {selectedRequest.services && selectedRequest.services.length > 0 && (
+              {/* Languages (New Section) */}
+              {selectedRequest.applicant.languages && selectedRequest.applicant.languages.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Services</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Languages</h4>
                   <div className="flex flex-wrap gap-2">
-                    {selectedRequest.services.map((service, idx) => (
-                      <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                        {service}
+                    {selectedRequest.applicant.languages.map((lang, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm font-medium">
+                        {lang}
                       </span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Documents */}
-              {selectedRequest.documents.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Attached Documents</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedRequest.documents.map((doc, idx) => (
-                      <a
-                        key={idx}
-                        href={doc}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
-                      >
-                        <FileText size={16} className="text-blue-600" />
-                        <span className="text-sm text-blue-900">{doc.split('/').pop() || doc}</span>
-                        <Download size={14} className="text-blue-600" />
-                      </a>
-                    ))}
+              {/* Additional Info */}
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {selectedRequest.applicant.gender && (
+                  <div>
+                    <span className="text-gray-500 block">Gender</span>
+                    <span className="font-medium">{selectedRequest.applicant.gender}</span>
                   </div>
-                </div>
-              )}
-
-              {/* Dates */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-1">Submitted</h4>
-                  <p className="text-gray-600">{new Date(selectedRequest.submittedDate).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-1">Status</h4>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    selectedRequest.status === 'approved' ? 'bg-green-100 text-green-700' :
-                    selectedRequest.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                    'bg-orange-100 text-orange-700'
-                  }`}>
-                    {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
-                  </span>
-                </div>
+                )}
+                {selectedRequest.applicant.licenseNumber && (
+                  <div>
+                    <span className="text-gray-500 block">License Number</span>
+                    <span className="font-medium text-orange-600">{selectedRequest.applicant.licenseNumber}</span>
+                  </div>
+                )}
               </div>
-            </div>
 
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setDetailsModalOpen(false);
-                  setSelectedRequest(null);
-                }}
-              >
-                Close
-              </Button>
-              {selectedRequest.status === 'pending' && (
-                <>
-                  <Button
-                    variant="secondary"
-                    icon={<CheckCircle size={18} />}
-                    className="bg-green-600 hover:bg-green-700"
-                    onClick={() => {
-                      handleApprove(selectedRequest.professionalId, selectedRequest.id);
-                      setDetailsModalOpen(false);
-                    }}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    icon={<XCircle size={18} />}
-                    className="border-red-300 text-red-600 hover:bg-red-50"
-                    onClick={() => {
-                      handleReject(selectedRequest.professionalId, selectedRequest.id);
-                      setDetailsModalOpen(false);
-                    }}
-                  >
-                    Reject
-                  </Button>
-                </>
-              )}
             </div>
           </div>
         </div>

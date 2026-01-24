@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const ForgotPasswordForm: React.FC = () => {
   const { forgotPassword, verifyOtp, loading, error } = useAuth();
+  const navigate = useNavigate();
 
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
@@ -20,9 +22,8 @@ const ForgotPasswordForm: React.FC = () => {
     e.preventDefault();
     try {
       await verifyOtp(otp); // backend verification
-      // Redirect to reset password page here, or let the parent handle it
-      // For now, assume global state update is enough, but typically we route:
-      window.location.href = "/resetpass";
+      // Redirect to reset password page using navigate to preserve REDUX state
+      navigate("/resetpass");
     } catch { }
   };
 

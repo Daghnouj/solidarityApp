@@ -2,9 +2,11 @@ import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import logo from "../assets/logo.png";
 import UserProfileDropdown from "./UserProfileDropdown";
+import { useAuth } from "../pages/auth/hooks/useAuth";
 
 const Header = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(true); // change to false to test guest view
+  const { user, logout } = useAuth();
+  const isLoggedIn = !!user;
   const [menuOpen, setMenuOpen] = useState(false);
   const [solidarityOpen, setSolidarityOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
@@ -12,7 +14,7 @@ const Header = () => {
   const [messagesOpen, setMessagesOpen] = useState(false);
 
   const handleLogout = () => {
-    setIsLoggedIn(false);
+    logout();
   };
 
   // Mock data for notifications and messages
@@ -23,9 +25,9 @@ const Header = () => {
   ];
 
   const messages = [
-    { id: 1, sender: "Dr. Sarah Johnson", preview: "Hello, regarding your appointment tomorrow...", time: "2 min ago" },
-    { id: 2, sender: "Support Team", preview: "Your account has been verified", time: "1 day ago" },
-    { id: 3, sender: "Community Admin", preview: "Welcome to the community!", time: "3 days ago" },
+    { id: 1, sender: "Dr. Sarah Johnson", preview: "Hello, regarding your appointment tomorrow...", time: "2 min ago", read: false },
+    { id: 2, sender: "Support Team", preview: "Your account has been verified", time: "1 day ago", read: true },
+    { id: 3, sender: "Community Admin", preview: "Welcome to the community!", time: "3 days ago", read: false },
   ];
 
   const unreadNotifications = notifications.filter(n => !n.read).length;

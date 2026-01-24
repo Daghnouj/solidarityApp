@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
-import { 
-  Search, 
+import {
+  Search,
   Plus,
   Upload,
   Trash2,
@@ -124,7 +124,7 @@ const GalleryPage: React.FC = () => {
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         setBackendItems(data.data);
         // Map backend items to frontend format
@@ -141,7 +141,7 @@ const GalleryPage: React.FC = () => {
           description: item.desc,
           views: item.views
         }));
-        
+
         setGalleryItems(mappedItems);
       } else {
         setGalleryItems([]);
@@ -177,13 +177,13 @@ const GalleryPage: React.FC = () => {
   // Filter gallery items
   const getFilteredItems = () => {
     return galleryItems.filter(item => {
-      const matchesSearch = !searchQuery || 
+      const matchesSearch = !searchQuery ||
         item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+
       const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-      
+
       return matchesSearch && matchesCategory;
     });
   };
@@ -332,7 +332,7 @@ const GalleryPage: React.FC = () => {
   };
 
   const getCategoryColor = (category: string) => {
-    switch(category) {
+    switch (category) {
       case 'events': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'centers': return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'activities': return 'bg-teal-100 text-teal-700 border-teal-200';
@@ -361,9 +361,9 @@ const GalleryPage: React.FC = () => {
           <p className="text-gray-600 text-sm md:text-base mt-1">Manage platform images and media content</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            icon={<RefreshCw size={18} />} 
+          <Button
+            variant="ghost"
+            icon={<RefreshCw size={18} />}
             onClick={fetchGalleryItems}
           >
             Refresh
@@ -421,7 +421,7 @@ const GalleryPage: React.FC = () => {
           </div>
 
           {/* Category Filter */}
-          <select 
+          <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500"
@@ -437,21 +437,19 @@ const GalleryPage: React.FC = () => {
           <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-all ${
-                viewMode === 'grid' 
-                  ? 'bg-white text-blue-900 shadow-md' 
-                  : 'text-gray-600'
-              }`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'grid'
+                ? 'bg-white text-blue-900 shadow-md'
+                : 'text-gray-600'
+                }`}
             >
               <Grid size={20} />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-all ${
-                viewMode === 'list' 
-                  ? 'bg-white text-blue-900 shadow-md' 
-                  : 'text-gray-600'
-              }`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'list'
+                ? 'bg-white text-blue-900 shadow-md'
+                : 'text-gray-600'
+                }`}
             >
               <List size={20} />
             </button>
@@ -470,8 +468,8 @@ const GalleryPage: React.FC = () => {
             <Card key={item.id} hover className="overflow-hidden group">
               {/* Image */}
               <div className="relative h-64 bg-gray-200 overflow-hidden">
-                <img 
-                  src={item.imageUrl} 
+                <img
+                  src={item.imageUrl}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   onError={(e) => {
@@ -480,20 +478,20 @@ const GalleryPage: React.FC = () => {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <div className="absolute bottom-4 left-4 right-4 flex gap-2">
-                    <button 
+                    <button
                       onClick={() => handleView(item)}
                       className="flex-1 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-lg text-sm font-semibold text-blue-900 hover:bg-white transition-colors flex items-center justify-center gap-2"
                     >
                       <Eye size={16} />
                       View
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDownload(item)}
                       className="px-3 py-2 bg-white/90 backdrop-blur-sm rounded-lg text-blue-900 hover:bg-white transition-colors"
                     >
                       <Download size={16} />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDeleteClick(item.id)}
                       className="px-3 py-2 bg-white/90 backdrop-blur-sm rounded-lg text-red-600 hover:bg-white transition-colors"
                     >
@@ -519,7 +517,7 @@ const GalleryPage: React.FC = () => {
               {/* Info */}
               <div className="p-4">
                 <h3 className="font-bold text-blue-900 mb-2 line-clamp-1">{item.title}</h3>
-                
+
                 <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
                   <Calendar size={12} className="text-teal-600" />
                   <span>{new Date(item.uploadDate).toLocaleDateString()}</span>
@@ -555,8 +553,8 @@ const GalleryPage: React.FC = () => {
               <div className="flex gap-6">
                 {/* Thumbnail */}
                 <div className="w-32 h-32 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 relative">
-                  <img 
-                    src={item.imageUrl} 
+                  <img
+                    src={item.imageUrl}
                     alt={item.title}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -643,8 +641,8 @@ const GalleryPage: React.FC = () => {
           </div>
           <h3 className="text-xl font-bold text-gray-700 mb-2">No images found</h3>
           <p className="text-gray-500 mb-6">
-            {galleryItems.length === 0 
-              ? 'Upload your first image to get started' 
+            {galleryItems.length === 0
+              ? 'Upload your first image to get started'
               : 'No images match your search criteria'}
           </p>
           {galleryItems.length === 0 && (

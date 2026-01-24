@@ -59,6 +59,10 @@ const AuthService = {
       email: credentials.email,
       mdp: credentials.password
     });
+    // Map backend 'nom' to frontend 'name'
+    if (response.data.user && response.data.user.nom) {
+      response.data.user.name = response.data.user.nom;
+    }
     return response.data;
   },
 
@@ -72,6 +76,10 @@ const AuthService = {
     const response = await axios.get(`${API_URL}/me`, {
       headers: getAuthHeaders()
     });
+    // Map backend 'nom' to frontend 'name'
+    if (response.data && response.data.nom) {
+      response.data.name = response.data.nom;
+    }
     return response.data;
   },
 

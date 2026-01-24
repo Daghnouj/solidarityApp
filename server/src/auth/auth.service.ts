@@ -4,34 +4,34 @@ import jwt from "jsonwebtoken";
 import { Server } from "socket.io";
 import User from "../user/user.model";
 import Request from "../request/request.model";
-import { 
-  SignupData, 
-  LoginData, 
+import {
+  SignupData,
+  LoginData,
   AuthResponse,
-  RequestData 
+  RequestData
 } from "./auth.types";
 import { CloudinaryFile } from "../../config/cloudinary/cloudinary.types";
 import { env } from "../../config/env";
 import { AdminNotificationService } from "../admin/adminNotification/adminNotification.service";
 
 class AuthService {
- async signup(userData: SignupData, file: CloudinaryFile | null = null, io?: Server | null): Promise<AuthResponse> {
+  async signup(userData: SignupData, file: CloudinaryFile | null = null, io?: Server | null): Promise<AuthResponse> {
     console.log('📨 Données reçues dans le service:', userData);
-    
-    const { 
-      nom, 
-      email, 
-      mdp, 
-      dateNaissance, 
-      adresse, 
-      telephone, 
+
+    const {
+      nom,
+      email,
+      mdp,
+      dateNaissance,
+      adresse,
+      telephone,
       role = 'patient', // ✅ Défaut explicite
       specialite,
-      situation_professionnelle, 
-      intitule_diplome, 
-      nom_etablissement, 
-      date_obtention_diplome, 
-      biographie 
+      situation_professionnelle,
+      intitule_diplome,
+      nom_etablissement,
+      date_obtention_diplome,
+      biographie
     } = userData;
 
     // Validation des champs requis (role n'est plus obligatoire)
@@ -51,15 +51,15 @@ class AuthService {
 
     // Hash du mot de passe
     const hashedPassword = await bcrypt.hash(mdp, 12);
-    
+
     // Création de l'utilisateur
     const userPayload: any = {
-      nom, 
-      email, 
-      mdp: hashedPassword, 
-      dateNaissance: dateNaissance ? new Date(dateNaissance) : undefined, 
-      adresse, 
-      telephone, 
+      nom,
+      email,
+      mdp: hashedPassword,
+      dateNaissance: dateNaissance ? new Date(dateNaissance) : undefined,
+      adresse,
+      telephone,
       role, // ✅ Toujours défini maintenant
       is_verified: role === "professional" ? false : true,
     };
@@ -114,31 +114,31 @@ class AuthService {
         biographie,
         document: documentUrl
       });
-      
+
       await requestDoc.save();
-      
-      return { 
+
+      return {
         success: true,
         message: "Demande soumise avec succès, en attente de validation.",
         userType: 'professional'
-      }; 
+      };
     }
 
-    return { 
+    return {
       success: true,
       message: "Compte patient créé avec succès !",
       userType: 'patient'
     };
   }
-  async login(loginData: LoginData, io?: Server | null): Promise<{ 
-    success: boolean; 
-    token: string; 
-    role: string; 
+  async login(loginData: LoginData, io?: Server | null): Promise<{
+    success: boolean;
+    token: string;
+    role: string;
     user: any;
     message?: string;
   }> {
     const { email, mdp, reactivate } = loginData;
-    
+
     if (!email || !mdp) {
       throw new Error("Email et mot de passe requis.");
     }
@@ -152,16 +152,16 @@ class AuthService {
     if (!user.isActive) {
       const twoMonthsAgo = new Date();
       twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
-      
+
       if (user.deactivatedAt && user.deactivatedAt > twoMonthsAgo) {
         if (reactivate) {
           user.isActive = true;
           user.deactivatedAt = undefined;
           await user.save();
         } else {
-          throw { 
-            message: "Votre compte est désactivé. Souhaitez-vous le réactiver ?", 
-            canReactivate: true 
+          throw {
+            message: "Votre compte est désactivé. Souhaitez-vous le réactiver ?",
+            canReactivate: true
           };
         }
       } else {
@@ -186,60 +186,41 @@ class AuthService {
 
     // Génération du token
     const token = jwt.sign(
-      { id: user._id, role: user.role }, 
-      env.JWT_SECRET, 
+      { id: user._id, role: user.role },
+      env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
     // Mise à jour des informations de connexion
-    await User.findByIdAndUpdate(user._id, { 
-      lastLogin: new Date(), 
-      isOnline: true 
+    await User.findByIdAndUpdate(user._id, {
+      lastLogin: new Date(),
+      isOnline: true
     });
 
     // Retour des informations sans le mot de passe
     const userWithoutPassword = await User.findById(user._id).select('-mdp');
 
-    // Emit admin notification for user login
-    if (io) {
-      try {
-        await AdminNotificationService.createNotification({
-          type: 'user_login',
-          title: 'Utilisateur connecté',
-          message: `${user.nom} (${user.email}) s'est connecté`,
-          data: {
-            userId: user._id.toString(),
-            userName: user.nom,
-            userEmail: user.email,
-            userRole: user.role
-          },
-          io
-        });
-      } catch (notifError) {
-        console.error('Error creating admin notification for login:', notifError);
-        // Don't fail the login if notification fails
-      }
-    }
+    // Admin notification for user login removed as per request
 
-    return { 
+    return {
       success: true,
-      token, 
+      token,
       role: user.role,
       user: userWithoutPassword
     };
   }
 
-  async submitRequest(requestData: RequestData, userId: string, file: CloudinaryFile | null = null, io?: Server | null): Promise<{ 
+  async submitRequest(requestData: RequestData, userId: string, file: CloudinaryFile | null = null, io?: Server | null): Promise<{
     success: boolean;
     message: string;
   }> {
-    const { 
-      specialite, 
-      situation_professionnelle, 
-      intitule_diplome, 
-      nom_etablissement, 
-      date_obtention_diplome, 
-      biographie 
+    const {
+      specialite,
+      situation_professionnelle,
+      intitule_diplome,
+      nom_etablissement,
+      date_obtention_diplome,
+      biographie
     } = requestData;
 
     // Validation des champs requis
@@ -250,7 +231,7 @@ class AuthService {
     const user = await User.findById(userId);
     if (!user || user.role !== "professional") {
       throw new Error("Seuls les professionnels peuvent soumettre une demande.");
-    }  
+    }
 
     // Vérification des demandes existantes
     const existingRequest = await Request.findOne({ professional: userId });
@@ -277,53 +258,30 @@ class AuthService {
 
     await requestDoc.save();
 
-    // Emit admin notification for verification request submission
-    if (io) {
-      try {
-        const user = await User.findById(userId);
-        if (user) {
-          await AdminNotificationService.createNotification({
-            type: 'verification_request',
-            title: 'Nouvelle demande de vérification',
-            message: `${user.nom} (${user.email}) a soumis une demande de vérification professionnelle`,
-            data: {
-              requestId: requestDoc._id.toString(),
-              professionalId: userId,
-              professionalName: user.nom,
-              professionalEmail: user.email,
-              specialite: specialite
-            },
-            io
-          });
-        }
-      } catch (notifError) {
-        console.error('Error creating admin notification for verification request:', notifError);
-        // Don't fail the request submission if notification fails
-      }
-    }
-    
-    return { 
+    // Admin notification for verification request removed as per request
+
+    return {
       success: true,
-      message: "Demande soumise avec succès, en attente de validation par l'administrateur." 
+      message: "Demande soumise avec succès, en attente de validation par l'administrateur."
     };
   }
 
-  async logout(userId: string): Promise<{ 
+  async logout(userId: string): Promise<{
     success: boolean;
     message: string;
   }> {
     await User.findByIdAndUpdate(
       userId,
-      { 
-        isOnline: false, 
-        lastLogin: new Date() 
+      {
+        isOnline: false,
+        lastLogin: new Date()
       },
       { new: true }
     );
-    
-    return { 
+
+    return {
       success: true,
-      message: "Déconnexion réussie" 
+      message: "Déconnexion réussie"
     };
   }
 
@@ -331,11 +289,11 @@ class AuthService {
     const user = await User.findById(userId)
       .select('-mdp -__v')
       .lean();
-      
+
     if (!user) {
       throw new Error("Utilisateur non trouvé");
     }
-    
+
     return {
       ...user,
       _id: user._id.toString()

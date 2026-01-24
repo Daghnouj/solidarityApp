@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Bell, 
+import {
+  Bell,
   AlertCircle,
   Check,
   X,
@@ -15,7 +15,7 @@ import {
 import { useAdminNotifications } from '../../hooks/useAdminNotifications';
 import type { AdminNotification } from '../../services/adminNotification.service';
 
-interface NotificationsMenuProps {}
+interface NotificationsMenuProps { }
 
 const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -68,7 +68,7 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
       case 'user_signup':
         return notification.data.userId ? `/admin/users?userId=${notification.data.userId}` : undefined;
       case 'contact_request':
-        return notification.data.contactId ? `/admin/contacts?contactId=${notification.data.contactId}` : '/admin/contacts';
+        return undefined;
       case 'verification_request':
       case 'verification_update':
         return notification.data.requestId ? `/admin/requests?requestId=${notification.data.requestId}` : '/admin/requests';
@@ -116,7 +116,7 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
         className="relative p-2.5 rounded-xl bg-gray-100 hover:bg-orange-50 hover:text-orange-600 transition-all duration-300 group"
       >
         <Bell size={20} className="text-blue-900 group-hover:text-orange-600 transition-colors" />
-        
+
         {/* Unread Badge */}
         {unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse shadow-lg">
@@ -190,9 +190,8 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
                   return (
                     <div
                       key={notificationId}
-                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer group relative ${
-                        !notification.read ? 'bg-blue-50/30' : ''
-                      }`}
+                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer group relative ${!notification.read ? 'bg-blue-50/30' : ''
+                        }`}
                     >
                       <div className="flex gap-3">
                         {/* Icon */}
@@ -267,18 +266,7 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
             )}
           </div>
 
-          {/* Footer */}
-          <div className="border-t border-gray-200 p-3 bg-gray-50 flex gap-2">
-            <a
-              href="/notifications"
-              className="flex-1 py-2.5 px-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl font-semibold hover:from-orange-600 hover:to-orange-700 transition-all text-center text-sm shadow-md hover:shadow-lg"
-            >
-              View All
-            </a>
-            <button className="p-2.5 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-100 transition-colors">
-              <SettingsIcon size={18} className="text-gray-600" />
-            </button>
-          </div>
+
         </div>
       )}
 

@@ -137,7 +137,16 @@ export class VerificationController {
             role: professional.role,
             is_verified: professional.is_verified,
             verification_status: professional.verification_status || (professional.is_verified ? 'approved' : 'pending'),
-            rejection_reason: professional.rejection_reason
+            rejection_reason: professional.rejection_reason,
+            // New profile fields
+            bio: professional.bio,
+            gender: professional.gender,
+            licenseNumber: professional.licenseNumber,
+            languages: professional.languages,
+            education: professional.education,
+            services: professional.services,
+            clinicName: professional.clinicName,
+            clinicAddress: professional.clinicAddress
           },
           specialite: request.specialite,
           situation_professionnelle: request.situation_professionnelle,
@@ -200,7 +209,16 @@ export class VerificationController {
           verification_status: professional.verification_status || (professional.is_verified ? 'approved' : 'pending'),
           rejection_reason: professional.rejection_reason,
           dateNaissance: professional.dateNaissance,
-          adresse: professional.adresse
+          adresse: professional.adresse,
+          // New profile fields
+          bio: professional.bio,
+          gender: professional.gender,
+          licenseNumber: professional.licenseNumber,
+          languages: professional.languages,
+          education: professional.education,
+          services: professional.services,
+          clinicName: professional.clinicName,
+          clinicAddress: professional.clinicAddress
         },
         specialite: request.specialite,
         situation_professionnelle: request.situation_professionnelle,
@@ -264,6 +282,10 @@ export class VerificationController {
           professionalEmail: professional.email,
           professionalPhone: professional.telephone || 'N/A',
           professionalAddress: professional.adresse || 'N/A',
+          clinicName: professional.clinicName || 'N/A',
+          clinicAddress: professional.clinicAddress || 'N/A',
+          licenseNumber: professional.licenseNumber || 'N/A',
+          gender: professional.gender || 'N/A',
           specialite: request.specialite,
           situation_professionnelle: request.situation_professionnelle || 'N/A',
           intitule_diplome: request.intitule_diplome || 'N/A',
