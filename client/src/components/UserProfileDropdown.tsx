@@ -1,16 +1,16 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../pages/auth/hooks/useAuth";
-
-const defaultUserIcon = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%236c757d'%3E%3Cpath d='M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-5.523 0-10 4.477-10 10h20c0-5.523-4.477-10-10-10z'/%3E%3C/svg%3E";
+import { User, LogOut, ChevronDown, LayoutDashboard } from "lucide-react";
 
 const UserProfileDropdown = ({ onLogout }: { onLogout: () => void }) => {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const displayName = user?.name || "User";
   const displayEmail = user?.email || "";
-  const displayPhoto = user?.profilePicture || defaultUserIcon;
+  const displayPhoto = user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
 
   // Determine profile link based on role
   const getProfileLink = () => {
@@ -19,42 +19,88 @@ const UserProfileDropdown = ({ onLogout }: { onLogout: () => void }) => {
     return '/dashboard/user/profile';
   };
 
+  const getDashboardLink = () => {
+    if (user?.role === 'admin') return '/admin';
+    if (user?.role === 'professional' || user?.isProfessional) return '/dashboard/professional';
+    return '/dashboard/user';
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className="relative ml-3">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center focus:outline-none"
+        className="flex items-center gap-2 p-1 rounded-xl hover:bg-gray-100 transition-all duration-300 focus:outline-none"
       >
         <img
           src={displayPhoto}
           alt="Profile"
-          className="w-12 h-12 rounded-full border-2 border-white shadow-sm object-cover bg-gray-100"
+          className="w-10 h-10 rounded-full border-2 border-orange-500 object-cover"
         />
+        <ChevronDown size={16} className={`text-gray-500 transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-56 bg-white border rounded-lg shadow-lg z-50 animate-fadeIn">
-          <div className="px-4 py-2">
-            <p className="font-semibold text-gray-800">{displayName}</p>
-            <p className="text-sm text-gray-500 truncate">{displayEmail}</p>
+        <div className="absolute right-0 mt-2 w-60 bg-white border border-gray-100 rounded-xl shadow-xl z-50 animate-fadeIn overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+            <p className="font-bold text-gray-900 truncate">{displayName}</p>
+            <p className="text-xs text-gray-500 truncate">{displayEmail}</p>
           </div>
-          <hr className="my-1 border-gray-200" />
 
-          <NavLink
-            to={getProfileLink()}
-            className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-          >
-            View Profile
-          </NavLink>
+          <div className="p-1">
+            <NavLink
+              to={getDashboardLink()}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
+            >
+              <LayoutDashboard size={18} />
+              Dashboard
+            </NavLink>
 
-          <button
-            onClick={onLogout}
-            className="w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600"
-          >
-            Logout
-          </button>
+            <NavLink
+              to={getProfileLink()}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-blue-600 rounded-lg transition-colors"
+            >
+              <User size={18} />
+              View Profile
+            </NavLink>
+
+            <button
+              onClick={() => {
+                onLogout();
+                setOpen(false);
+              }}
+              className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left"
+            >
+              <LogOut size={18} />
+              Sign Out
+            </button>
+          </div>
         </div>
       )}
+      <style>{`
+          @keyframes fadeIn {
+              from { opacity: 0; transform: translateY(-8px); }
+              to { opacity: 1; transform: translateY(0); }
+          }
+          .animate-fadeIn {
+              animation: fadeIn 0.2s ease-out forwards;
+          }
+      `}</style>
     </div>
   );
 };
