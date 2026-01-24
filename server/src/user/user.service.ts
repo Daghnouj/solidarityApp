@@ -1,15 +1,16 @@
 import { Types } from "mongoose";
 import bcrypt from "bcryptjs";
 import User from "./user.model";
+import Request from "../request/request.model";
 import { UserDocument } from "./user.types";
 import { cloudinary } from "../../config/cloudinary/cloudinary";
-import { 
-  UpdateProfileData, 
-  PasswordData, 
+import {
+  UpdateProfileData,
+  PasswordData,
   UpdatePhotoResponse,
   DeactivateResponse,
   ActivateResponse,
-  UserResponse   
+  UserResponse
 } from "./user.types";
 import { CloudinaryFile } from "../../config/cloudinary/cloudinary.types";
 
@@ -27,16 +28,35 @@ class UserService {
   }
 
   async updateProfile(userId: string, updateData: UpdateProfileData): Promise<UserDocument> {
-    const { email, nom, dateNaissance, adresse, telephone } = updateData;
-    
+    const {
+      email, nom, dateNaissance, adresse, telephone,
+      bio, gender, licenseNumber, languages, education, services, clinicName, clinicAddress
+    } = updateData;
+
     const user = await User.findByIdAndUpdate(
       userId,
-      { email, nom, dateNaissance, adresse, telephone },
+      {
+        email, nom, dateNaissance, adresse, telephone,
+        bio, gender, licenseNumber, languages, education, services, clinicName, clinicAddress
+      },
       { new: true }
     ).select("-mdp");
 
     if (!user) {
       throw new Error("Utilisateur non trouvé");
+    }
+
+    // Sync bio with Request biography if bio is updated
+    if (bio !== undefined) {
+      try {
+        await Request.findOneAndUpdate(
+          { professional: userId },
+          { biographie: bio }
+        );
+      } catch (error) {
+        console.error("Error syncing bio to request:", error);
+        // Don't fail the profile update if sync fails, just log it
+      }
     }
 
     return user;
@@ -68,16 +88,16 @@ class UserService {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
+
     await User.findByIdAndUpdate(
       userId,
       { mdp: hashedPassword },
       { runValidators: false, context: 'query' } as any
     );
 
-    return { 
-      success: true, 
-      message: "Mot de passe mis à jour avec succès." 
+    return {
+      success: true,
+      message: "Mot de passe mis à jour avec succès."
     };
   }
 
@@ -123,10 +143,10 @@ class UserService {
       throw new Error("Erreur lors de la mise à jour de la photo");
     }
 
-    return { 
+    return {
       success: true,
-      message: "Photo mise à jour", 
-      photo: updatedUser.photo || null 
+      message: "Photo mise à jour",
+      photo: updatedUser.photo || null
     };
   }
 
@@ -148,9 +168,9 @@ class UserService {
     }
 
     await User.findByIdAndDelete(userId);
-    return { 
+    return {
       success: true,
-      message: "Compte supprimé avec succès" 
+      message: "Compte supprimé avec succès"
     };
   }
 
@@ -158,26 +178,26 @@ class UserService {
     if (password) {
       const user = await User.findById(userId);
       if (!user) throw new Error("Utilisateur non trouvé");
-      
+
       const isMatch = await bcrypt.compare(password, user.mdp!);
       if (!isMatch) throw new Error("Mot de passe incorrect");
     }
-    
+
     const updatedUser = await User.findByIdAndUpdate(
-      userId, 
-      { 
+      userId,
+      {
         isActive: false,
         deactivatedAt: new Date(),
         isOnline: false
-      }, 
+      },
       { new: true }
     ).select("-mdp");
-    
+
     if (!updatedUser) throw new Error("Utilisateur non trouvé");
-    
-    return { 
+
+    return {
       success: true,
-      message: "Compte désactivé. Vous avez 2 mois pour le réactiver avant suppression définitive.", 
+      message: "Compte désactivé. Vous avez 2 mois pour le réactiver avant suppression définitive.",
       user: updatedUser,
       deactivatedAt: updatedUser.deactivatedAt!
     };
@@ -185,20 +205,20 @@ class UserService {
 
   async activateAccount(userId: string): Promise<ActivateResponse> {
     const user = await User.findByIdAndUpdate(
-      userId, 
-      { 
+      userId,
+      {
         isActive: true,
         deactivatedAt: null
-      }, 
+      },
       { new: true }
     ).select("-mdp");
-    
+
     if (!user) throw new Error("Utilisateur non trouvé");
-    
-    return { 
+
+    return {
       success: true,
-      message: "Compte activé avec succès.", 
-      user 
+      message: "Compte activé avec succès.",
+      user
     };
   }
 
@@ -207,7 +227,7 @@ class UserService {
     if (!user) {
       throw new Error('Utilisateur non trouvé');
     }
-    
+
     return {
       _id: user._id.toString(),
       nom: user.nom,
@@ -219,6 +239,14 @@ class UserService {
       role: user.role,
       is_verified: user.is_verified,
       specialite: user.specialite,
+      bio: user.bio,
+      gender: user.gender,
+      licenseNumber: user.licenseNumber,
+      languages: user.languages,
+      education: user.education,
+      services: user.services,
+      clinicName: user.clinicName,
+      clinicAddress: user.clinicAddress,
       isOnline: user.isOnline,
       lastLogin: user.lastLogin
     };
@@ -243,6 +271,14 @@ class UserService {
       role: user.role,
       is_verified: user.is_verified,
       specialite: user.specialite,
+      bio: user.bio,
+      gender: user.gender,
+      licenseNumber: user.licenseNumber,
+      languages: user.languages,
+      education: user.education,
+      services: user.services,
+      clinicName: user.clinicName,
+      clinicAddress: user.clinicAddress,
       isOnline: user.isOnline,
       lastLogin: user.lastLogin
     };

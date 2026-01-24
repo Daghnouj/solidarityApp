@@ -18,11 +18,12 @@ import commentRoutes from "./src/community/comments/comment.routes";
 import availabilityRoutes from "./src/availability/availability.routes";
 import favoritesRoutes from "./src/community/favorites/favorites.routes";
 import professionnelRouter from "./src/professional/professional.routes";
+import appointmentRoutes from "./src/appointment/appointment.routes";
 import { authLimiter, basicSecurity, generalLimiter, noSqlInjectionMiddleware } from "./middlewares/security";
 import { requestLogger } from "./middlewares/logger";
-import { notFoundHandler,errorHandler } from "./middlewares/errorHandler";
+import { notFoundHandler, errorHandler } from "./middlewares/errorHandler";
 
- 
+
 // Import des middlewares
 
 
@@ -57,7 +58,7 @@ app.use("/api/auth/", authLimiter);
 app.use("/api/", generalLimiter);
 
 // 🛣️ 7. Routes
-app.use("/api/auth", authRoutes);  
+app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/password", passwordRoutes);
 app.use('/api/auth/password', passwordRoutes);
@@ -67,7 +68,7 @@ app.use('/api/admin/verification', verificationRouter);
 app.use('/api/admin/overview', adminOverviewRoutes);
 app.use('/api/admin/notifications', adminNotificationRoutes);
 app.use('/api/contact', contactRouter);
-app.use('/api/gallery',galleryRouter);
+app.use('/api/gallery', galleryRouter);
 app.use('/api/professional', professionnelRouter);
 app.use('/api/partners', partnersRoutes);
 app.use('/api/events', eventRoutes);
@@ -75,6 +76,7 @@ app.use('/api/community/posts', postRoutes);
 app.use('/api/community', commentRoutes);
 app.use('/api/community/favorites', favoritesRoutes);
 app.use('/api/availabilities', availabilityRoutes);
+app.use('/api/appointments', appointmentRoutes);
 // 🏠 8. Route de test  
 app.get("/", (req: Request, res: Response) => {
   res.json({

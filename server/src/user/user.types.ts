@@ -26,6 +26,15 @@ export interface IUser {
   subscriptionStatus: 'active' | 'inactive' | 'trialing' | 'canceled';
   plan?: 'monthly' | 'yearly' | null;
   currentPeriodEnd?: Date;
+  // New Profile Fields
+  bio?: string;
+  gender?: 'Male' | 'Female' | 'Prefer not to say';
+  licenseNumber?: string;
+  languages?: string[];
+  education?: { degree: string; field: string; school: string; year: string }[];
+  services?: { name: string; price: string; duration: string }[];
+  clinicName?: string;
+  clinicAddress?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,6 +73,15 @@ export interface UpdateProfileData {
   adresse?: string;
   telephone?: string;
   specialite?: string;
+  // New Profile Fields
+  bio?: string;
+  gender?: 'Male' | 'Female' | 'Prefer not to say';
+  licenseNumber?: string;
+  languages?: string[];
+  education?: { degree: string; field: string; school: string; year: string }[];
+  services?: { name: string; price: string; duration: string }[];
+  clinicName?: string;
+  clinicAddress?: string;
 }
 
 export interface PasswordData {
@@ -102,6 +120,15 @@ export interface UserResponse {
   role: 'patient' | 'professional';
   is_verified: boolean;
   specialite?: string;
+  // New Profile Fields
+  bio?: string;
+  gender?: 'Male' | 'Female' | 'Prefer not to say';
+  licenseNumber?: string;
+  languages?: string[];
+  education?: { degree: string; field: string; school: string; year: string }[];
+  services?: { name: string; price: string; duration: string }[];
+  clinicName?: string;
+  clinicAddress?: string;
   isOnline: boolean;
   lastLogin?: Date;
 }

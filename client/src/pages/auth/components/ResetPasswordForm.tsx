@@ -1,10 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
 const ResetPasswordForm: React.FC = () => {
-  const { resetPassword, loading, error } = useAuth();
+  const { resetPassword, loading, error, resetUserId } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !resetUserId && !error) {
+      // If no resetUserId (e.g. page refresh), redirect to start
+      navigate("/forgetpass");
+    }
+  }, [resetUserId, loading, error, navigate]);
   const [passwords, setPasswords] = useState({
     password: "",
     confirmPassword: "",
@@ -135,8 +142,8 @@ const ResetPasswordForm: React.FC = () => {
                   <div
                     key={level}
                     className={`h-2 flex-1 rounded-full transition-all ${level <= strength
-                        ? strength === 4 ? "bg-green-500" : strength === 3 ? "bg-teal-500" : strength === 2 ? "bg-yellow-500" : "bg-red-500"
-                        : "bg-slate-200"
+                      ? strength === 4 ? "bg-green-500" : strength === 3 ? "bg-teal-500" : strength === 2 ? "bg-yellow-500" : "bg-red-500"
+                      : "bg-slate-200"
                       }`}
                     aria-hidden="true"
                   />
@@ -179,10 +186,10 @@ const ResetPasswordForm: React.FC = () => {
             name="confirmPassword"
             placeholder="Re-enter your new password"
             className={`w-full pl-12 pr-12 py-3.5 bg-slate-50 border-2 rounded-xl text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 hover:border-slate-300 ${passwordMatchError || (passwords.confirmPassword && passwords.password !== passwords.confirmPassword)
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : passwords.confirmPassword && passwords.password === passwords.confirmPassword
-                  ? 'border-green-300'
-                  : 'border-slate-200'
+              ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+              : passwords.confirmPassword && passwords.password === passwords.confirmPassword
+                ? 'border-green-300'
+                : 'border-slate-200'
               }`}
             onChange={handleChange}
             value={passwords.confirmPassword}
