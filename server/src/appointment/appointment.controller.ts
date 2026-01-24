@@ -6,8 +6,12 @@ export class AppointmentController {
 
     static async create(req: any, res: Response): Promise<void> {
         try {
+            console.log('📅 Appointment create called');
+            console.log('req.io exists:', !!req.io);
+            console.log('req.io type:', typeof req.io);
+
             const patientId = req.user._id;
-            const appointment = await AppointmentService.createAppointment(req.body, patientId);
+            const appointment = await AppointmentService.createAppointment(req.body, patientId, req.io);
             res.status(201).json(appointment);
         } catch (error: any) {
             res.status(400).json({ message: error.message });

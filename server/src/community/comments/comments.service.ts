@@ -1,10 +1,10 @@
 import { Types } from 'mongoose';
 import Post from '../post/post.model';
 import { createNotification } from '../notification/notification.service';
-import { 
-  AddCommentRequest, 
-  AddReplyRequest, 
-  UpdateCommentRequest, 
+import {
+  AddCommentRequest,
+  AddReplyRequest,
+  UpdateCommentRequest,
   UpdateReplyRequest,
   CreateCommentData,
   CreateReplyData
@@ -12,9 +12,9 @@ import {
 
 export class CommentService {
   static async addComment(
-    postId: string, 
-    data: AddCommentRequest, 
-    userId: Types.ObjectId, 
+    postId: string,
+    data: AddCommentRequest,
+    userId: Types.ObjectId,
     io?: any
   ): Promise<any> {
     const post = await Post.findById(postId);
@@ -34,6 +34,10 @@ export class CommentService {
     await post.save();
 
     if (post.user.toString() !== userId.toString()) {
+      console.log('💬 Creating comment notification...');
+      console.log('Post owner:', post.user.toString());
+      console.log('Commenter:', userId.toString());
+      console.log('io available:', !!io);
       await createNotification(
         post.user,
         userId,
@@ -45,6 +49,7 @@ export class CommentService {
         },
         io
       );
+      console.log('✅ Comment notification created');
     }
 
     const populatedPost = await Post.findById(postId)
@@ -54,10 +59,10 @@ export class CommentService {
   }
 
   static async addReply(
-    postId: string, 
-    commentId: string, 
-    data: AddReplyRequest, 
-    userId: Types.ObjectId, 
+    postId: string,
+    commentId: string,
+    data: AddReplyRequest,
+    userId: Types.ObjectId,
     io?: any
   ): Promise<any> {
     const post = await Post.findById(postId);
@@ -87,7 +92,7 @@ export class CommentService {
         userId,
         'reply',
         postId,
-        { 
+        {
           commentId: commentId,
           replyId: comment.replies[comment.replies.length - 1]._id,
           replyPreview: data.replyText.slice(0, 50)
@@ -104,14 +109,14 @@ export class CommentService {
     if (!populatedComment) {
       throw new Error('Commentaire non trouvé après population');
     }
-    
+
     return populatedComment.replies[populatedComment.replies.length - 1];
   }
 
   static async updateComment(
-    postId: string, 
-    commentId: string, 
-    data: UpdateCommentRequest, 
+    postId: string,
+    commentId: string,
+    data: UpdateCommentRequest,
     userId: Types.ObjectId
   ): Promise<any> {
     const post = await Post.findById(postId);
@@ -137,8 +142,8 @@ export class CommentService {
   }
 
   static async deleteComment(
-    postId: string, 
-    commentId: string, 
+    postId: string,
+    commentId: string,
     userId: Types.ObjectId
   ): Promise<void> {
     const post = await Post.findById(postId);
@@ -161,10 +166,10 @@ export class CommentService {
   }
 
   static async updateReply(
-    postId: string, 
-    commentId: string, 
-    replyId: string, 
-    data: UpdateReplyRequest, 
+    postId: string,
+    commentId: string,
+    replyId: string,
+    data: UpdateReplyRequest,
     userId: Types.ObjectId
   ): Promise<any> {
     const post = await Post.findById(postId);
@@ -196,9 +201,9 @@ export class CommentService {
   }
 
   static async deleteReply(
-    postId: string, 
-    commentId: string, 
-    replyId: string, 
+    postId: string,
+    commentId: string,
+    replyId: string,
     userId: Types.ObjectId
   ): Promise<void> {
     const post = await Post.findById(postId);
