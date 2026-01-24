@@ -4,6 +4,7 @@ export interface User {
   _id?: string;
   name: string;
   email: string;
+  role?: string; // Added role
   birthday?: string;
   address?: string;
   phoneNumber?: string;
@@ -37,6 +38,19 @@ export interface RegisterData {
 export interface LoginData {
   email: string;
   password: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+  message?: string;
+  success?: boolean;
+}
+
+export interface RegisterResponse {
+  success: boolean;
+  message: string;
+  userType?: string;
 }
 
 export interface AuthState {

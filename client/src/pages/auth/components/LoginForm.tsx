@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 const LoginForm: React.FC = () => {
   const { login, loading, error } = useAuth();
@@ -10,9 +11,26 @@ const LoginForm: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(form);
+    try {
+      const result = await login(form);
+      // Check if login was successful based on the returned action
+      if (result.meta.requestStatus === 'fulfilled') {
+        const user = result.payload.user;
+        if (user.role === 'admin') {
+          navigate('/admin');
+        } else if (user.isProfessional || user.role === 'professional') {
+          navigate('/');
+        } else {
+          navigate('/'); // Or /dashboard for patients too
+        }
+      }
+    } catch (err) {
+      console.error("Login failed", err);
+    }
   };
 
   return (
@@ -20,20 +38,19 @@ const LoginForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6" noValidate>
         {/* Email Input */}
         <div>
-          <label 
-            htmlFor="email" 
+          <label
+            htmlFor="email"
             className="block text-sm font-semibold text-slate-700 mb-2"
           >
             Email Address
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <svg 
-                className={`h-5 w-5 transition-colors ${
-                  focusedField === 'email' ? 'text-solidarity-blue' : 'text-slate-400'
-                }`} 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className={`h-5 w-5 transition-colors ${focusedField === 'email' ? 'text-solidarity-blue' : 'text-slate-400'
+                  }`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
@@ -60,20 +77,19 @@ const LoginForm: React.FC = () => {
 
         {/* Password Input */}
         <div>
-          <label 
-            htmlFor="password" 
+          <label
+            htmlFor="password"
             className="block text-sm font-semibold text-slate-700 mb-2"
           >
             Password
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <svg 
-                className={`h-5 w-5 transition-colors ${
-                  focusedField === 'password' ? 'text-solidarity-blue' : 'text-slate-400'
-                }`} 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className={`h-5 w-5 transition-colors ${focusedField === 'password' ? 'text-solidarity-blue' : 'text-slate-400'
+                  }`}
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
                 aria-hidden="true"
               >
@@ -119,8 +135,8 @@ const LoginForm: React.FC = () => {
 
         {/* Error Message */}
         {error && (
-          <div 
-            role="alert" 
+          <div
+            role="alert"
             aria-live="polite"
             className="bg-red-50 border-2 border-red-200 rounded-xl p-4 flex items-start gap-3"
           >
