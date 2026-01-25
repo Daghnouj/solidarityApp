@@ -38,6 +38,7 @@ import UserOverview from "./dashboarduser/pages/UserOverview";
 import UserAppointments from "./dashboarduser/pages/UserAppointments";
 import UserFavorites from "./dashboarduser/pages/UserFavorites";
 import UserCommunity from "./dashboarduser/pages/UserCommunity";
+import UserSavedPosts from "./dashboarduser/pages/UserSavedPosts";
 import UserProfile from "./dashboarduser/pages/UserProfile";
 
 // Pages - Professional Dashboard
@@ -45,6 +46,8 @@ import ProfessionalLayout from "./dashboardprofessional/ProfessionalLayout";
 import ProfessionalOverview from "./dashboardprofessional/pages/ProfessionalOverview";
 import ProfessionalSchedule from "./dashboardprofessional/pages/ProfessionalSchedule";
 import ProfessionalAppointments from "./dashboardprofessional/pages/ProfessionalAppointments";
+import ProfessionalCommunity from "./dashboardprofessional/pages/ProfessionalCommunity";
+import ProfessionalSavedPosts from "./dashboardprofessional/pages/ProfessionalSavedPosts";
 import ProfessionalProfileDashboard from "./dashboardprofessional/pages/ProfessionalProfile";
 
 // Components
@@ -89,6 +92,7 @@ const App: React.FC = () => {
             <Route path="appointments" element={<UserAppointments />} />
             <Route path="favorites" element={<UserFavorites />} />
             <Route path="community" element={<UserCommunity />} />
+            <Route path="saved" element={<UserSavedPosts />} />
             <Route path="profile" element={<UserProfile />} />
           </Route>
 
@@ -97,6 +101,8 @@ const App: React.FC = () => {
             <Route index element={<ProfessionalOverview />} />
             <Route path="requests" element={<ProfessionalAppointments />} />
             <Route path="calendar" element={<ProfessionalSchedule />} />
+            <Route path="community" element={<ProfessionalCommunity />} />
+            <Route path="saved" element={<ProfessionalSavedPosts />} />
             <Route path="profile" element={<ProfessionalProfileDashboard />} />
           </Route>
 

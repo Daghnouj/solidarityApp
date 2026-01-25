@@ -3,13 +3,6 @@ import { Outlet } from 'react-router-dom';
 import UserSidebar from './components/layout/UserSidebar';
 import UserHeader from './components/layout/UserHeader';
 
-// Static mock user data
-const mockUser = {
-    name: "John User",
-    email: "john@example.com",
-    photo: "https://api.dicebear.com/7.x/avataaars/svg?seed=John"
-};
-
 const UserLayout: React.FC = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-orange-50/20">
@@ -21,7 +14,7 @@ const UserLayout: React.FC = () => {
             {/* Main Content Area */}
             <div className="md:ml-72">
                 {/* Header - Sticky */}
-                <UserHeader user={mockUser} />
+                <UserHeader />
 
                 {/* Page Content - Child routes render here via Outlet */}
                 <main className="p-3 sm:p-4 md:p-6 lg:p-8">

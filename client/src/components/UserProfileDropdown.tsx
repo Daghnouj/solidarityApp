@@ -8,9 +8,9 @@ const UserProfileDropdown = ({ onLogout }: { onLogout: () => void }) => {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const displayName = user?.name || "User";
+  const displayName = user?.name || user?.nom || "User";
   const displayEmail = user?.email || "";
-  const displayPhoto = user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
+  const displayPhoto = user?.photo || user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${displayName}`;
 
   // Determine profile link based on role
   const getProfileLink = () => {

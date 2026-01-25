@@ -4,6 +4,7 @@ import {
     LayoutDashboard,
     Calendar,
     Clock,
+    MessageSquare,
     User,
     Shield
 } from "lucide-react";
@@ -25,6 +26,11 @@ const ProfessionalSidebar: React.FC = () => {
             path: "/dashboard/professional/calendar",
             label: "Calendar",
             icon: Calendar
+        },
+        {
+            path: "/dashboard/professional/community",
+            label: "My Community",
+            icon: MessageSquare
         },
         {
             path: "/dashboard/professional/profile",
@@ -67,10 +73,8 @@ const ProfessionalSidebar: React.FC = () => {
             </nav>
 
             {/* Footer */}
-            <div className="absolute bottom-4 md:bottom-6 left-2 md:left-4 lg:left-6 right-2 md:right-4 lg:right-6">
-                <div className="hidden md:block text-xs text-blue-300 text-center">
-                    v2.0 • Pro Panel
-                </div>
+            <div className="absolute bottom-4 md:bottom-6 left-2 md:left-4 lg:left-6 right-2 md:right-4 lg:left-6 right-2 md:right-4 lg:right-6 text-xs text-blue-300 text-center">
+                v2.0 • Pro Panel
             </div>
         </aside>
     );

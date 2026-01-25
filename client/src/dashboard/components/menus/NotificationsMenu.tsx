@@ -4,7 +4,6 @@ import {
   AlertCircle,
   Check,
   X,
-  Settings as SettingsIcon,
   UserPlus,
   Mail,
   FileCheck,
@@ -113,49 +112,43 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
       {/* Bell Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2.5 rounded-xl bg-gray-100 hover:bg-orange-50 hover:text-orange-600 transition-all duration-300 group"
+        className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group focus:outline-none"
       >
-        <Bell size={20} className="text-blue-900 group-hover:text-orange-600 transition-colors" />
-
-        {/* Unread Badge */}
+        <Bell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse shadow-lg">
-            {unreadCount}
-          </span>
+          <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         )}
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden z-50 animate-slideDown">
+        <div className="absolute right-0 mt-4 w-96 bg-white rounded-xl shadow-xl border border-gray-100 z-50 animate-fadeIn overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-900 to-blue-800 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-white font-bold text-lg">Notifications</h3>
-                  {isConnected ? (
-                    <Wifi size={16} className="text-green-300" title="Connected" />
-                  ) : (
-                    <WifiOff size={16} className="text-red-300" title="Disconnected" />
-                  )}
-                </div>
-                <p className="text-blue-200 text-sm">
-                  {loading ? 'Loading...' : unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
-                </p>
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 text-sm">Notifications</h3>
+                {isConnected ? (
+                  <Wifi size={14} className="text-green-500" />
+                ) : (
+                  <WifiOff size={14} className="text-red-500" />
+                )}
               </div>
-              <button
-                onClick={markAllAsRead}
-                disabled={unreadCount === 0 || loading}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-semibold transition-colors"
-              >
-                Mark all read
-              </button>
+              <p className="text-xs font-semibold text-blue-600 mt-1">
+                {loading ? 'Loading...' : unreadCount > 0 ? `${unreadCount} New` : 'All caught up!'}
+              </p>
             </div>
+            <button
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0 || loading}
+              className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed text-blue-600 rounded-lg text-xs font-bold transition-colors"
+            >
+              Mark all read
+            </button>
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-96 overflow-y-auto custom-scrollbar">
             {loading ? (
               <div className="p-12 text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
@@ -190,30 +183,29 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
                   return (
                     <div
                       key={notificationId}
-                      className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer group relative ${!notification.read ? 'bg-blue-50/30' : ''
-                        }`}
+                      className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer group relative ${!notification.read ? 'bg-blue-50/30' : ''}`}
                     >
                       <div className="flex gap-3">
                         {/* Icon */}
-                        <div className={`p-2 rounded-lg ${colorClasses.bg} flex-shrink-0`}>
-                          <Icon size={18} className={colorClasses.text} />
+                        <div className={`p-2 rounded-lg ${colorClasses.bg} flex-shrink-0 self-start`}>
+                          <Icon size={16} className={colorClasses.text} />
                         </div>
 
                         {/* Content */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2 mb-1">
-                            <h4 className="font-semibold text-blue-900 text-sm">
+                            <h4 className={`text-sm ${!notification.read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>
                               {notification.title}
                             </h4>
                             {!notification.read && (
-                              <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1.5"></span>
+                              <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
                             )}
                           </div>
-                          <p className="text-gray-600 text-sm mb-2">
+                          <p className="text-gray-600 text-sm mb-2 line-clamp-2">
                             {notification.message}
                           </p>
                           <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-400">
                               {formatTimestamp(notification.createdAt)}
                             </span>
                             {actionUrl && (
@@ -225,16 +217,16 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
                                     markAsRead(notificationId);
                                   }
                                 }}
-                                className="text-xs text-orange-600 font-semibold hover:text-orange-700"
+                                className="text-xs text-blue-600 font-bold hover:text-blue-700"
                               >
-                                View →
+                                View Details →
                               </a>
                             )}
                           </div>
                         </div>
 
                         {/* Action Buttons (Show on hover) */}
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 self-start">
                           {!notification.read && (
                             <button
                               onClick={(e) => {
@@ -265,24 +257,29 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = () => {
               </div>
             )}
           </div>
-
-
         </div>
       )}
 
       <style>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .animate-slideDown {
-          animation: slideDown 0.2s ease-out;
+        .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 20px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
         }
       `}</style>
     </div>
