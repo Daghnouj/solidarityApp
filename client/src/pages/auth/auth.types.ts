@@ -3,6 +3,7 @@
 export interface User {
   _id?: string;
   name: string;
+  nom?: string;
   email: string;
   role?: string; // Added role
   birthday?: string;
@@ -11,6 +12,7 @@ export interface User {
   isProfessional?: boolean;
   professionalInfo?: ProfessionalInfo;
   profilePicture?: string;
+  photo?: string;
 }
 
 export interface ProfessionalInfo {

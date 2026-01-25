@@ -8,64 +8,64 @@ import { NotificationService } from '../notification/notification.service';
 import { AdminNotificationService } from '../../admin/adminNotification/adminNotification.service';
 
 export class PostService {
- static async createPost(data: CreatePostRequest, user: any, io?: Server | null): Promise<IPost> {
-  const hashtags = extractHashtags(data.content);
-  
-  const newPost = new Post({
-    content: data.content,
-    user: user._id,
-    username: user.nom,
-    userPhoto: user.photo,
-    userRole: user.role,
-    hashtags
-  });
+  static async createPost(data: CreatePostRequest, user: any, io?: Server | null): Promise<IPost> {
+    const hashtags = extractHashtags(data.content);
 
-  await newPost.save();
+    const newPost = new Post({
+      content: data.content,
+      user: user._id,
+      username: user.nom,
+      userPhoto: user.photo,
+      userRole: user.role,
+      hashtags
+    });
 
-  // Emit admin notification for new post
-  if (io) {
-    try {
-      await AdminNotificationService.createNotification({
-        type: 'new_post',
-        title: 'Nouveau post publié',
-        message: `${user.nom} a publié un nouveau post`,
-        data: {
-          postId: newPost._id.toString(),
-          userId: user._id.toString(),
-          userName: user.nom,
-          userRole: user.role,
-          postContent: data.content.substring(0, 100) + (data.content.length > 100 ? '...' : ''),
-          hashtags: hashtags
-        },
-        io
-      });
-    } catch (notifError) {
-      console.error('Error creating admin notification for new post:', notifError);
-      // Don't fail the post creation if notification fails
+    await newPost.save();
+
+    // Emit admin notification for new post
+    if (io) {
+      try {
+        await AdminNotificationService.createNotification({
+          type: 'new_post',
+          title: 'Nouveau post publié',
+          message: `${user.nom} a publié un nouveau post`,
+          data: {
+            postId: newPost._id.toString(),
+            userId: user._id.toString(),
+            userName: user.nom,
+            userRole: user.role,
+            postContent: data.content.substring(0, 100) + (data.content.length > 100 ? '...' : ''),
+            hashtags: hashtags
+          },
+          io
+        });
+      } catch (notifError) {
+        console.error('Error creating admin notification for new post:', notifError);
+        // Don't fail the post creation if notification fails
+      }
     }
-  }
 
-  if (hashtags.length > 0) {
-    try {
-      const bulkOps = hashtags.map(tag => ({
-        updateOne: {
-          filter: { name: tag },
-          update: { $inc: { count: 1 }, $setOnInsert: { name: tag } },
-          upsert: true
-        }
-      }));
-      
-      await Hashtag.bulkWrite(bulkOps, { ordered: false });
-    } catch (error: any) {
-      // Log l'erreur mais ne bloque pas la création du post
-      console.error('Erreur lors de la mise à jour des hashtags:', error.message);
-      // Optionnel: nettoyer les hashtags invalides
-      await Hashtag.deleteMany({ name: null });
+    if (hashtags.length > 0) {
+      try {
+        const bulkOps = hashtags.map(tag => ({
+          updateOne: {
+            filter: { name: tag },
+            update: { $inc: { count: 1 }, $setOnInsert: { name: tag } },
+            upsert: true
+          }
+        }));
+
+        await Hashtag.bulkWrite(bulkOps, { ordered: false });
+      } catch (error: any) {
+        // Log l'erreur mais ne bloque pas la création du post
+        console.error('Erreur lors de la mise à jour des hashtags:', error.message);
+        // Optionnel: nettoyer les hashtags invalides
+        await Hashtag.deleteMany({ name: null });
+      }
     }
-  }
 
-  return newPost;
-}
+    return newPost;
+  }
 
   static async addLike(postId: string, userId: Types.ObjectId, io?: any): Promise<any> {
     const post = await Post.findById(postId)
@@ -78,7 +78,7 @@ export class PostService {
     }
 
     const isLiking = !post.likedBy.some((id: Types.ObjectId) => id.equals(userId));
-    
+
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
       {
@@ -100,6 +100,34 @@ export class PostService {
     }
 
     return updatedPost;
+  }
+
+  static async getFavoritePosts(userId: string): Promise<IPost[]> {
+    return await Post.find({ favorites: userId })
+      .populate('user', 'nom photo role')
+      .populate({
+        path: 'comments.user',
+        select: 'nom photo'
+      })
+      .populate({
+        path: 'comments.replies.user',
+        select: 'nom photo'
+      })
+      .sort({ date: -1 });
+  }
+
+  static async getMyPosts(userId: string): Promise<IPost[]> {
+    return await Post.find({ user: userId })
+      .populate('user', 'nom photo role')
+      .populate({
+        path: 'comments.user',
+        select: 'nom photo'
+      })
+      .populate({
+        path: 'comments.replies.user',
+        select: 'nom photo'
+      })
+      .sort({ date: -1 });
   }
 
   static async getAllPosts(): Promise<IPost[]> {
@@ -195,21 +223,23 @@ export class PostService {
         { hashtags: searchRegex }
       ]
     })
-    .populate({
-      path: 'user',
-      select: 'nom photo role'
-    })
-    .sort({ date: -1 });
+      .populate({
+        path: 'user',
+        select: 'nom photo role'
+      })
+      .sort({ date: -1 });
   }
 
 
   static async getPopularHashtags(): Promise<any[]> {
     return await Post.aggregate([
       { $unwind: "$hashtags" },
-      { $group: { 
-          _id: "$hashtags", 
-          count: { $sum: 1 } 
-      }},
+      {
+        $group: {
+          _id: "$hashtags",
+          count: { $sum: 1 }
+        }
+      },
       { $sort: { count: -1 } },
       { $limit: 3 }
     ]);

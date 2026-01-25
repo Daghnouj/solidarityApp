@@ -5,7 +5,7 @@ import DashboardAddPostModal from '../../dashboard/components/ui/DashboardAddPos
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-const UserCommunity: React.FC = () => {
+const ProfessionalCommunity: React.FC = () => {
     const { user } = useAuth();
     const [posts, setPosts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -65,7 +65,7 @@ const UserCommunity: React.FC = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-bold text-gray-800">My Community</h2>
-                    <p className="text-gray-500 text-sm mt-1">Manage your activity and saved posts.</p>
+                    <p className="text-gray-500 text-sm mt-1">Manage your activity and saved insights.</p>
                 </div>
                 <button
                     onClick={() => setIsModalOpen(true)}
@@ -103,7 +103,7 @@ const UserCommunity: React.FC = () => {
                     {posts.map((post) => (
                         <div key={post._id || post.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
                             <div className="flex gap-4">
-                                <div className="w-12 h-12 rounded-full bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100">
+                                <div className="w-12 h-12 rounded-full bg-gray-100 overflow-hidden flex-shrink-0 border border-gray-100">
                                     <img
                                         src={(activeTab === 'activity' ? (user?.photo || user?.profilePicture) : post.user?.photo || post.user?.profilePicture) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${(activeTab === 'activity' ? (user?.nom || user?.name) : post.user?.nom || post.user?.name) || 'default'}`}
                                         alt="User"
@@ -157,7 +157,7 @@ const UserCommunity: React.FC = () => {
                     <h3 className="text-xl font-bold text-gray-800">No {activeTab === 'activity' ? 'posts' : 'saved items'} yet</h3>
                     <p className="text-gray-500 mt-2 max-w-sm mx-auto">
                         {activeTab === 'activity'
-                            ? "You haven't shared anything with the community yet. Start by sharing your thoughts!"
+                            ? "You haven't shared anything with the community yet. Start by sharing your thoughts or expertise!"
                             : "Save interesting discussions from the community to find them here later."}
                     </p>
                     <button
@@ -188,4 +188,4 @@ const UserCommunity: React.FC = () => {
     );
 };
 
-export default UserCommunity;
+export default ProfessionalCommunity;

@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import UserProfileDropdown from "./UserProfileDropdown";
 import { useAuth } from "../pages/auth/hooks/useAuth";
 import { Bell, MessageSquare, Menu, X, ChevronDown } from "lucide-react";
+import { io } from "socket.io-client";
+
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const Header = () => {
   const { user, logout } = useAuth();
@@ -13,6 +16,10 @@ const Header = () => {
   const [communityOpen, setCommunityOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const navigate = useNavigate();
 
   const notificationRef = useRef<HTMLDivElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
@@ -38,12 +45,101 @@ const Header = () => {
     };
   }, []);
 
-  // Mock data for notifications and messages
-  const notifications = [
-    { id: 1, text: "New appointment confirmed", time: "10 min ago", read: false },
-    { id: 2, text: "Your post got 5 new likes", time: "1 hour ago", read: true },
-    { id: 3, text: "Dr. Smith sent you a message", time: "2 hours ago", read: false },
-  ];
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const response = await fetch(`${API_BASE_URL}/community/notifications`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setNotifications(data);
+        setUnreadCount(data.filter((n: any) => !n.read).length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notifications", error);
+    }
+  };
+
+  const markAsRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE_URL}/community/notifications/mark-read`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (error) {
+      console.error("Failed to mark notifications as read", error);
+    }
+  };
+
+  const markOneAsRead = async (id: string) => {
+    try {
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Failed to mark notification as read", error);
+    }
+  };
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchNotifications();
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const socket = io(API_BASE_URL.replace('/api', ''), {
+        auth: { token },
+        transports: ['websocket']
+      });
+
+      socket.on('new_notification', (newNotification: any) => {
+        setNotifications(prev => [newNotification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      });
+
+      socket.on('notification', (newNotification: any) => {
+        setNotifications(prev => [newNotification, ...prev]);
+        setUnreadCount(prev => prev + 1);
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [isLoggedIn]);
+
+  const handleNotificationClick = (notification: any) => {
+    setNotificationsOpen(false);
+    if (!notification.read) {
+      markOneAsRead(notification._id);
+    }
+
+    if (notification.type.includes('appointment')) {
+      navigate(user?.role === 'professional' ? '/dashboard/professional/requests' : '/dashboard/user/appointments');
+    } else if (notification.post?._id) {
+      navigate(`/community/post/${notification.post._id}`);
+    } else if (notification.type === 'comment' || notification.type === 'reply') {
+      if (notification.post?._id) navigate(`/community/post/${notification.post._id}`);
+    }
+  };
+
+  const getNotificationContent = (n: any) => {
+    const senderName = n.sender?.nom || 'Someone';
+    switch (n.type) {
+      case 'appointment_request': return `New appointment request from ${senderName}`;
+      case 'appointment_confirmed': return `Appointment confirmed with ${senderName}`;
+      case 'appointment_cancelled': return `Appointment cancelled by ${senderName}`;
+      case 'like': return `${senderName} liked your post`;
+      case 'comment': return `${senderName} commented on your post`;
+      case 'reply': return `${senderName} replied to your comment`;
+      default: return 'New notification';
+    }
+  };
 
   const messages = [
     { id: 1, sender: "Dr. Sarah Johnson", preview: "Hello, regarding your appointment tomorrow...", time: "2 min ago", read: false },
@@ -51,7 +147,6 @@ const Header = () => {
     { id: 3, sender: "Community Admin", preview: "Welcome to the community!", time: "3 days ago", read: false },
   ];
 
-  const unreadNotifications = notifications.filter(n => !n.read).length;
   const unreadMessages = messages.filter(m => !m.read).length;
 
   return (
@@ -129,11 +224,14 @@ const Header = () => {
                 {/* Notifications */}
                 <div className="relative" ref={notificationRef}>
                   <button
-                    onClick={() => setNotificationsOpen(!notificationsOpen)}
+                    onClick={() => {
+                      setNotificationsOpen(!notificationsOpen);
+                      if (!notificationsOpen) markAsRead();
+                    }}
                     className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group"
                   >
                     <Bell size={20} />
-                    {unreadNotifications > 0 && (
+                    {unreadCount > 0 && (
                       <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                     )}
                   </button>
@@ -142,30 +240,43 @@ const Header = () => {
                     <div className="absolute right-0 mt-4 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 animate-fadeIn overflow-hidden">
                       <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                         <h3 className="font-bold text-gray-900 text-sm">Notifications</h3>
-                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{unreadNotifications} New</span>
+                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{unreadCount} New</span>
                       </div>
                       <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                        {notifications.map((notification) => (
-                          <div
-                            key={notification.id}
-                            className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!notification.read ? 'bg-blue-50/30' : ''}`}
-                          >
-                            <div className="flex justify-between items-start gap-2">
-                              <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-                                {notification.text}
+                        {notifications.length > 0 ? (
+                          notifications.map((notification, i) => (
+                            <div
+                              key={i}
+                              onClick={() => handleNotificationClick(notification)}
+                              className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!notification.read ? 'bg-blue-50/30' : ''}`}
+                            >
+                              <div className="flex justify-between items-start gap-2">
+                                <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                                  {getNotificationContent(notification)}
+                                </p>
+                                {!notification.read && (
+                                  <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {new Date(notification.createdAt).toLocaleDateString()} {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
-                              {!notification.read && (
-                                <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
-                              )}
                             </div>
-                            <p className="text-xs text-gray-400 mt-1">{notification.time}</p>
+                          ))
+                        ) : (
+                          <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                            No notifications yet
                           </div>
-                        ))}
+                        )}
                       </div>
                       <div className="p-2 border-t border-gray-100 bg-gray-50/50">
-                        <NavLink to="/notifications" className="block text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
-                          View All
-                        </NavLink>
+                        <button
+                          onClick={markAsRead}
+                          disabled={unreadCount === 0}
+                          className="w-full text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          Mark All as Read
+                        </button>
                       </div>
                     </div>
                   )}
@@ -279,9 +390,9 @@ const Header = () => {
                 <NavLink to="/notifications" className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 rounded-xl hover:bg-gray-50">
                   <Bell size={20} className="mr-3" />
                   Notifications
-                  {unreadNotifications > 0 && (
+                  {unreadCount > 0 && (
                     <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                      {unreadNotifications}
+                      {unreadCount}
                     </span>
                   )}
                 </NavLink>

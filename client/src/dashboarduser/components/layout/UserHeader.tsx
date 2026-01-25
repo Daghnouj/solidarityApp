@@ -1,20 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, User, LogOut, ChevronDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Bell, User, LogOut, ChevronDown } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import { useAuth } from '../../../pages/auth/hooks/useAuth';
 
-interface UserHeaderProps {
-    user: {
-        name: string;
-        email: string;
-        photo: string;
-    };
-}
+const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
+const UserHeader: React.FC = () => {
+    const { user, logout } = useAuth();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const notificationRef = useRef<HTMLDivElement>(null);
+    const [notifications, setNotifications] = useState<any[]>([]);
+    const [unreadCount, setUnreadCount] = useState(0);
+    const navigate = useNavigate();
 
     // Close dropdowns when clicking outside
     useEffect(() => {
@@ -33,11 +33,98 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
         };
     }, []);
 
-    const notifications = [
-        { id: 1, title: "Appointment Confirmed", time: "10 mins ago", unread: true },
-        { id: 2, title: "New Message from Dr. Sarah", time: "1 hour ago", unread: true },
-        { id: 3, title: "Daily Wellness Tip", time: "5 hours ago", unread: false },
-    ];
+    const fetchNotifications = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/community/notifications`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setNotifications(data);
+                setUnreadCount(data.filter((n: any) => !n.read).length);
+            }
+        } catch (error) {
+            console.error("Failed to fetch notifications", error);
+        }
+    };
+
+    const markAsRead = async () => {
+        if (unreadCount === 0) return;
+        try {
+            const token = localStorage.getItem('token');
+            await fetch(`${API_BASE_URL}/community/notifications/mark-read`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setUnreadCount(0);
+            setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+        } catch (error) {
+            console.error("Failed to mark notifications as read", error);
+        }
+    };
+
+    const markOneAsRead = async (id: string) => {
+        try {
+            setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (error) {
+            console.error("Failed to mark notification as read", error);
+        }
+    };
+
+    const handleNotificationClick = (notification: any) => {
+        setIsNotificationsOpen(false);
+        if (!notification.read) {
+            markOneAsRead(notification._id);
+        }
+
+        if (notification.type.includes('appointment')) {
+            navigate('/dashboard/user/appointments');
+        } else if (notification.post?._id) {
+            navigate(`/community/post/${notification.post._id}`);
+        } else if (notification.type === 'comment' || notification.type === 'reply') {
+            if (notification.post?._id) navigate(`/community/post/${notification.post._id}`);
+        }
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    const getNotificationContent = (n: any) => {
+        const senderName = n.sender?.nom || 'Someone';
+        switch (n.type) {
+            case 'appointment_request': return `New appointment request from ${senderName}`;
+            case 'appointment_confirmed': return `Appointment confirmed with ${senderName}`;
+            case 'appointment_cancelled': return `Appointment cancelled by ${senderName}`;
+            case 'like': return `${senderName} liked your post`;
+            case 'comment': return `${senderName} commented on your post`;
+            case 'reply': return `${senderName} replied to your comment`;
+            default: return 'New notification';
+        }
+    };
+
+    useEffect(() => {
+        fetchNotifications();
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const socket = io(API_BASE_URL.replace('/api', ''), {
+            auth: { token },
+            transports: ['websocket']
+        });
+
+        socket.on('new_notification', (newNotification: any) => {
+            setNotifications(prev => [newNotification, ...prev]);
+            setUnreadCount(prev => prev + 1);
+        });
+
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
 
     return (
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-8 py-4 sticky top-0 z-40 shadow-sm">
@@ -47,7 +134,7 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
                 <div className="flex items-center gap-4 min-w-0">
                     <div className="truncate">
                         <h1 className="text-lg md:text-2xl font-bold text-blue-900 dark:text-white truncate">
-                            Welcome back, {user.name.split(" ")[0]}
+                            Welcome back, {user?.nom?.split(" ")[0] || user?.name?.split(" ")[0] || 'User'}
                         </h1>
                         <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm mt-1 hidden sm:block">
                             Here's what's happening with your health journey
@@ -58,50 +145,64 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
                 {/* RIGHT */}
                 <div className="flex items-center gap-3">
 
-                    {/* Search (desktop only) */}
-                    <div className="relative hidden lg:block max-w-xs">
-                        <Search
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                            size={18}
-                        />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none"
-                        />
-                    </div>
-
                     {/* Notification Bell Dropdown */}
                     <div className="relative" ref={notificationRef}>
                         <button
-                            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                            className="relative p-2.5 rounded-xl bg-gray-100 hover:bg-orange-50 hover:text-orange-600 transition-all duration-300 group focus:outline-none"
+                            onClick={() => {
+                                setIsNotificationsOpen(!isNotificationsOpen);
+                                if (!isNotificationsOpen) markAsRead();
+                            }}
+                            className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group focus:outline-none"
                         >
-                            <Bell size={20} className="text-blue-900 group-hover:text-orange-600 transition-colors" />
-                            <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-orange-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                                {notifications.filter(n => n.unread).length}
-                            </span>
+                            <Bell size={20} />
+                            {unreadCount > 0 && (
+                                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                            )}
                         </button>
 
                         {isNotificationsOpen && (
-                            <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-2 animate-fadeIn z-50">
-                                <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                                    <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
-                                    <button className="text-xs text-blue-600 hover:text-blue-700 font-medium">Mark all read</button>
+                            <div className="absolute right-0 mt-4 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 animate-fadeIn overflow-hidden">
+                                <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                    <h3 className="font-bold text-gray-900 text-sm">Notifications</h3>
+                                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                                        {unreadCount} New
+                                    </span>
                                 </div>
-                                <div className="max-h-80 overflow-y-auto">
-                                    {notifications.map(n => (
-                                        <div key={n.id} className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer border-b border-gray-50 dark:border-gray-700 last:border-0 ${n.unread ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
-                                            <div className="flex justify-between items-start mb-1">
-                                                <p className={`text-sm ${n.unread ? 'font-semibold text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>{n.title}</p>
-                                                {n.unread && <span className="w-2 h-2 bg-orange-500 rounded-full flex-shrink-0 mt-1.5"></span>}
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                                    {notifications.length > 0 ? (
+                                        notifications.map((n, i) => (
+                                            <div
+                                                key={i}
+                                                onClick={() => handleNotificationClick(n)}
+                                                className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!n.read ? 'bg-blue-50/30' : ''}`}
+                                            >
+                                                <div className="flex justify-between items-start gap-2">
+                                                    <p className={`text-sm ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                                                        {getNotificationContent(n)}
+                                                    </p>
+                                                    {!n.read && (
+                                                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-gray-400 mt-1">
+                                                    {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
                                             </div>
-                                            <p className="text-xs text-gray-400">{n.time}</p>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                                            No notifications yet
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
-                                <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700 text-center">
-                                    <button className="text-xs font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">View All Updates</button>
+                                <div className="p-2 border-t border-gray-100 bg-gray-50/50">
+                                    <button
+                                        onClick={markAsRead}
+                                        disabled={unreadCount === 0}
+                                        className="w-full text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                                    >
+                                        Mark All as Read
+                                    </button>
                                 </div>
                             </div>
                         )}
@@ -114,14 +215,14 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
                             className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-gray-100 transition-all duration-300 group cursor-pointer focus:outline-none"
                         >
                             <img
-                                src={user.photo}
-                                alt={user.name}
+                                src={user?.photo || user?.profilePicture || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.nom || user?.name}`}
+                                alt={user?.nom || user?.name}
                                 className="w-10 h-10 rounded-full border-2 border-orange-500 group-hover:border-orange-600 transition-all duration-300 object-cover"
                             />
                             <div className="hidden lg:block text-left">
                                 <div className="flex items-center gap-2">
                                     <p className="text-sm font-semibold text-blue-900 dark:text-white group-hover:text-orange-600 transition-colors">
-                                        {user.name}
+                                        {user?.nom || user?.name}
                                     </p>
                                     <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
                                 </div>
@@ -135,8 +236,8 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
                         {isProfileOpen && (
                             <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden py-1 animate-fadeIn z-50">
                                 <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user.name}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user.email}</p>
+                                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{user?.nom || user?.name}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                                 </div>
 
                                 <div className="py-1">
@@ -148,17 +249,12 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
                                         <User size={18} />
                                         My Profile
                                     </Link>
-                                    {/* Settings removed as requested */}
                                 </div>
 
                                 <div className="border-t border-gray-100 dark:border-gray-700 py-1">
                                     <button
-                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left"
-                                        onClick={() => {
-                                            // Add logout logic here
-                                            console.log("Logging out...");
-                                            setIsProfileOpen(false);
-                                        }}
+                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left font-semibold"
+                                        onClick={handleLogout}
                                     >
                                         <LogOut size={18} />
                                         Sign Out
@@ -176,6 +272,19 @@ const UserHeader: React.FC<UserHeaderProps> = ({ user }) => {
                 }
                 .animate-fadeIn {
                     animation: fadeIn 0.2s ease-out forwards;
+                }
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 4px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: #e2e8f0;
+                    border-radius: 20px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: #cbd5e1;
                 }
             `}</style>
         </header>
