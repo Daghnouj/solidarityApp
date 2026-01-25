@@ -6,8 +6,6 @@ import PostFeed from "./components/PostFeed";
 import RightSidebar from "./components/RightSidebar";
 import AddPostModal from "./components/AddPostModal";
 import CommentModal from "./components/CommentModal";
-import NotificationsModal from "./components/NotificationsModal";
-import FavoritesModal from "./components/FavoritesModal";
 import { useCommunity } from "./hooks/useCommunity";
 import type { Post } from "./types";
 
@@ -15,52 +13,62 @@ import type { Post } from "./types";
 export default function Community() {
   const {
     posts,
+    loading,
+    error,
     addPost,
     toggleLike,
     addComment,
-    toggleBookmark,
-    notifications,
-    unreadCount,
-    clearNotifications,
-    setUnreadCount,
+    addReply,
   } = useCommunity();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [showFavorites, setShowFavorites] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
+  // Update selected post if it changes in the posts list (to show new comments/replies)
+  const currentSelectedPost = selectedPost ? posts.find(p => p._id === selectedPost._id) || selectedPost : null;
+
   const filtered = posts.filter((p) =>
-    (p.content + (p.hashtags || []).join(" ")).toLowerCase().includes(searchQuery.toLowerCase())
+    (p.content + (p.hashtags || []).join(" ") + (p.user?.nom || p.username)).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-gray-100 p-4 md:p-8 mt-20">
-      <Banner />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen bg-[#F8F9FA] p-4 md:p-8 mt-20">
+      <div className="max-w-7xl mx-auto">
+        <Banner />
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6 mt-4">
-        <LeftSidebar
-          unreadCount={unreadCount}
-          onAddPost={() => setShowAddModal(true)}
-          onShowFavorites={() => setShowFavorites(true)}
-          onShowNotifications={() => {
-            setShowNotifications(true);
-            setUnreadCount(0);
-          }}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <LeftSidebar
+            onAddPost={() => setShowAddModal(true)}
+          />
 
-        <PostFeed
-          posts={filtered}
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          onLike={toggleLike}
-          onBookmark={toggleBookmark}
-          onComment={(p) => setSelectedPost(p)}
-          onAddPost={() => setShowAddModal(true)}
-        />
+          <main className="md:col-span-6 space-y-6">
+            {loading ? (
+              <div className="flex justify-center py-20">
+                <div className="relative">
+                  <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-indigo-200"></div>
+                  <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-t-4 border-indigo-600 animate-spin"></div>
+                </div>
+              </div>
+            ) : error ? (
+              <div className="bg-red-50 border border-red-100 text-red-600 px-6 py-4 rounded-2xl flex items-center gap-3">
+                <span className="text-xl">⚠️</span>
+                <span className="font-medium">{error}</span>
+              </div>
+            ) : (
+              <PostFeed
+                posts={filtered}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onLike={toggleLike}
+                onComment={(p) => setSelectedPost(p)}
+                onAddPost={() => setShowAddModal(true)}
+              />
+            )}
+          </main>
 
-        <RightSidebar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+          <RightSidebar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+        </div>
       </div>
 
       <AddPostModal
@@ -73,25 +81,11 @@ export default function Community() {
       />
 
       <CommentModal
-        post={selectedPost}
+        post={currentSelectedPost}
         onClose={() => setSelectedPost(null)}
-        onAddComment={(id, text) => {
-          addComment(id, text);
-          setSelectedPost(null);
-        }}
+        onAddComment={addComment}
+        onAddReply={addReply}
       />
-
-      <NotificationsModal
-        visible={showNotifications}
-        onClose={() => setShowNotifications(false)}
-        notifications={notifications}
-        clearNotifications={() => {
-          clearNotifications();
-          setShowNotifications(false);
-        }}
-      />
-
-      <FavoritesModal visible={showFavorites} onClose={() => setShowFavorites(false)} posts={posts} />
     </motion.div>
   );
 }
