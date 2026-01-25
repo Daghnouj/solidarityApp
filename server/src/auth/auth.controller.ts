@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import authService from "./auth.service";
 import { ProtectedRequest } from '../types/express';
 import { getIOInstance } from '../socket';
+import jwt from 'jsonwebtoken';
+import { env } from '../../config/env';
 
 // ✅ Export nommé de chaque fonction
 export const signup = async (req: Request, res: Response): Promise<void> => {
@@ -37,6 +39,31 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
   }
 };
+
+export const socialAuthCallback = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = req.user as any;
+    if (!user) {
+      res.redirect(`${env.FRONTEND_URL || 'http://localhost:5173'}/login?error=auth_failed`);
+      return;
+    }
+
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    // Redirect to frontend with token
+    res.redirect(`${env.FRONTEND_URL || 'http://localhost:5173'}/auth/callback?token=${token}`);
+  } catch (error) {
+    console.error("Social Auth Error:", error);
+    res.redirect(`${env.FRONTEND_URL || 'http://localhost:5173'}/login?error=server_error`);
+  }
+};
+
+
+
 
 export const submitRequest = async (req: ProtectedRequest, res: Response): Promise<void> => {
   try {

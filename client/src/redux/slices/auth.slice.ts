@@ -1,7 +1,7 @@
 // src/redux/slices/auth.slice.ts
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
-import type { AuthState, AuthResponse, RegisterResponse, User, RegisterData, LoginData } from "../../pages/auth/auth.types";
+import type { AuthState, AuthResponse, RegisterResponse, RegisterData, LoginData } from "../../pages/auth/auth.types";
 import authService from "../../pages/auth/services/auth.service";
 
 const userFromStorage = localStorage.getItem("user")
@@ -73,6 +73,8 @@ export const verifyOtpUser = createAsyncThunk<{ message: string }, { userId: str
     }
   }
 );
+
+
 
 export const resetPasswordUser = createAsyncThunk<{ message: string }, { userId: string; password: string; confirmPassword: string }>(
   "auth/resetPassword",

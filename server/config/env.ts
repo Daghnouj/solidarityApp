@@ -3,7 +3,7 @@ import { z } from "zod";
 import dotenv from "dotenv";
 
 dotenv.config(); // Charge le fichier .env
- 
+
 // Définir le schéma de validation avec Zod
 const envSchema = z.object({
   PORT: z.string().default("5000"),

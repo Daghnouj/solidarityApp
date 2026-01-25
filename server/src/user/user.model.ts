@@ -66,6 +66,10 @@ const UserSchema: Schema<UserDocument> = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  lastSeen: {
+    type: Date,
+    default: Date.now
+  },
   lastLogin: {
     type: Date,
     default: null

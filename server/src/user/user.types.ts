@@ -15,6 +15,7 @@ export interface IUser {
   isActive: boolean;
   deactivatedAt?: Date;
   isOnline: boolean;
+  lastSeen?: Date;
   lastLogin?: Date;
   oauthProvider: 'local' | 'google' | 'facebook';
   oauthId?: string;
@@ -130,5 +131,6 @@ export interface UserResponse {
   clinicName?: string;
   clinicAddress?: string;
   isOnline: boolean;
+  lastSeen?: Date;
   lastLogin?: Date;
 }

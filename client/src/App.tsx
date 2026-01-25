@@ -22,6 +22,8 @@ import LoginForm from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
 import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import OAuthCallbackPage from "./pages/auth/OAuthCallbackPage";
+
 
 // Pages - Admin Dashboard
 import OverviewPage from "./dashboard/OverviewPage";
@@ -114,6 +116,8 @@ const App: React.FC = () => {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/resetpass" element={<ResetPasswordPage />} />
           <Route path="/forgetpass" element={<ForgotPasswordPage />} />
+          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+
 
           {/* ================= Fallback 404 ================= */}
           <Route path="*" element={<h1 className="p-8 text-2xl text-red-600">404 - Page Not Found</h1>} />
