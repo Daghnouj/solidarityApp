@@ -1,20 +1,43 @@
 // components/community/types.ts
-export interface Comment {
-  id: string;
-  author: string;
+export interface Reply {
+  _id: string;
+  user: {
+    _id: string;
+    nom: string;
+    photo?: string;
+  };
   text: string;
-  timestamp: string;
+  date: string;
+}
+
+export interface Comment {
+  _id: string;
+  user: {
+    _id: string;
+    nom: string;
+    photo?: string;
+  };
+  text: string;
+  date: string;
+  replies?: Reply[];
 }
 
 export interface Post {
-  id: string;
-  author: string;
-  avatar?: string;
+  _id: string;
+  username: string;
+  userPhoto?: string;
+  userRole: string;
   content: string;
   likes: number;
   likedBy: string[]; // array of user ids
   comments: Comment[];
   hashtags?: string[];
-  bookmarkedBy: string[]; // array of user ids
-  timestamp: string;
+  favorites: string[]; // array of user ids
+  date: string;
+  user?: {
+    _id: string;
+    nom: string;
+    photo?: string;
+    role: string;
+  };
 }

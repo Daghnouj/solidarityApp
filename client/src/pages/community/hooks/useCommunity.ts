@@ -1,102 +1,114 @@
-// components/community/useCommunity.ts
-import { useState } from "react";
-import type { Post, Comment } from "../types";
-import { MOCK_POSTS } from "../data/mockPosts";
-
-const fakeCurrentUserId = "me"; // local-only
-
-function newId() {
-  return (Date.now() + Math.random()).toString(36);
-}
+// src/pages/community/hooks/useCommunity.ts
+import { useState, useEffect, useCallback } from "react";
+import type { Post } from "../types";
+import CommunityService from "../services/community.service";
 
 export function useCommunity() {
-  const [posts, setPosts] = useState<Post[]>(MOCK_POSTS);
-  const [notifications, setNotifications] = useState<string[]>([
-    "Welcome to the community!",
-  ]);
-  const [unreadCount, setUnreadCount] = useState<number>(1);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function addPost(content: string, hashtags: string[] = []) {
-    const p: Post = {
-      id: newId(),
-      author: "You",
-      avatar: "/default-avatar.png",
-      content,
-      likes: 0,
-      likedBy: [],
-      comments: [],
-      hashtags,
-      bookmarkedBy: [],
-      timestamp: new Date().toISOString(),
-    };
-    setPosts((s) => [p, ...s]);
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await CommunityService.getAllPosts();
+      setPosts(data);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Failed to fetch posts");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
+
+  async function addPost(content: string) {
+    try {
+      const response = await CommunityService.createPost(content);
+      if (response.success) {
+        setPosts((s) => [response.post, ...s]);
+      }
+    } catch (err: any) {
+      console.error("Failed to add post", err);
+    }
   }
 
-  function toggleLike(postId: string) {
-    setPosts((s) =>
-      s.map((p) => {
-        if (p.id !== postId) return p;
-        const liked = p.likedBy.includes(fakeCurrentUserId);
-        const likedBy = liked
-          ? p.likedBy.filter((id) => id !== fakeCurrentUserId)
-          : [...p.likedBy, fakeCurrentUserId];
-        return {
-          ...p,
-          likedBy,
-          likes: liked ? Math.max(0, p.likes - 1) : p.likes + 1,
-        };
-      })
-    );
+  async function toggleLike(postId: string) {
+    try {
+      const response = await CommunityService.toggleLike(postId);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => (p._id === postId ? response.post : p))
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle like", err);
+    }
   }
 
-  function addComment(postId: string, text: string) {
-    const comment: Comment = {
-      id: newId(),
-      author: "You",
-      text,
-      timestamp: new Date().toISOString(),
-    };
-    setPosts((s) =>
-      s.map((p) => (p.id === postId ? { ...p, comments: [...p.comments, comment] } : p))
-    );
+  async function addComment(postId: string, text: string) {
+    try {
+      const response = await CommunityService.addComment(postId, text);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => {
+            if (p._id === postId) {
+              // Add the new comment to the existing post's comments array
+              return {
+                ...p,
+                comments: [...p.comments, response.comment]
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to add comment", err);
+    }
   }
 
-  function toggleBookmark(postId: string) {
-    setPosts((s) =>
-      s.map((p) => {
-        if (p.id !== postId) return p;
-        const bookmarked = p.bookmarkedBy.includes(fakeCurrentUserId);
-        return {
-          ...p,
-          bookmarkedBy: bookmarked
-            ? p.bookmarkedBy.filter((id) => id !== fakeCurrentUserId)
-            : [...p.bookmarkedBy, fakeCurrentUserId],
-        };
-      })
-    );
-  }
-
-  function clearNotifications() {
-    setNotifications([]);
-    setUnreadCount(0);
-  }
-
-  function markNotificationsRead() {
-    setUnreadCount(0);
+  async function addReply(postId: string, commentId: string, text: string) {
+    try {
+      const response = await CommunityService.addReply(postId, commentId, text);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => {
+            if (p._id === postId) {
+              return {
+                ...p,
+                comments: p.comments.map(c => {
+                  if (c._id === commentId) {
+                    return {
+                      ...c,
+                      replies: [...(c.replies || []), response.reply]
+                    };
+                  }
+                  return c;
+                })
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to add reply", err);
+    }
   }
 
   return {
     posts,
+    loading,
+    error,
     addPost,
     toggleLike,
     addComment,
-    toggleBookmark,
-    notifications,
-    setNotifications,
-    unreadCount,
-    setUnreadCount,
-    clearNotifications,
-    markNotificationsRead,
+    addReply,
     setPosts,
+    fetchPosts,
   };
 }

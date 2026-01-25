@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { FaTimes, FaHashtag, FaGlobeAmericas } from "react-icons/fa";
+import { useAppSelector } from "../../../redux/hooks";
 
 interface Props {
   visible: boolean;
@@ -9,8 +11,7 @@ interface Props {
 
 export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
   const [content, setContent] = useState("");
-
-  if (!visible) return null;
+  const { user } = useAppSelector((state) => state.auth);
 
   const handleSubmit = () => {
     if (!content.trim()) return;
@@ -24,65 +25,84 @@ export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Background overlay */}
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-
-      {/* Modal content */}
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ duration: 0.3 }}
-        className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 z-10"
-      >
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Create New Post</h2>
-          <button
+    <AnimatePresence>
+      {visible && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+          />
+
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden z-10"
           >
-            ✕
-          </button>
+            <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Create Post</h2>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+              >
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <img
+                  src={user?.photo || "/default-avatar.png"}
+                  alt="User"
+                  className="w-11 h-11 rounded-full object-cover border border-gray-100"
+                />
+                <div>
+                  <div className="font-bold text-gray-900">{user?.nom || "Guest User"}</div>
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    <FaGlobeAmericas className="text-[9px]" /> Public
+                  </div>
+                </div>
+              </div>
+
+              <textarea
+                autoFocus
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={`What's on your mind, ${user?.nom?.split(' ')[0] || "Friend"}?`}
+                rows={5}
+                className="w-full border-none p-0 text-lg text-gray-700 placeholder:text-gray-300 focus:outline-none focus:ring-0 resize-none"
+              />
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {extractHashtags(content).map((tag) => (
+                  <span key={tag} className="flex items-center gap-1 text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl">
+                    <FaHashtag className="text-[10px]" /> {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-6 pt-0 flex justify-between items-center">
+              <div className="flex gap-2">
+                 {/* Placeholder for future attachments icons */}
+                 <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-indigo-600 cursor-pointer transition">
+                    <FaHashtag />
+                 </div>
+              </div>
+              <button
+                onClick={handleSubmit}
+                disabled={!content.trim()}
+                className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-100"
+              >
+                Post
+              </button>
+            </div>
+          </motion.div>
         </div>
-
-        {/* Textarea */}
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Share your thoughts... (use #hashtags to tag topics)"
-          rows={6}
-          className="w-full border border-gray-300 rounded-xl p-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
-        />
-
-        {/* Live hashtag preview */}
-        {extractHashtags(content).length > 0 && (
-          <div className="mt-3 text-sm text-indigo-600 space-x-2">
-            {extractHashtags(content).map((tag) => (
-              <span key={tag}>#{tag}</span>
-            ))}
-          </div>
-        )}
-
-        {/* Footer buttons */}
-        <div className="flex justify-end gap-3 mt-5">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-full border text-gray-700 hover:bg-gray-100 transition"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-4 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition"
-          >
-            Post
-          </button>
-        </div>
-      </motion.div>
-    </div>
+      )}
+    </AnimatePresence>
   );
 }
