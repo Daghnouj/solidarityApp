@@ -20,6 +20,7 @@ import favoritesRoutes from "./src/community/favorites/favorites.routes";
 import professionnelRouter from "./src/professional/professional.routes";
 import appointmentRoutes from "./src/appointment/appointment.routes";
 import notificationRoutes from "./src/community/notification/notification.routes";
+import chatRoutes from "./src/chat/chat.routes";
 import { authLimiter, basicSecurity, generalLimiter, noSqlInjectionMiddleware } from "./middlewares/security";
 import { requestLogger } from "./middlewares/logger";
 import { notFoundHandler, errorHandler } from "./middlewares/errorHandler";
@@ -60,6 +61,11 @@ app.use((req: any, res, next) => {
   next();
 });
 
+// 🔐 5.6. Passport OAuth
+import passport from './config/passport';
+app.use(passport.initialize());
+
+
 // 🛡️ 6. Rate limiting
 app.use("/api/auth/", authLimiter);
 app.use("/api/", generalLimiter);
@@ -85,6 +91,7 @@ app.use('/api/community/favorites', favoritesRoutes);
 app.use('/api/availabilities', availabilityRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/community/notifications', notificationRoutes);
+app.use('/api/chat', chatRoutes);
 // 🏠 8. Route de test  
 app.get("/", (req: Request, res: Response) => {
   res.json({

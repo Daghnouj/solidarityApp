@@ -18,6 +18,8 @@ const Header = () => {
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+  const [notificationMessages, setNotificationMessages] = useState<any[]>([]);
 
   const navigate = useNavigate();
 
@@ -26,6 +28,35 @@ const Header = () => {
 
   const handleLogout = () => {
     logout();
+  };
+
+  const fetchMessageNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const response = await fetch(`${API_BASE_URL}/chat/conversations`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Format snippets for the dropdown
+        const snippets = data.map((conv: any) => {
+          const otherUser = conv.participants.find((p: any) => p._id !== user?._id);
+          return {
+            id: conv._id,
+            sender: otherUser?.nom || "Unknown",
+            preview: conv.lastMessage?.content || "No messages yet",
+            time: conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
+            read: conv.lastMessage ? conv.lastMessage.read : true,
+            otherUserId: otherUser?._id
+          };
+        });
+        setNotificationMessages(snippets.slice(0, 5)); // show latest 5
+        setUnreadMessagesCount(data.filter((c: any) => c.lastMessage && !c.lastMessage.read && c.lastMessage.sender !== user?._id).length);
+      }
+    } catch (error) {
+      console.error("Failed to fetch message notifications", error);
+    }
   };
 
   // Close dropdowns when clicking outside
@@ -89,6 +120,7 @@ const Header = () => {
   useEffect(() => {
     if (isLoggedIn) {
       fetchNotifications();
+      fetchMessageNotifications();
       const token = localStorage.getItem('token');
       if (!token) return;
 
@@ -107,8 +139,23 @@ const Header = () => {
         setUnreadCount(prev => prev + 1);
       });
 
+      // --- NEW: Real-time Message Notifications ---
+      socket.on('receive_message', () => {
+        setUnreadMessagesCount(prev => prev + 1);
+        // Refresh snippets to show the new message content
+        fetchMessageNotifications();
+      });
+
+      // Listen for custom "chat_read" event from QuickActionsMenu
+      const handleChatRead = () => {
+        setUnreadMessagesCount(0);
+        fetchMessageNotifications(); // Refresh to mark as read in UI
+      };
+      window.addEventListener('chat_opened', handleChatRead);
+
       return () => {
         socket.disconnect();
+        window.removeEventListener('chat_opened', handleChatRead);
       };
     }
   }, [isLoggedIn]);
@@ -141,13 +188,11 @@ const Header = () => {
     }
   };
 
-  const messages = [
-    { id: 1, sender: "Dr. Sarah Johnson", preview: "Hello, regarding your appointment tomorrow...", time: "2 min ago", read: false },
-    { id: 2, sender: "Support Team", preview: "Your account has been verified", time: "1 day ago", read: true },
-    { id: 3, sender: "Community Admin", preview: "Welcome to the community!", time: "3 days ago", read: false },
-  ];
 
-  const unreadMessages = messages.filter(m => !m.read).length;
+  const handleMessageClick = (otherUserId: string) => {
+    setMessagesOpen(false);
+    window.dispatchEvent(new CustomEvent('open_chat', { detail: { userId: otherUserId } }));
+  };
 
   return (
     <nav className="bg-white/95 backdrop-blur-sm shadow-sm fixed top-0 w-full z-50 transition-all duration-300">
@@ -289,7 +334,7 @@ const Header = () => {
                     className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group"
                   >
                     <MessageSquare size={20} />
-                    {unreadMessages > 0 && (
+                    {unreadMessagesCount > 0 && (
                       <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
                     )}
                   </button>
@@ -298,23 +343,39 @@ const Header = () => {
                     <div className="absolute right-0 mt-4 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 animate-fadeIn overflow-hidden">
                       <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                         <h3 className="font-bold text-gray-900 text-sm">Messages</h3>
-                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{unreadMessages} New</span>
+                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{unreadMessagesCount} New</span>
                       </div>
                       <div className="max-h-80 overflow-y-auto custom-scrollbar">
-                        {messages.map((message) => (
-                          <div key={message.id} className="px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0">
-                            <div className="flex justify-between items-start">
-                              <p className="font-bold text-sm text-gray-900">{message.sender}</p>
-                              <p className="text-xs text-gray-400">{message.time}</p>
+                        {notificationMessages.length > 0 ? (
+                          notificationMessages.map((msg) => (
+                            <div
+                              key={msg.id}
+                              onClick={() => handleMessageClick(msg.otherUserId)}
+                              className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!msg.read ? 'bg-blue-50/20' : ''}`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <p className={`text-sm ${!msg.read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{msg.sender}</p>
+                                <p className="text-[10px] text-gray-400">{msg.time}</p>
+                              </div>
+                              <p className={`text-sm truncate mt-0.5 ${!msg.read ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>{msg.preview}</p>
                             </div>
-                            <p className="text-sm text-gray-600 truncate mt-0.5">{message.preview}</p>
+                          ))
+                        ) : (
+                          <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                            Pas de messages récents
                           </div>
-                        ))}
+                        )}
                       </div>
                       <div className="p-2 border-t border-gray-100 bg-gray-50/50">
-                        <NavLink to="/messages" className="block text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors">
+                        <button
+                          onClick={() => {
+                            setMessagesOpen(false);
+                            window.dispatchEvent(new CustomEvent('open_chat', { detail: {} }));
+                          }}
+                          className="w-full text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
                           View All
-                        </NavLink>
+                        </button>
                       </div>
                     </div>
                   )}
@@ -397,15 +458,21 @@ const Header = () => {
                   )}
                 </NavLink>
 
-                <NavLink to="/messages" className="flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 rounded-xl hover:bg-gray-50">
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    window.dispatchEvent(new CustomEvent('open_chat', { detail: {} }));
+                  }}
+                  className="w-full flex items-center px-4 py-3 text-gray-700 hover:text-blue-600 rounded-xl hover:bg-gray-50 text-left"
+                >
                   <MessageSquare size={20} className="mr-3" />
                   Messages
-                  {unreadMessages > 0 && (
+                  {unreadMessagesCount > 0 && (
                     <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                      {unreadMessages}
+                      {unreadMessagesCount}
                     </span>
                   )}
-                </NavLink>
+                </button>
               </div>
 
               <button

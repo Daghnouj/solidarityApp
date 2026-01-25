@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, ThumbsUp, Share2, RefreshCw, Bookmark } from 'lucide-react';
+import { MessageSquare, ThumbsUp, Share2, RefreshCw, Bookmark, X } from 'lucide-react';
 import { useAuth } from '../../pages/auth/hooks/useAuth';
 import DashboardAddPostModal from '../../dashboard/components/ui/DashboardAddPostModal';
+import { useNavigate } from 'react-router-dom';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -11,6 +12,9 @@ const ProfessionalCommunity: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'activity' | 'saved'>('activity');
+    const [likersModalOpen, setLikersModalOpen] = useState(false);
+    const [selectedPostLikers, setSelectedPostLikers] = useState<any[]>([]);
+    const navigate = useNavigate();
 
     const fetchData = async () => {
         setLoading(true);
@@ -53,6 +57,41 @@ const ProfessionalCommunity: React.FC = () => {
             console.error("Error creating post:", error);
             alert("Failed to create post. Please try again.");
             throw error;
+        }
+    };
+
+    const handleLike = async (postId: string) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/community/posts/${postId}/like`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (response.ok) {
+                const updatedPost = await response.json();
+                // Update local state
+                setPosts(prev => prev.map(p => {
+                    const id = p._id || p.id;
+                    if (id === postId) {
+                        // The API returns { success: true, post: updatedPost }
+                        // Actually controller returns { success: true, post } or just post?
+                        // Let's look at controller: res.json({ success: true, post })
+                        // So we need updatedPost.post
+                        return { ...p, likes: updatedPost.post.likes, likedBy: updatedPost.post.likedBy };
+                    }
+                    return p;
+                }));
+            }
+        } catch (error) {
+            console.error("Failed to like post", error);
+        }
+    };
+
+    const openLikersModal = (post: any) => {
+        if (post.likedBy && post.likedBy.length > 0) {
+            setSelectedPostLikers(post.likedBy);
+            setLikersModalOpen(true);
         }
     };
 
@@ -131,14 +170,30 @@ const ProfessionalCommunity: React.FC = () => {
                                     </p>
 
                                     <div className="flex gap-6 mt-6 pt-4 border-t border-gray-100">
-                                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                                            <ThumbsUp size={18} />
-                                            <span>{post.likes || 0} Likes</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                                        <button
+                                            onClick={() => handleLike(post._id || post.id)}
+                                            className={`flex items-center gap-2 text-sm transition-colors ${post.likedBy?.some((u: any) => (u._id || u) === user?._id) ? 'text-blue-600 font-semibold' : 'text-gray-400 hover:text-blue-600'}`}
+                                        >
+                                            <ThumbsUp size={18} className={post.likedBy?.some((u: any) => (u._id || u) === user?._id) ? 'fill-blue-600' : ''} />
+                                            <span
+                                                className="hover:underline cursor-pointer"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openLikersModal(post);
+                                                }}
+                                            >
+                                                {post.likes || 0} Likes
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            onClick={() => navigate(`/community/post/${post._id || post.id}`)}
+                                            className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors"
+                                        >
                                             <MessageSquare size={18} />
                                             <span>{post.comments?.length || 0} Comments</span>
-                                        </div>
+                                        </button>
+
                                         <button className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors ml-auto">
                                             <Share2 size={18} />
                                             <span>Share</span>
@@ -174,6 +229,38 @@ const ProfessionalCommunity: React.FC = () => {
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleCreatePost}
             />
+
+            {/* Likers Modal */}
+            {likersModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                            <h3 className="font-bold text-gray-900">Liked by</h3>
+                            <button
+                                onClick={() => setLikersModalOpen(false)}
+                                className="p-1 rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="max-h-[400px] overflow-y-auto p-2">
+                            {selectedPostLikers.map((liker: any, index: number) => (
+                                <div key={index} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
+                                    <img
+                                        src={liker.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${liker.nom || 'User'}`}
+                                        alt={liker.nom}
+                                        className="w-10 h-10 rounded-full bg-gray-100 border border-gray-100"
+                                    />
+                                    <div>
+                                        <p className="font-semibold text-sm text-gray-900">{liker.nom}</p>
+                                        <p className="text-xs text-gray-500 capitalize">{liker.role}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @keyframes fadeIn {

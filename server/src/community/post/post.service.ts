@@ -86,7 +86,7 @@ export class PostService {
         [isLiking ? '$addToSet' : '$pull']: { likedBy: userId }
       },
       { new: true, select: 'likes likedBy' }
-    );
+    ).populate('likedBy', 'nom photo role');
 
     if (isLiking && !post.user._id.equals(userId)) {
       await NotificationService.createNotification({
@@ -105,6 +105,7 @@ export class PostService {
   static async getFavoritePosts(userId: string): Promise<IPost[]> {
     return await Post.find({ favorites: userId })
       .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
       .populate({
         path: 'comments.user',
         select: 'nom photo'
@@ -119,6 +120,7 @@ export class PostService {
   static async getMyPosts(userId: string): Promise<IPost[]> {
     return await Post.find({ user: userId })
       .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
       .populate({
         path: 'comments.user',
         select: 'nom photo'
@@ -133,6 +135,7 @@ export class PostService {
   static async getAllPosts(): Promise<IPost[]> {
     return await Post.find()
       .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
       .populate({
         path: 'comments.user',
         select: 'nom photo'

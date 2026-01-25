@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, User, LogOut, ChevronDown } from 'lucide-react';
+import { Bell, User, LogOut, ChevronDown, MessageSquare } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuth } from '../../../pages/auth/hooks/useAuth';
@@ -10,11 +10,43 @@ const ProfessionalHeader: React.FC = () => {
     const { user, logout } = useAuth();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
+    const [messagesOpen, setMessagesOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+    const [notificationMessages, setNotificationMessages] = useState<any[]>([]);
+
     const notificationRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
+    const messageRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+
+    const fetchMessageNotifications = async () => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`${API_BASE_URL}/chat/conversations`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const snippets = data.map((conv: any) => {
+                    const otherUser = conv.participants.find((p: any) => p._id !== user?._id);
+                    return {
+                        id: conv._id,
+                        sender: otherUser?.nom || "Unknown",
+                        preview: conv.lastMessage?.content || "No messages yet",
+                        time: conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
+                        read: conv.lastMessage ? conv.lastMessage.read : true,
+                        otherUserId: otherUser?._id
+                    };
+                });
+                setNotificationMessages(snippets.slice(0, 5));
+                setUnreadMessagesCount(data.filter((c: any) => c.lastMessage && !c.lastMessage.read && c.lastMessage.sender !== user?._id).length);
+            }
+        } catch (error) {
+            console.error("Failed to fetch message notifications", error);
+        }
+    };
 
     const fetchNotifications = async () => {
         try {
@@ -49,6 +81,7 @@ const ProfessionalHeader: React.FC = () => {
 
     useEffect(() => {
         fetchNotifications();
+        fetchMessageNotifications();
 
         // Socket.IO Connection
         const token = localStorage.getItem('token');
@@ -69,10 +102,23 @@ const ProfessionalHeader: React.FC = () => {
             setUnreadCount(prev => prev + 1);
         });
 
+        socket.on('receive_message', () => {
+            setUnreadMessagesCount(prev => prev + 1);
+            fetchMessageNotifications();
+        });
+
+        const handleChatRead = () => {
+            setUnreadMessagesCount(0);
+            fetchMessageNotifications();
+        };
+        window.addEventListener('chat_opened', handleChatRead);
+
         return () => {
             socket.off('connect');
             socket.off('new_notification');
+            socket.off('receive_message');
             socket.disconnect();
+            window.removeEventListener('chat_opened', handleChatRead);
         };
     }, []);
 
@@ -84,6 +130,9 @@ const ProfessionalHeader: React.FC = () => {
             }
             if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
                 setIsProfileOpen(false);
+            }
+            if (messageRef.current && !messageRef.current.contains(event.target as Node)) {
+                setMessagesOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -151,18 +200,79 @@ const ProfessionalHeader: React.FC = () => {
                 {/* RIGHT */}
                 <div className="flex items-center gap-3">
 
+                    {/* Messages */}
+                    <div className="relative" ref={messageRef}>
+                        <button
+                            onClick={() => setMessagesOpen(!messagesOpen)}
+                            className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group focus:outline-none"
+                        >
+                            <MessageSquare size={20} />
+                            {unreadMessagesCount > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-600 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white">
+                                    {unreadMessagesCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Messages Dropdown */}
+                        {messagesOpen && (
+                            <div className="absolute right-0 mt-4 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 animate-fadeIn overflow-hidden">
+                                <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                    <h3 className="font-bold text-gray-900 text-sm">Messages</h3>
+                                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{unreadMessagesCount} New</span>
+                                </div>
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar">
+                                    {notificationMessages.length > 0 ? (
+                                        notificationMessages.map((msg) => (
+                                            <div
+                                                key={msg.id}
+                                                onClick={() => {
+                                                    setMessagesOpen(false);
+                                                    window.dispatchEvent(new CustomEvent('open_chat', { detail: { userId: msg.otherUserId } }));
+                                                }}
+                                                className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!msg.read ? 'bg-blue-50/20' : ''}`}
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <p className={`text-sm ${!msg.read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{msg.sender}</p>
+                                                    <p className="text-[10px] text-gray-400">{msg.time}</p>
+                                                </div>
+                                                <p className={`text-sm truncate mt-0.5 ${!msg.read ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>{msg.preview}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                                            Pas de messages récents
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="p-2 border-t border-gray-100 bg-gray-50/50">
+                                    <button
+                                        onClick={() => {
+                                            setMessagesOpen(false);
+                                            window.dispatchEvent(new CustomEvent('open_chat', { detail: {} }));
+                                        }}
+                                        className="w-full text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                                    >
+                                        View All
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     {/* Notifications */}
                     <div className="relative" ref={notificationRef}>
                         <button
                             onClick={() => {
                                 setShowNotifications(!showNotifications);
-                                if (!showNotifications) markAsRead();
                             }}
                             className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group focus:outline-none"
                         >
                             <Bell size={20} />
                             {unreadCount > 0 && (
-                                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                                <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                                    {unreadCount}
+                                </span>
                             )}
                         </button>
 
@@ -171,7 +281,9 @@ const ProfessionalHeader: React.FC = () => {
                             <div className="absolute right-0 mt-4 w-80 bg-white rounded-xl shadow-xl border border-gray-100 z-50 animate-fadeIn overflow-hidden">
                                 <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
                                     <h3 className="font-bold text-gray-900 text-sm">Notifications</h3>
-                                    <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{unreadCount} New</span>
+                                    {unreadCount > 0 && (
+                                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{unreadCount} New</span>
+                                    )}
                                 </div>
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {notifications.length > 0 ? (
@@ -181,21 +293,30 @@ const ProfessionalHeader: React.FC = () => {
                                                 className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!n.read ? 'bg-blue-50/30' : ''}`}
                                                 onClick={() => handleNotificationClick(n)}
                                             >
-                                                <div className="flex gap-3">
+                                                <div className="flex gap-3 items-start">
+                                                    {/* Colored indicator button for unread notifications */}
+                                                    {!n.read && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                markOneAsRead(n._id);
+                                                            }}
+                                                            className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 mt-2 hover:scale-125 transition-transform"
+                                                            title="Mark as read"
+                                                        ></button>
+                                                    )}
+                                                    {n.read && (
+                                                        <div className="w-2 h-2 flex-shrink-0 mt-2"></div>
+                                                    )}
                                                     <img
                                                         src={n.sender?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${n.sender?.nom}`}
                                                         alt="User"
                                                         className="w-10 h-10 rounded-full bg-gray-200"
                                                     />
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex justify-between items-start gap-2">
-                                                            <p className={`text-sm line-clamp-2 ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-                                                                {getNotificationContent(n)}
-                                                            </p>
-                                                            {!n.read && (
-                                                                <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
-                                                            )}
-                                                        </div>
+                                                        <p className={`text-sm line-clamp-2 ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                                                            {getNotificationContent(n)}
+                                                        </p>
                                                         <p className="text-xs text-gray-400 mt-1">
                                                             {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         </p>
@@ -213,7 +334,10 @@ const ProfessionalHeader: React.FC = () => {
                                     <button
                                         onClick={markAsRead}
                                         disabled={unreadCount === 0}
-                                        className="w-full text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50"
+                                        className={`w-full text-center py-2 text-xs font-bold rounded-lg transition-all ${unreadCount > 0
+                                            ? 'text-white bg-blue-600 hover:bg-blue-700 shadow-sm'
+                                            : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                            }`}
                                     >
                                         Mark All as Read
                                     </button>

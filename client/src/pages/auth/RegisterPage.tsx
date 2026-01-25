@@ -63,6 +63,32 @@ const RegisterPage: React.FC = () => (
 
         <RegisterForm />
 
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-slate-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-white text-slate-500">Or sign up with</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => window.location.href = "http://localhost:5000/api/auth/google"}
+            className="flex items-center justify-center px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="h-5 w-5 mr-2" alt="Google" />
+            <span className="text-sm font-medium text-slate-700">Google</span>
+          </button>
+          <button
+            onClick={() => window.location.href = "http://localhost:5000/api/auth/facebook"}
+            className="flex items-center justify-center px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
+          >
+            <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="h-5 w-5 mr-2" alt="Facebook" />
+            <span className="text-sm font-medium text-slate-700">Facebook</span>
+          </button>
+        </div>
+
         <div className="space-y-6 mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
@@ -106,7 +132,7 @@ const RegisterPage: React.FC = () => (
         animation-delay: 4s;
       }
     `}</style>
-  </div>
+  </div >
 );
 
 export default RegisterPage;
