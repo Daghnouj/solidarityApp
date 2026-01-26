@@ -16,9 +16,16 @@ export default function Community() {
     loading,
     error,
     addPost,
+    editPost,
+    removePost,
     toggleLike,
+    toggleFavorite,
     addComment,
     addReply,
+    editComment,
+    removeComment,
+    editReply,
+    removeReply,
   } = useCommunity();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,7 +68,10 @@ export default function Community() {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onLike={toggleLike}
+                onFavorite={toggleFavorite}
                 onComment={(p) => setSelectedPost(p)}
+                onEditPost={editPost}
+                onDeletePost={removePost}
                 onAddPost={() => setShowAddModal(true)}
               />
             )}
@@ -85,6 +95,10 @@ export default function Community() {
         onClose={() => setSelectedPost(null)}
         onAddComment={addComment}
         onAddReply={addReply}
+        onEditComment={editComment}
+        onDeleteComment={removeComment}
+        onEditReply={editReply}
+        onDeleteReply={removeReply}
       />
     </motion.div>
   );

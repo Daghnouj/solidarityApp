@@ -8,7 +8,10 @@ interface Props {
   searchQuery: string;
   setSearchQuery: (val: string) => void;
   onLike: (id: string) => void;
+  onFavorite: (id: string) => void;
   onComment: (post: Post) => void;
+  onEditPost: (id: string, content: string) => void;
+  onDeletePost: (id: string) => void;
   onAddPost: () => void;
 }
 
@@ -17,7 +20,10 @@ export default function PostFeed({
   searchQuery,
   setSearchQuery,
   onLike,
+  onFavorite,
   onComment,
+  onEditPost,
+  onDeletePost,
   onAddPost,
 }: Props) {
   const { user } = useAppSelector((state) => state.auth);
@@ -76,7 +82,7 @@ export default function PostFeed({
         {posts.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border border-gray-100">
             <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-               <FaSearch className="text-gray-300 text-xl" />
+              <FaSearch className="text-gray-300 text-xl" />
             </div>
             <h3 className="text-gray-900 font-bold mb-1">No posts found</h3>
             <p className="text-gray-500 text-sm">Try adjusting your search or filters.</p>
@@ -87,7 +93,10 @@ export default function PostFeed({
               key={p._id}
               post={p}
               onLike={() => onLike(p._id)}
+              onFavorite={() => onFavorite(p._id)}
               onComment={() => onComment(p)}
+              onEdit={(content) => onEditPost(p._id, content)}
+              onDelete={() => onDeletePost(p._id)}
             />
           ))
         )}

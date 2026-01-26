@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bookmark, ThumbsUp, MessageSquare, Share2, RefreshCw } from 'lucide-react';
-
-const API_BASE_URL = import.meta.env.VITE_API_URL;
+import CommunityService from '../../pages/community/services/community.service';
 
 const ProfessionalSavedPosts: React.FC = () => {
     const [posts, setPosts] = useState<any[]>([]);
@@ -9,14 +8,8 @@ const ProfessionalSavedPosts: React.FC = () => {
 
     const fetchSavedPosts = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`${API_BASE_URL}/community/posts/saved`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (response.ok) {
-                const data = await response.json();
-                setPosts(data);
-            }
+            const data = await CommunityService.getFavoritePosts();
+            setPosts(data);
         } catch (error) {
             console.error("Failed to fetch saved posts", error);
         } finally {

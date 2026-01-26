@@ -5,6 +5,7 @@ export interface Reply {
     _id: string;
     nom: string;
     photo?: string;
+    role?: string;
   };
   text: string;
   date: string;
@@ -16,6 +17,7 @@ export interface Comment {
     _id: string;
     nom: string;
     photo?: string;
+    role?: string;
   };
   text: string;
   date: string;
@@ -29,7 +31,7 @@ export interface Post {
   userRole: string;
   content: string;
   likes: number;
-  likedBy: string[]; // array of user ids
+  likedBy: (string | { _id: string; nom: string; photo?: string; role: string })[]; // can be ids or populated objects
   comments: Comment[];
   hashtags?: string[];
   favorites: string[]; // array of user ids

@@ -36,6 +36,28 @@ export function useCommunity() {
     }
   }
 
+  async function editPost(postId: string, content: string) {
+    try {
+      const response = await CommunityService.updatePost(postId, content);
+      if (response.success) {
+        setPosts((s) => s.map((p) => (p._id === postId ? response.post : p)));
+      }
+    } catch (err: any) {
+      console.error("Failed to edit post", err);
+    }
+  }
+
+  async function removePost(postId: string) {
+    try {
+      const response = await CommunityService.deletePost(postId);
+      if (response.success) {
+        setPosts((s) => s.filter((p) => p._id !== postId));
+      }
+    } catch (err: any) {
+      console.error("Failed to delete post", err);
+    }
+  }
+
   async function toggleLike(postId: string) {
     try {
       const response = await CommunityService.toggleLike(postId);
@@ -49,6 +71,19 @@ export function useCommunity() {
     }
   }
 
+  async function toggleFavorite(postId: string) {
+    try {
+      const response = await CommunityService.toggleFavorite(postId);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => (p._id === postId ? response.post : p))
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to toggle favorite", err);
+    }
+  }
+
   async function addComment(postId: string, text: string) {
     try {
       const response = await CommunityService.addComment(postId, text);
@@ -59,7 +94,7 @@ export function useCommunity() {
               // Add the new comment to the existing post's comments array
               return {
                 ...p,
-                comments: [...p.comments, response.comment]
+                comments: [...(p.comments || []), response.comment]
               };
             }
             return p;
@@ -100,14 +135,125 @@ export function useCommunity() {
     }
   }
 
+  async function editComment(postId: string, commentId: string, text: string) {
+    try {
+      const response = await CommunityService.updateComment(postId, commentId, text);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => {
+            if (p._id === postId) {
+              return {
+                ...p,
+                comments: p.comments.map((c) =>
+                  c._id === commentId ? { ...c, text, edited: true } : c
+                ),
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to edit comment", err);
+    }
+  }
+
+  async function removeComment(postId: string, commentId: string) {
+    try {
+      const response = await CommunityService.deleteComment(postId, commentId);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => {
+            if (p._id === postId) {
+              return {
+                ...p,
+                comments: p.comments.filter((c) => c._id !== commentId),
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to delete comment", err);
+    }
+  }
+
+  async function editReply(postId: string, commentId: string, replyId: string, text: string) {
+    try {
+      const response = await CommunityService.updateReply(postId, commentId, replyId, text);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => {
+            if (p._id === postId) {
+              return {
+                ...p,
+                comments: p.comments.map((c) => {
+                  if (c._id === commentId) {
+                    return {
+                      ...c,
+                      replies: (c.replies || []).map((r) =>
+                        r._id === replyId ? { ...r, text, edited: true } : r
+                      ),
+                    };
+                  }
+                  return c;
+                }),
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to edit reply", err);
+    }
+  }
+
+  async function removeReply(postId: string, commentId: string, replyId: string) {
+    try {
+      const response = await CommunityService.deleteReply(postId, commentId, replyId);
+      if (response.success) {
+        setPosts((s) =>
+          s.map((p) => {
+            if (p._id === postId) {
+              return {
+                ...p,
+                comments: p.comments.map((c) => {
+                  if (c._id === commentId) {
+                    return {
+                      ...c,
+                      replies: (c.replies || []).filter((r) => r._id !== replyId),
+                    };
+                  }
+                  return c;
+                }),
+              };
+            }
+            return p;
+          })
+        );
+      }
+    } catch (err: any) {
+      console.error("Failed to delete reply", err);
+    }
+  }
+
   return {
     posts,
     loading,
     error,
     addPost,
+    editPost,
+    removePost,
     toggleLike,
+    toggleFavorite,
     addComment,
     addReply,
+    editComment,
+    removeComment,
+    editReply,
+    removeReply,
     setPosts,
     fetchPosts,
   };

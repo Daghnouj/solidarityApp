@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Bell, User, LogOut, ChevronDown, MessageSquare } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import { useAuth } from '../../../pages/auth/hooks/useAuth';
+import { useSocket } from '../../../context/SocketContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const ProfessionalHeader: React.FC = () => {
     const { user, logout } = useAuth();
+    const { socket } = useSocket();
     const [notifications, setNotifications] = useState<any[]>([]);
     const [showNotifications, setShowNotifications] = useState(false);
     const [messagesOpen, setMessagesOpen] = useState(false);
@@ -83,29 +84,20 @@ const ProfessionalHeader: React.FC = () => {
         fetchNotifications();
         fetchMessageNotifications();
 
-        // Socket.IO Connection
-        const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!socket) return;
 
-        const socket = io(API_BASE_URL.replace('/api', ''), {
-            auth: { token },
-            transports: ['websocket']
-        });
-
-        socket.on('connect', () => {
-            console.log('Connected to notification socket');
-        });
-
-        // Listen for new notifications
-        socket.on('new_notification', (newNotification: any) => {
+        const handleNewNotification = (newNotification: any) => {
             setNotifications(prev => [newNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
-        });
+        };
 
-        socket.on('receive_message', () => {
+        const handleReceiveMessage = () => {
             setUnreadMessagesCount(prev => prev + 1);
             fetchMessageNotifications();
-        });
+        };
+
+        socket.on('new_notification', handleNewNotification);
+        socket.on('receive_message', handleReceiveMessage);
 
         const handleChatRead = () => {
             setUnreadMessagesCount(0);
@@ -114,13 +106,11 @@ const ProfessionalHeader: React.FC = () => {
         window.addEventListener('chat_opened', handleChatRead);
 
         return () => {
-            socket.off('connect');
-            socket.off('new_notification');
-            socket.off('receive_message');
-            socket.disconnect();
+            socket.off('new_notification', handleNewNotification);
+            socket.off('receive_message', handleReceiveMessage);
             window.removeEventListener('chat_opened', handleChatRead);
         };
-    }, []);
+    }, [socket]);
 
     // Close on click outside
     useEffect(() => {

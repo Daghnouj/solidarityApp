@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, User, LogOut, ChevronDown } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import { useAuth } from '../../../pages/auth/hooks/useAuth';
+import { useSocket } from '../../../context/SocketContext';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 const UserHeader: React.FC = () => {
     const { user, logout } = useAuth();
+    const { socket } = useSocket();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -108,23 +109,22 @@ const UserHeader: React.FC = () => {
 
     useEffect(() => {
         fetchNotifications();
-        const token = localStorage.getItem('token');
-        if (!token) return;
+    }, []);
 
-        const socket = io(API_BASE_URL.replace('/api', ''), {
-            auth: { token },
-            transports: ['websocket']
-        });
+    useEffect(() => {
+        if (!socket) return;
 
-        socket.on('new_notification', (newNotification: any) => {
+        const handleNewNotification = (newNotification: any) => {
             setNotifications(prev => [newNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
-        });
+        };
+
+        socket.on('new_notification', handleNewNotification);
 
         return () => {
-            socket.disconnect();
+            socket.off('new_notification', handleNewNotification);
         };
-    }, []);
+    }, [socket]);
 
     return (
         <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 md:px-8 py-4 sticky top-0 z-40 shadow-sm">

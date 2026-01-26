@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaTimes, FaHashtag, FaGlobeAmericas } from "react-icons/fa";
+import { FaTimes, FaHashtag, FaGlobeAmericas, FaCheckCircle } from "react-icons/fa";
 import { useAppSelector } from "../../../redux/hooks";
 
 interface Props {
@@ -12,6 +12,11 @@ interface Props {
 export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
   const [content, setContent] = useState("");
   const { user } = useAppSelector((state) => state.auth);
+
+  const getAvatar = (photo?: string, name?: string) => {
+    if (photo && photo !== 'default.png' && photo !== 'default-avatar.png' && photo.includes('http')) return photo;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=random&color=fff`;
+  };
 
   const handleSubmit = () => {
     if (!content.trim()) return;
@@ -55,12 +60,17 @@ export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
             <div className="p-6">
               <div className="flex items-center gap-3 mb-4">
                 <img
-                  src={user?.photo || "/default-avatar.png"}
+                  src={getAvatar(user?.photo, user?.nom)}
                   alt="User"
                   className="w-11 h-11 rounded-full object-cover border border-gray-100"
                 />
                 <div>
-                  <div className="font-bold text-gray-900">{user?.nom || "Guest User"}</div>
+                  <div className="flex items-center gap-1.5">
+                    {user?.role === 'professional' && (
+                      <FaCheckCircle className="text-indigo-500 text-[13px]" title="Professional" />
+                    )}
+                    <div className="font-bold text-gray-900">{user?.nom || "Guest User"}</div>
+                  </div>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
                     <FaGlobeAmericas className="text-[9px]" /> Public
                   </div>
@@ -87,10 +97,10 @@ export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
 
             <div className="p-6 pt-0 flex justify-between items-center">
               <div className="flex gap-2">
-                 {/* Placeholder for future attachments icons */}
-                 <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-indigo-600 cursor-pointer transition">
-                    <FaHashtag />
-                 </div>
+                {/* Placeholder for future attachments icons */}
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-indigo-600 cursor-pointer transition">
+                  <FaHashtag />
+                </div>
               </div>
               <button
                 onClick={handleSubmit}

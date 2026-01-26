@@ -120,6 +120,34 @@ export const getSavedPosts = async (req: SocketIORequest, res: Response): Promis
   }
 };
 
+export const getLikedPosts = async (req: SocketIORequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'Non autorisé' });
+      return;
+    }
+    const posts = await PostService.getLikedPosts(req.user._id as any);
+    res.json(posts);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getCommentedPosts = async (req: SocketIORequest, res: Response): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'Non autorisé' });
+      return;
+    }
+    const posts = await PostService.getCommentedPosts(req.user._id as any);
+    res.json(posts);
+  } catch (error: any) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 export const updatePost = async (req: SocketIORequest, res: Response): Promise<void> => {
   try {
     if (!req.user) {
