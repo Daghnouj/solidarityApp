@@ -13,6 +13,8 @@ export interface User {
   professionalInfo?: ProfessionalInfo;
   profilePicture?: string;
   photo?: string;
+  following?: string[];
+  groups?: string[];
 }
 
 export interface ProfessionalInfo {

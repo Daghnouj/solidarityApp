@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { Server } from 'socket.io';
 import Post from './post.model';
-import Hashtag from '../community.models';
+import { Hashtag } from '../community.models';
 import { IPost, CreatePostRequest, UpdatePostRequest } from './post.types';
 import { extractHashtags } from '../utils/hashtagUtils';
 import { NotificationService } from '../notification/notification.service';
