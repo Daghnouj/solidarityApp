@@ -20,9 +20,7 @@ const UserProfileDropdown = ({ onLogout }: { onLogout: () => void }) => {
   };
 
   const getDashboardLink = () => {
-    if (user?.role === 'admin') return '/admin';
-    if (user?.role === 'professional' || user?.isProfessional) return '/dashboard/professional';
-    return '/dashboard/user';
+    return '/dashboard';
   };
 
   // Close dropdown when clicking outside

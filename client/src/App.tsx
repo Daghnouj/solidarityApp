@@ -56,11 +56,14 @@ import ProfessionalProfileDashboard from "./dashboardprofessional/pages/Professi
 import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./pages/ProfessionalProfile/components/ErrorBoundary";
 import { SocketProvider } from "./context/SocketContext";
+import DashboardBridge from "./components/DashboardBridge";
+import { Toaster } from "react-hot-toast";
 
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <SocketProvider>
+        <Toaster position="top-right" />
         <Router>
           <ScrollToTop />
           <Routes>
@@ -90,6 +93,7 @@ const App: React.FC = () => {
             </Route>
 
             {/* ================= User Dashboard ================= */}
+            <Route path="/dashboard" element={<DashboardBridge />} />
             <Route path="/dashboard/user" element={<UserLayout />}>
               <Route index element={<UserOverview />} />
               <Route path="appointments" element={<UserAppointments />} />

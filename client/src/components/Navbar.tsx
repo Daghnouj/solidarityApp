@@ -167,7 +167,7 @@ const Header = () => {
     }
 
     if (notification.type.includes('appointment')) {
-      navigate(user?.role === 'professional' ? '/dashboard/professional/requests' : '/dashboard/user/appointments');
+      navigate('/dashboard');
     } else if (notification.post?._id) {
       navigate(`/community/post/${notification.post._id}`);
     } else if (notification.type === 'comment' || notification.type === 'reply') {

@@ -1,91 +1,105 @@
-import React from 'react';
-import { Heart, Star, MapPin, Search, Filter, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Heart, MessageSquare, Share2, RefreshCw } from 'lucide-react';
+import CommunityService from '../../pages/community/services/community.service';
 
 const UserFavorites: React.FC = () => {
+    const [posts, setPosts] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchLikedPosts = async () => {
+        try {
+            const data = await CommunityService.getLikedPosts();
+            setPosts(data);
+        } catch (error) {
+            console.error('Failed to fetch liked posts', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLikedPosts();
+    }, []);
+
     return (
-        <div className="space-y-8 animate-fadeIn">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-800">Favorite Specialists</h2>
-                    <p className="text-gray-500 text-sm mt-1">Access your saved professionals quickly.</p>
-                </div>
-
-                {/* Search & Filter */}
-                <div className="flex w-full md:w-auto gap-3">
-                    <div className="relative flex-1 md:w-64">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search saved..."
-                            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-400 transition-all"
-                        />
-                    </div>
-                    <button className="p-2 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-600">
-                        <Filter size={20} />
-                    </button>
-                </div>
+        <div className="space-y-6 animate-fadeIn">
+            <div>
+                <h2 className="text-2xl font-bold text-gray-800">Liked Posts</h2>
+                <p className="text-gray-500 text-sm mt-1">Posts you liked in the community.</p>
             </div>
 
-            {/* Categories */}
-            <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                {['All', 'Psychologists', 'Psychiatrists', 'Therapists'].map((cat, i) => (
-                    <button
-                        key={cat}
-                        className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${i === 0 ? 'bg-gray-900 text-white shadow-md' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                    >
-                        {cat}
-                    </button>
-                ))}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group">
-                        {/* Banner & Like */}
-                        <div className="h-28 bg-gradient-to-r from-blue-400 to-indigo-500 relative">
-                            <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
-                            <button className="absolute top-3 right-3 p-2 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all hover:scale-110">
-                                <Heart className="fill-current" size={18} />
-                            </button>
-                        </div>
-
-                        {/* Profile Info */}
-                        <div className="px-6 pb-6 pt-0 relative">
-                            <div className="flex justify-between items-end -mt-10 mb-4">
-                                <div className="w-20 h-20 rounded-2xl border-4 border-white bg-white shadow-md overflow-hidden relative">
+            {loading ? (
+                <div className="flex justify-center p-12">
+                    <RefreshCw className="animate-spin text-blue-600" size={32} />
+                </div>
+            ) : posts.length > 0 ? (
+                <div className="space-y-4">
+                    {posts.map((post) => (
+                        <div key={post._id || post.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 rounded-full bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100">
                                     <img
-                                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Doc${i}`}
-                                        alt="Doctor"
+                                        src={post.user?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${post.user?.nom}`}
+                                        alt="Author"
                                         className="w-full h-full object-cover"
                                     />
-                                    <div className="absolute bottom-0 right-0 w-5 h-5 bg-green-500 border-2 border-white rounded-full"></div>
                                 </div>
-                                <div className="flex items-center gap-1 bg-orange-50 px-2 py-1 rounded-lg">
-                                    <Star className="text-orange-500 fill-current" size={14} />
-                                    <span className="text-sm font-bold text-orange-700">4.9</span>
-                                </div>
-                            </div>
+                                <div className="flex-1">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <h3 className="font-bold text-gray-900">{post.user?.nom}</h3>
+                                            <p className="text-xs text-gray-400">
+                                                {new Date(post.createdAt || post.date).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <div className="flex gap-2 items-center">
+                                            {post.hashtags?.slice(0, 2).map((tag: string, i: number) => (
+                                                <span key={i} className="px-2 py-1 bg-gray-50 text-gray-600 rounded-lg text-xs font-semibold">#{tag}</span>
+                                            ))}
+                                            <Heart className="text-red-500 fill-current" size={18} />
+                                        </div>
+                                    </div>
 
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <h3 className="text-lg font-bold text-gray-900 line-clamp-1">Dr. Example Name</h3>
-                                    <ShieldCheck size={16} className="text-blue-500" />
-                                </div>
-                                <p className="text-blue-600 text-sm font-medium mb-3">Clinical Psychologist</p>
+                                    <p className="mt-3 text-gray-600 leading-relaxed">
+                                        {post.content}
+                                    </p>
 
-                                <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
-                                    <MapPin size={16} className="text-gray-400" />
-                                    <span>Tunis, Tunisia</span>
+                                    <div className="flex gap-4 mt-4 pt-4 border-t border-gray-100">
+                                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                                            <Heart size={18} />
+                                            <span>{post.likes || 0} Likes</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                                            <MessageSquare size={18} />
+                                            <span>{post.comments?.length || 0} Comments</span>
+                                        </div>
+                                        <button className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors ml-auto">
+                                            <Share2 size={18} />
+                                            <span>Share</span>
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <button className="w-full py-2.5 bg-gray-50 text-gray-900 rounded-xl text-sm font-bold hover:bg-gray-900 hover:text-white transition-all duration-300 border border-gray-200 hover:border-transparent">
-                                    Book Appointment
-                                </button>
                             </div>
                         </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="bg-white p-12 rounded-2xl border border-dashed border-gray-200 text-center">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Heart className="text-gray-300" size={32} />
                     </div>
-                ))}
-            </div>
+                    <h3 className="text-lg font-bold text-gray-800">No liked posts</h3>
+                    <p className="text-gray-500 mt-2 max-w-sm mx-auto">
+                        Like posts in the community to find them here later.
+                    </p>
+                    <button
+                        onClick={() => window.location.href = '/community'}
+                        className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all"
+                    >
+                        Go to Community
+                    </button>
+                </div>
+            )}
 
             <style>{`
                 @keyframes fadeIn {
@@ -94,19 +108,6 @@ const UserFavorites: React.FC = () => {
                 }
                 .animate-fadeIn {
                     animation: fadeIn 0.4s ease-out forwards;
-                }
-                .custom-scrollbar::-webkit-scrollbar {
-                    height: 4px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #e5e7eb;
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #d1d5db;
                 }
             `}</style>
         </div>
