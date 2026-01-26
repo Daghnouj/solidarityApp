@@ -55,75 +55,77 @@ import ProfessionalProfileDashboard from "./dashboardprofessional/pages/Professi
 // Components
 import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./pages/ProfessionalProfile/components/ErrorBoundary";
+import { SocketProvider } from "./context/SocketContext";
 
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <Router>
-        <ScrollToTop />
+      <SocketProvider>
+        <Router>
+          <ScrollToTop />
+          <Routes>
 
-        <Routes>
+            {/* ================= Public Layout ================= */}
+            <Route element={<Layout />}>
+              <Route path="/" element={<Home />} />
+              <Route path="/professionals" element={<Professionals />} />
+              <Route path="/professionals/:id" element={<ProfessionalProfile />} />
+              <Route path="/book/:therapistId" element={<BookingPage />} />
+              <Route path="/activities-centers" element={<ActivitiesCenters />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/galerie" element={<Galerie />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/about" element={<AboutPage />} />
+            </Route>
 
-          {/* ================= Public Layout ================= */}
-          <Route element={<Layout />}>
-            <Route path="/" element={<Home />} />
-            <Route path="/professionals" element={<Professionals />} />
-            <Route path="/professionals/:id" element={<ProfessionalProfile />} />
-            <Route path="/book/:therapistId" element={<BookingPage />} />
-            <Route path="/activities-centers" element={<ActivitiesCenters />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/galerie" element={<Galerie />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/about" element={<AboutPage />} />
-          </Route>
+            {/* ================= Admin Dashboard ================= */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<OverviewPage />} />       {/* /admin */}
+              <Route path="users" element={<UsersPage />} />   {/* /admin/users */}
+              <Route path="requests" element={<RequestsPage />} />
+              <Route path="activities-centers" element={<ActivitiesCentersPage />} />
+              <Route path="gallery" element={<GalleryPage />} />
+              <Route path="profile" element={<AdminProfilePage />} />
+              {/* Add more admin routes here later */}
+            </Route>
 
-          {/* ================= Admin Dashboard ================= */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<OverviewPage />} />       {/* /admin */}
-            <Route path="users" element={<UsersPage />} />   {/* /admin/users */}
-            <Route path="requests" element={<RequestsPage />} />
-            <Route path="activities-centers" element={<ActivitiesCentersPage />} />
-            <Route path="gallery" element={<GalleryPage />} />
-            <Route path="profile" element={<AdminProfilePage />} />
-            {/* Add more admin routes here later */}
-          </Route>
+            {/* ================= User Dashboard ================= */}
+            <Route path="/dashboard/user" element={<UserLayout />}>
+              <Route index element={<UserOverview />} />
+              <Route path="appointments" element={<UserAppointments />} />
+              <Route path="favorites" element={<UserFavorites />} />
+              <Route path="community" element={<UserCommunity />} />
+              <Route path="saved" element={<UserSavedPosts />} />
+              <Route path="profile" element={<UserProfile />} />
+            </Route>
 
-          {/* ================= User Dashboard ================= */}
-          <Route path="/dashboard/user" element={<UserLayout />}>
-            <Route index element={<UserOverview />} />
-            <Route path="appointments" element={<UserAppointments />} />
-            <Route path="favorites" element={<UserFavorites />} />
-            <Route path="community" element={<UserCommunity />} />
-            <Route path="saved" element={<UserSavedPosts />} />
-            <Route path="profile" element={<UserProfile />} />
-          </Route>
+            {/* ================= Professional Dashboard ================= */}
+            <Route path="/dashboard/professional" element={<ProfessionalLayout />}>
+              <Route index element={<ProfessionalOverview />} />
+              <Route path="requests" element={<ProfessionalAppointments />} />
+              <Route path="calendar" element={<ProfessionalSchedule />} />
+              <Route path="community" element={<ProfessionalCommunity />} />
+              <Route path="saved" element={<ProfessionalSavedPosts />} />
+              <Route path="profile" element={<ProfessionalProfileDashboard />} />
+            </Route>
 
-          {/* ================= Professional Dashboard ================= */}
-          <Route path="/dashboard/professional" element={<ProfessionalLayout />}>
-            <Route index element={<ProfessionalOverview />} />
-            <Route path="requests" element={<ProfessionalAppointments />} />
-            <Route path="calendar" element={<ProfessionalSchedule />} />
-            <Route path="community" element={<ProfessionalCommunity />} />
-            <Route path="saved" element={<ProfessionalSavedPosts />} />
-            <Route path="profile" element={<ProfessionalProfileDashboard />} />
-          </Route>
+            {/* ================= Admin Login (no dashboard layout) ================= */}
+            <Route path="/admin/login" element={<DashboardLoginPage />} />
 
-          {/* ================= Admin Login (no dashboard layout) ================= */}
-          <Route path="/admin/login" element={<DashboardLoginPage />} />
-
-          {/* ================= Auth Pages ================= */}
-          <Route path="/login" element={<LoginForm />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/resetpass" element={<ResetPasswordPage />} />
-          <Route path="/forgetpass" element={<ForgotPasswordPage />} />
-          <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+            {/* ================= Auth Pages ================= */}
+            <Route path="/login" element={<LoginForm />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/resetpass" element={<ResetPasswordPage />} />
+            <Route path="/forgetpass" element={<ForgotPasswordPage />} />
+            <Route path="/auth/callback" element={<OAuthCallbackPage />} />
 
 
-          {/* ================= Fallback 404 ================= */}
-          <Route path="*" element={<h1 className="p-8 text-2xl text-red-600">404 - Page Not Found</h1>} />
+            {/* ================= Fallback 404 ================= */}
+            <Route path="*" element={<h1 className="p-8 text-2xl text-red-600">404 - Page Not Found</h1>} />
 
-        </Routes>
-      </Router>
+          </Routes>
+        </Router>
+      </SocketProvider>
     </ErrorBoundary>
   );
 };

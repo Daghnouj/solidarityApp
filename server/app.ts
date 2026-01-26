@@ -86,7 +86,7 @@ app.use('/api/professional', professionnelRouter);
 app.use('/api/partners', partnersRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/community/posts', postRoutes);
-app.use('/api/community', commentRoutes);
+app.use('/api/community/posts', commentRoutes);
 app.use('/api/community/favorites', favoritesRoutes);
 app.use('/api/availabilities', availabilityRoutes);
 app.use('/api/appointments', appointmentRoutes);

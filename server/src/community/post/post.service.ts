@@ -68,10 +68,7 @@ export class PostService {
   }
 
   static async addLike(postId: string, userId: Types.ObjectId, io?: any): Promise<any> {
-    const post = await Post.findById(postId)
-      .select('content user likedBy likes')
-      .populate('user', '_id')
-      .lean();
+    const post = await Post.findById(postId);
 
     if (!post) {
       throw new Error('Post introuvable');
@@ -79,18 +76,18 @@ export class PostService {
 
     const isLiking = !post.likedBy.some((id: Types.ObjectId) => id.equals(userId));
 
-    const updatedPost = await Post.findByIdAndUpdate(
+    await Post.findByIdAndUpdate(
       postId,
       {
         $inc: { likes: isLiking ? 1 : -1 },
         [isLiking ? '$addToSet' : '$pull']: { likedBy: userId }
       },
-      { new: true, select: 'likes likedBy' }
-    ).populate('likedBy', 'nom photo role');
+      { new: true }
+    );
 
-    if (isLiking && !post.user._id.equals(userId)) {
+    if (isLiking && post.user.toString() !== userId.toString()) {
       await NotificationService.createNotification({
-        recipientId: post.user._id,
+        recipientId: post.user,
         senderId: userId,
         type: 'like',
         postId: postId,
@@ -99,7 +96,18 @@ export class PostService {
       });
     }
 
-    return updatedPost;
+    // Return the full populated post
+    return await Post.findById(postId)
+      .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
+      .populate({
+        path: 'comments.user',
+        select: 'nom photo'
+      })
+      .populate({
+        path: 'comments.replies.user',
+        select: 'nom photo'
+      });
   }
 
   static async getFavoritePosts(userId: string): Promise<IPost[]> {
@@ -123,11 +131,41 @@ export class PostService {
       .populate('likedBy', 'nom photo role')
       .populate({
         path: 'comments.user',
-        select: 'nom photo'
+        select: 'nom photo role'
       })
       .populate({
         path: 'comments.replies.user',
-        select: 'nom photo'
+        select: 'nom photo role'
+      })
+      .sort({ date: -1 });
+  }
+
+  static async getLikedPosts(userId: string): Promise<IPost[]> {
+    return await Post.find({ likedBy: userId })
+      .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
+      .populate({
+        path: 'comments.user',
+        select: 'nom photo role'
+      })
+      .populate({
+        path: 'comments.replies.user',
+        select: 'nom photo role'
+      })
+      .sort({ date: -1 });
+  }
+
+  static async getCommentedPosts(userId: string): Promise<IPost[]> {
+    return await Post.find({ 'comments.user': userId })
+      .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
+      .populate({
+        path: 'comments.user',
+        select: 'nom photo role'
+      })
+      .populate({
+        path: 'comments.replies.user',
+        select: 'nom photo role'
       })
       .sort({ date: -1 });
   }

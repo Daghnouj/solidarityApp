@@ -8,15 +8,31 @@ export class FavorisService {
       throw new Error('Post non trouvé');
     }
 
-    const index = post.favorites.indexOf(userId);
+    const index = post.favorites.findIndex((id: any) => id.equals(userId));
     if (index !== -1) {
       post.favorites.splice(index, 1);
-      await post.save();
-      return { message: 'Favori retiré', isFavorite: false };
     } else {
       post.favorites.push(userId);
-      await post.save();
-      return { message: 'Ajouté aux favoris', isFavorite: true };
     }
+
+    await post.save();
+
+    const populatedPost = await Post.findById(postId)
+      .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
+      .populate({
+        path: 'comments.user',
+        select: 'nom photo role'
+      })
+      .populate({
+        path: 'comments.replies.user',
+        select: 'nom photo role'
+      });
+
+    return {
+      success: true,
+      message: index !== -1 ? 'Favori retiré' : 'Ajouté aux favoris',
+      post: populatedPost
+    };
   }
 }

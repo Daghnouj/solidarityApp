@@ -53,7 +53,8 @@ export class CommentService {
     }
 
     const populatedPost = await Post.findById(postId)
-      .populate('comments.user', 'nom photo');
+      .populate('comments.user', 'nom photo role')
+      .populate('comments.replies.user', 'nom photo role');
 
     return populatedPost.comments[populatedPost.comments.length - 1];
   }
@@ -102,7 +103,8 @@ export class CommentService {
     }
 
     const populatedPost = await Post.findById(postId)
-      .populate('comments.replies.user', 'nom photo');
+      .populate('comments.user', 'nom photo role')
+      .populate('comments.replies.user', 'nom photo role');
 
     // Utilisez find() ici aussi
     const populatedComment = populatedPost.comments.find(c => c._id?.toString() === commentId);
