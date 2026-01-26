@@ -1,11 +1,15 @@
-import { FaPlus, FaUsers, FaCompass } from "react-icons/fa";
+import { FaPlus, FaUsers, FaCompass, FaHome } from "react-icons/fa";
 
 interface Props {
   onAddPost: () => void;
+  activeView: 'feed' | 'following' | 'groups';
+  onViewChange: (view: 'feed' | 'following' | 'groups') => void;
 }
 
 export default function LeftSidebar({
   onAddPost,
+  activeView,
+  onViewChange,
 }: Props) {
   return (
     <aside className="md:col-span-3">
@@ -19,17 +23,27 @@ export default function LeftSidebar({
 
         <nav className="space-y-1">
           <button
-            className="flex items-center gap-3 w-full px-4 py-3 text-gray-700 hover:bg-white hover:shadow-sm rounded-xl transition group"
+            onClick={() => onViewChange('feed')}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition group ${activeView === 'feed' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-gray-700 hover:bg-white hover:shadow-sm'}`}
           >
-            <FaUsers className="text-gray-400 group-hover:text-indigo-600 transition" />
+            <FaHome className={activeView === 'feed' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600 transition'} />
+            <span className="font-medium">Feed</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('groups')}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition group ${activeView === 'groups' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-gray-700 hover:bg-white hover:shadow-sm'}`}
+          >
+            <FaUsers className={activeView === 'groups' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600 transition'} />
             <span className="font-medium">Groups</span>
           </button>
 
           <button
-            className="flex items-center gap-3 w-full px-4 py-3 text-gray-700 hover:bg-white hover:shadow-sm rounded-xl transition group relative"
+            onClick={() => onViewChange('following')}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition group relative ${activeView === 'following' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-gray-700 hover:bg-white hover:shadow-sm'}`}
           >
-            <FaCompass className="text-gray-400 group-hover:text-indigo-500 transition" />
-            <span className="font-medium">Discover</span>
+            <FaCompass className={activeView === 'following' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600 transition'} />
+            <span className="font-medium">Following</span>
           </button>
         </nav>
       </div>

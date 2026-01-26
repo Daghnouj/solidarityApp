@@ -27,6 +27,8 @@ export interface IUser {
   subscriptionStatus: 'active' | 'inactive' | 'trialing' | 'canceled';
   plan?: 'monthly' | 'yearly' | null;
   currentPeriodEnd?: Date;
+  following: Types.ObjectId[];
+  groups: Types.ObjectId[];
   // New Profile Fields
   bio?: string;
   gender?: 'Male' | 'Female' | 'Prefer not to say';
@@ -133,4 +135,6 @@ export interface UserResponse {
   isOnline: boolean;
   lastSeen?: Date;
   lastLogin?: Date;
+  following?: string[];
+  groups?: string[];
 }

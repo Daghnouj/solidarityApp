@@ -6,6 +6,8 @@ import PostFeed from "./components/PostFeed";
 import RightSidebar from "./components/RightSidebar";
 import AddPostModal from "./components/AddPostModal";
 import CommentModal from "./components/CommentModal";
+import DiscoverView from "./components/DiscoverView";
+import GroupsView from "./components/GroupsView";
 import { useCommunity } from "./hooks/useCommunity";
 import type { Post } from "./types";
 
@@ -31,6 +33,7 @@ export default function Community() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [activeView, setActiveView] = useState<'feed' | 'following' | 'groups'>('feed');
 
   // Update selected post if it changes in the posts list (to show new comments/replies)
   const currentSelectedPost = selectedPost ? posts.find(p => p._id === selectedPost._id) || selectedPost : null;
@@ -47,33 +50,47 @@ export default function Community() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           <LeftSidebar
             onAddPost={() => setShowAddModal(true)}
+            activeView={activeView}
+            onViewChange={setActiveView}
           />
 
           <main className="md:col-span-6 space-y-6">
-            {loading ? (
-              <div className="flex justify-center py-20">
-                <div className="relative">
-                  <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-indigo-200"></div>
-                  <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-t-4 border-indigo-600 animate-spin"></div>
+            {activeView === 'feed' ? (
+              loading ? (
+                <div className="flex justify-center py-20">
+                  <div className="relative">
+                    <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-indigo-200"></div>
+                    <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-t-4 border-indigo-600 animate-spin"></div>
+                  </div>
                 </div>
-              </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-100 text-red-600 px-6 py-4 rounded-2xl flex items-center gap-3">
-                <span className="text-xl">⚠️</span>
-                <span className="font-medium">{error}</span>
-              </div>
-            ) : (
-              <PostFeed
-                posts={filtered}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                onLike={toggleLike}
-                onFavorite={toggleFavorite}
-                onComment={(p) => setSelectedPost(p)}
-                onEditPost={editPost}
-                onDeletePost={removePost}
-                onAddPost={() => setShowAddModal(true)}
+              ) : error ? (
+                <div className="bg-red-50 border border-red-100 text-red-600 px-6 py-4 rounded-2xl flex items-center gap-3">
+                  <span className="text-xl">⚠️</span>
+                  <span className="font-medium">{error}</span>
+                </div>
+              ) : (
+                <PostFeed
+                  posts={filtered}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  onLike={toggleLike}
+                  onFavorite={toggleFavorite}
+                  onComment={(p) => setSelectedPost(p)}
+                  onEditPost={editPost}
+                  onDeletePost={removePost}
+                  onAddPost={() => setShowAddModal(true)}
+                />
+              )
+            ) : activeView === 'following' ? (
+              <DiscoverView
+                onSearchTag={(tag) => {
+                  setSearchQuery(tag);
+                  setActiveView('feed');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               />
+            ) : (
+              <GroupsView />
             )}
           </main>
 

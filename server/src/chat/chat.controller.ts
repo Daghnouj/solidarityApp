@@ -24,15 +24,24 @@ export const getConversations = async (req: ProtectedRequest, res: Response): Pr
 export const getMessages = async (req: ProtectedRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user._id;
-        const { otherUserId } = req.params;
+        const { conversationId } = req.params;
 
-        // Find message history between current user and other user
+        // Check if user is participant
+        const conversation = await Conversation.findOne({
+            _id: conversationId,
+            participants: userId
+        });
+
+        if (!conversation) {
+            res.status(403).json({ message: "Non autorisé ou conversation introuvable" });
+            return;
+        }
+
         const messages = await Message.find({
-            $or: [
-                { sender: userId, receiver: otherUserId },
-                { sender: otherUserId, receiver: userId }
-            ]
-        }).sort({ timestamp: 1 });
+            conversationId
+        })
+            .populate('sender', 'nom photo role')
+            .sort({ timestamp: 1 });
 
         res.status(200).json(messages);
     } catch (error: any) {
@@ -42,10 +51,21 @@ export const getMessages = async (req: ProtectedRequest, res: Response): Promise
 
 export const getAvailableContacts = async (req: ProtectedRequest, res: Response): Promise<void> => {
     try {
-        // For now, return all users except self, or could filter by role (e.g. patients see professionals)
-        const users = await User.find({ _id: { $ne: req.user._id } })
+        const userId = req.user._id;
+
+        // Fetch current user with their following list
+        const currentUser = await User.findById(userId).select('following');
+        if (!currentUser) {
+            res.status(404).json({ message: "Utilisateur introuvable" });
+            return;
+        }
+
+        // Return users that the current user is following
+        const users = await User.find({
+            _id: { $in: currentUser.following }
+        })
             .select('nom photo email role lastSeen')
-            .limit(20);
+            .limit(50);
 
         res.status(200).json(users);
     } catch (error: any) {
@@ -128,6 +148,42 @@ export const clearConversation = async (req: ProtectedRequest, res: Response): P
         );
 
         res.status(200).json({ message: "Conversation effacée" });
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const markMessagesAsRead = async (req: ProtectedRequest, res: Response): Promise<void> => {
+    try {
+        const userId = req.user._id;
+        const { conversationId } = req.params;
+
+        const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+        if (!conversation) {
+            res.status(403).json({ message: "Non autorisé" });
+            return;
+        }
+
+        const query: any = { conversationId, read: false };
+        if (conversation.isGroup) {
+            // In group, mark messages not sent by me as read
+            query.sender = { $ne: userId };
+        } else {
+            // In private, mark messages received by me as read
+            query.receiver = userId;
+        }
+
+        await Message.updateMany(query, { $set: { read: true } });
+
+        // Real-time update via socket - Emit to each participant's room
+        const io = req.app.get('io');
+        if (io) {
+            conversation.participants.forEach((pId: any) => {
+                io.to(pId.toString()).emit('messages_read', { conversationId, readerId: userId });
+            });
+        }
+
+        res.status(200).json({ success: true });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }

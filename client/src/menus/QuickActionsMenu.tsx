@@ -9,11 +9,13 @@ import {
     Send,
     Minus,
     MoreHorizontal,
-    Pencil,
-    Trash2,
+    Check,
+    CheckCheck,
     Sun,
     Moon,
-    FileText
+    FileText,
+    Pencil,
+    Trash2
 } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import axios from 'axios';
@@ -34,10 +36,11 @@ interface Message {
 }
 
 interface Contact {
-    id: string;
-    _id: string;
+    id: string; // This will be conversationId for groups, otherUserId for private
+    _id: string; // This will be the other user's _id for private chats, or the group's _id for groups
+    conversationId: string;
+    isGroup: boolean;
     name: string;
-    nom?: string;
     photo: string;
     status: string;
     lastSeen?: string;
@@ -58,8 +61,8 @@ interface QuickActionsMenuProps {
     position?: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 }
 
-const API_URL = "http://localhost:5000/api";
-const SOCKET_URL = "http://localhost:5000";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const SOCKET_URL = API_URL.replace('/api', '');
 
 const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     actions,
@@ -78,11 +81,11 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     const [messageInput, setMessageInput] = useState("");
     const [contacts, setContacts] = useState<Contact[]>([]);
-    const [activeContactId, setActiveContactId] = useState<string | null>(null);
+    const [activeContactId, setActiveContactId] = useState<string | null>(null); // This is the conversationId
     const [messages, setMessages] = useState<Message[]>([]);
     const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [allUsers, setAllUsers] = useState<Contact[]>([]);
+    const [allUsers, setAllUsers] = useState<Contact[]>([]); // This will store individual users for search
     const [searchQuery, setSearchQuery] = useState("");
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -91,7 +94,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     const socketRef = useRef<Socket | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const activeContactIdRef = useRef<string | null>(null);
+    const activeContactIdRef = useRef<string | null>(null); // This is the conversationId
     const imageInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -191,37 +194,33 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                     return prev;
                 });
                 if (lastSeen) {
-                    setContacts(prev => prev.map(c => c.id === userId ? { ...c, lastSeen } : c));
-                    setAllUsers(prev => prev.map(c => c.id === userId ? { ...c, lastSeen } : c));
+                    setContacts(prev => prev.map(c => c._id === userId && !c.isGroup ? { ...c, lastSeen } : c));
+                    setAllUsers(prev => prev.map(c => c._id === userId && !c.isGroup ? { ...c, lastSeen } : c));
                 }
             });
 
             socket.on('receive_message', (msg: any) => {
-                // Use ref to check if this message belongs to currently open chat
-                if (activeContactIdRef.current === msg.sender) {
-                    const formattedMsg = {
-                        ...msg,
-                        sender: 'contact' as const,
-                        time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        attachment: msg.attachment
-                    };
-                    setMessages(prev => [...prev, formattedMsg]);
+                // Use ref to check if this message belongs to currently open conversation
+                if (activeContactIdRef.current === msg.conversationId) {
+                    setMessages(prev => {
+                        // Prevent duplicates
+                        const exists = prev.some(m => m._id === msg._id || (m.timestamp === msg.timestamp && m.content === msg.content));
+                        if (exists) return prev;
+
+                        const formattedMsg = {
+                            ...msg,
+                            sender: msg.sender === user._id ? 'me' as const : 'contact' as const,
+                            senderType: msg.sender === user._id ? 'me' as const : 'contact' as const,
+                            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            attachment: msg.attachment
+                        };
+                        return [...prev, formattedMsg];
+                    });
+                    markMessagesAsRead(msg.conversationId);
                 }
                 fetchConversations();
             });
 
-            socket.on('message_sent', (msg: any) => {
-                if (activeContactIdRef.current === msg.receiver) {
-                    const formattedMsg = {
-                        ...msg,
-                        sender: 'me' as const,
-                        time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        attachment: msg.attachment
-                    };
-                    setMessages(prev => [...prev, formattedMsg]);
-                }
-                fetchConversations();
-            });
 
             socket.on('message_edited', ({ messageId, content }: { messageId: string, content: string }) => {
                 setMessages(prev => prev.map(m => (m._id === messageId ? { ...m, content } : m)));
@@ -232,9 +231,16 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                 fetchConversations();
             });
 
-            socket.on('chat_cleared', ({ senderId }: { senderId: string }) => {
-                if (activeContactIdRef.current === senderId) {
+            socket.on('chat_cleared', ({ conversationId }: { conversationId: string }) => {
+                if (activeContactIdRef.current === conversationId) {
                     setMessages([]);
+                }
+                fetchConversations();
+            });
+
+            socket.on('messages_read', ({ conversationId }: { conversationId: string }) => {
+                if (activeContactIdRef.current === conversationId) {
+                    setMessages(prev => prev.map(m => m.sender === 'me' ? { ...m, read: true } : m));
                 }
                 fetchConversations();
             });
@@ -258,28 +264,61 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     // External listener to open a specific chat
     useEffect(() => {
         const handleOpenChat = (event: any) => {
-            const userId = event.detail?.userId;
+            const userId = event.detail?.userId; // This is the _id of the user, not conversationId
 
             setIsChatOpen(true);
             setIsSearching(false);
 
             if (userId) {
-                setActiveContactId(userId);
-                // Sync with ref as well since socket listeners use ref
-                activeContactIdRef.current = userId;
+                // Find or create a conversation with this user
+                const existingContact = contacts.find(c => c._id === userId && !c.isGroup);
+                if (existingContact) {
+                    setActiveContactId(existingContact.conversationId);
+                    activeContactIdRef.current = existingContact.conversationId;
+                } else {
+                    // If not found, we might need to fetch or create a conversation
+                    // For now, we'll just set the activeContactId to the userId, assuming the backend will handle it
+                    // This might need refinement to ensure a conversationId is always available
+                    // For simplicity, let's assume fetchConversations will eventually pick it up
+                    // Or, we could make an API call to get/create conversation for this userId
+                    // For now, we'll rely on fetchConversations to update the contacts list
+                    // and then set activeContactId from there.
+                    // A more robust solution would be to create a conversation if it doesn't exist.
+                    // For this example, we'll just trigger a re-fetch and hope it appears.
+                    fetchConversations().then(() => {
+                        const newContact = contacts.find(c => c._id === userId && !c.isGroup);
+                        if (newContact) {
+                            setActiveContactId(newContact.conversationId);
+                            activeContactIdRef.current = newContact.conversationId;
+                        }
+                    });
+                }
             }
         };
 
         window.addEventListener('open_chat', handleOpenChat);
         return () => window.removeEventListener('open_chat', handleOpenChat);
-    }, []);
+    }, [contacts]); // Add contacts to dependency array to ensure it has the latest list
 
     // Load messages when contact changes
     useEffect(() => {
         if (activeContactId && !isSearching) {
             fetchMessages(activeContactId);
+            markMessagesAsRead(activeContactId);
         }
     }, [activeContactId, isSearching]);
+
+    const markMessagesAsRead = async (conversationId: string) => {
+        try {
+            await axios.patch(`${API_URL}/chat/mark-read/${conversationId}`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            // Update unread count in Navbar
+            window.dispatchEvent(new CustomEvent('chat_opened'));
+        } catch (err) {
+            console.error("Error marking messages as read:", err);
+        }
+    };
 
     const fetchConversations = async () => {
         try {
@@ -288,13 +327,28 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             });
 
             const formattedContacts = res.data.map((conv: any) => {
+                if (conv.isGroup) {
+                    return {
+                        id: conv._id, // conversationId
+                        _id: conv._id, // group _id
+                        conversationId: conv._id,
+                        isGroup: true,
+                        name: conv.groupName,
+                        photo: `https://api.dicebear.com/7.x/initials/svg?seed=${conv.groupName}`, // Placeholder for group photo
+                        status: `${conv.participants.length} members`,
+                        messages: []
+                    };
+                }
                 const otherUser = conv.participants.find((p: any) => p._id !== user._id);
                 return {
-                    id: otherUser._id,
-                    _id: otherUser._id,
+                    id: conv._id, // conversationId
+                    _id: otherUser._id, // other user's _id
+                    conversationId: conv._id,
+                    isGroup: false,
                     name: otherUser.nom,
                     photo: otherUser.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUser.nom}`,
                     status: onlineUsers.includes(otherUser._id) ? 'Active now' : 'Offline',
+                    lastSeen: otherUser.lastSeen,
                     messages: []
                 };
             });
@@ -308,14 +362,16 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         }
     };
 
-    const fetchMessages = async (otherUserId: string) => {
+    const fetchMessages = async (conversationId: string) => {
         try {
-            const res = await axios.get(`${API_URL}/chat/messages/${otherUserId}`, {
+            const res = await axios.get(`${API_URL}/chat/messages/${conversationId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const formattedMessages = res.data.map((m: any) => ({
                 ...m,
-                sender: m.sender === user._id ? 'me' : 'contact',
+                sender: m.sender._id === user._id || m.sender === user._id ? 'me' : 'contact',
+                senderType: m.sender._id === user._id || m.sender === user._id ? 'me' : 'contact',
+                senderInfo: m.sender,
                 time: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }));
             setMessages(formattedMessages);
@@ -328,8 +384,11 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         const text = content !== undefined ? content : messageInput;
         if ((!text.trim() && !attachment) || !activeContactId || !socketRef.current) return;
 
+        const activeConv = contacts.find(c => c.id === activeContactId);
+
         socketRef.current.emit('send_message', {
-            receiverId: activeContactId,
+            conversationId: activeConv?.isGroup ? activeContactId : undefined,
+            receiverId: activeConv?.isGroup ? undefined : activeConv?._id,
             content: text,
             attachment
         });
@@ -342,7 +401,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             await axios.put(`${API_URL}/chat/message/${messageId}`, { content: newContent }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            socketRef.current?.emit('edit_message', { messageId, content: newContent, receiverId: activeContactId });
+            socketRef.current?.emit('edit_message', { messageId, content: newContent, conversationId: activeContactId });
             setEditingMessageId(null);
             setMessageInput("");
         } catch (err) {
@@ -351,11 +410,12 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     };
 
     const handleDeleteMessage = async (messageId: string) => {
+        if (!window.confirm("Supprimer ce message ?")) return;
         try {
             await axios.delete(`${API_URL}/chat/message/${messageId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            socketRef.current?.emit('delete_message', { messageId, receiverId: activeContactId });
+            socketRef.current?.emit('delete_message', { messageId, conversationId: activeContactId });
         } catch (err) {
             console.error("Error deleting message:", err);
         }
@@ -369,10 +429,29 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             await axios.delete(`${API_URL}/chat/clear/${activeContactId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            socketRef.current?.emit('clear_chat', { receiverId: activeContactId });
+            socketRef.current?.emit('clear_chat', { conversationId: activeContactId });
             setMessages([]);
         } catch (err) {
             console.error("Error clearing chat:", err);
+        }
+    };
+
+    const handleLeaveGroup = async () => {
+        if (!activeContactId || !activeContact?.isGroup) return;
+        if (!window.confirm(`Are you sure you want to leave ${activeContact.name}?`)) return;
+
+        try {
+            const res = await axios.post(`${API_URL}/community/groups/toggle/${activeContact._id}`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (res.data.success) {
+                setContacts(prev => prev.filter(c => c.id !== activeContactId));
+                setMessages([]);
+                setActiveContactId(null);
+                setIsChatOpen(false);
+            }
+        } catch (err) {
+            console.error("Error leaving group:", err);
         }
     };
 
@@ -544,12 +623,14 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                     <div className="flex items-center gap-2.5 min-w-0">
                                         <div className="relative">
                                             <img src={activeContact.photo} alt="" className="w-8 h-8 rounded-full border border-blue-100" />
-                                            <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 ${isDarkMode ? 'border-gray-900' : 'border-white'} ${onlineUsers.includes(activeContact.id) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                            {!activeContact.isGroup && (
+                                                <div className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 ${isDarkMode ? 'border-gray-900' : 'border-white'} ${onlineUsers.includes(activeContact._id) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                            )}
                                         </div>
                                         <div>
                                             <h4 className={`text-sm font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'} leading-tight truncate`}>{activeContact.name}</h4>
-                                            <p className={`text-[10px] font-medium ${onlineUsers.includes(activeContact.id) ? 'text-green-500' : 'text-gray-400'}`}>
-                                                {onlineUsers.includes(activeContact.id) ? 'Active now' : `Connected ${formatLastSeen(activeContact.lastSeen)}`}
+                                            <p className={`text-[10px] font-medium ${activeContact.isGroup ? 'text-indigo-500' : (onlineUsers.includes(activeContact._id) ? 'text-green-500' : 'text-gray-400')}`}>
+                                                {activeContact.isGroup ? activeContact.status : (onlineUsers.includes(activeContact._id) ? 'Active now' : `Connected ${formatLastSeen(activeContact.lastSeen)}`)}
                                             </p>
                                         </div>
                                     </div>
@@ -594,12 +675,12 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                         >
                                             <div className="relative">
                                                 <img src={u.photo} alt="" className={`w-10 h-10 rounded-full border ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`} />
-                                                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 ${isDarkMode ? 'border-gray-900' : 'border-white'} ${onlineUsers.includes(u.id) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                                <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 ${isDarkMode ? 'border-gray-900' : 'border-white'} ${onlineUsers.includes(u._id) ? 'bg-green-500' : 'bg-gray-400'}`}></div>
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <p className={`text-sm font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'} truncate`}>{u.name}</p>
                                                 <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                                                    {onlineUsers.includes(u.id) ? 'Online' : `Connected ${formatLastSeen(u.lastSeen)}`}
+                                                    {onlineUsers.includes(u._id) ? 'Online' : `Connected ${formatLastSeen(u.lastSeen)}`}
                                                 </p>
                                             </div>
                                         </button>
@@ -624,70 +705,88 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                         <span className={`text-[10px] uppercase tracking-widest font-bold ${isDarkMode ? 'text-gray-500 bg-gray-900 border-gray-800' : 'text-gray-400 bg-white border-gray-100'} px-3 py-1 rounded-full border shadow-sm`}>Today</span>
                                     </div>
 
-                                    {messages.map((msg, index) => (
+                                    {messages.map((msg: any, index) => (
                                         <div key={msg._id || index} className={`flex group ${msg.sender === 'me' ? 'flex-col items-end' : 'gap-2'}`}>
-                                            {msg.sender === 'contact' && activeContact && (
-                                                <img src={activeContact.photo} alt="" className="w-7 h-7 rounded-full self-end mb-1" />
+                                            {msg.sender === 'contact' && (
+                                                <img
+                                                    src={msg.senderInfo?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.senderInfo?.nom}`}
+                                                    alt=""
+                                                    className="w-7 h-7 rounded-full self-end mb-1"
+                                                    title={msg.senderInfo?.nom}
+                                                />
                                             )}
-                                            <div className="relative flex items-center group/msg">
+                                            <div className="relative flex items-center group/msg max-w-[85%]">
+                                                {/* Context Menu for Edit/Delete (Sent Messages) */}
                                                 {msg.sender === 'me' && (
-                                                    <div className={`opacity-0 group-hover/msg:opacity-100 transition-opacity absolute -left-16 flex gap-1 ${isDarkMode ? 'bg-gray-800/80 border-gray-700' : 'bg-white/80 border-gray-100'} backdrop-blur px-2 py-1 rounded-full shadow-sm border`}>
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingMessageId(msg._id || null);
-                                                                setMessageInput(msg.content || "");
-                                                            }}
-                                                            className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
-                                                            title="Edit"
-                                                        >
-                                                            <Pencil size={12} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteMessage(msg._id || "")}
-                                                            className="p-1 text-red-500 hover:text-red-700 transition-colors"
-                                                            title="Delete"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
+                                                    <div className="absolute -left-8 opacity-0 group-hover/msg:opacity-100 transition-all duration-200">
+                                                        <div className={`p-1 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg border border-gray-100/10 flex flex-col gap-1`}>
+                                                            <button
+                                                                onClick={() => { setEditingMessageId(msg._id || null); setMessageInput(msg.content || ""); }}
+                                                                className="p-1 hover:text-blue-500 transition-colors"
+                                                            >
+                                                                <Pencil size={12} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteMessage(msg._id || "")}
+                                                                className="p-1 hover:text-red-500 transition-colors"
+                                                            >
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 )}
 
-                                                <div className={`p-3 rounded-2xl shadow-sm max-w-[85%] ${msg.sender === 'me'
-                                                    ? 'bg-blue-600 text-white rounded-br-none shadow-blue-100'
-                                                    : `${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border border-gray-100 text-gray-800'} rounded-bl-none`
+                                                <div className={`p-3 rounded-2xl shadow-sm relative transition-all duration-300 w-full ${msg.sender === 'me'
+                                                    ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-br-none shadow-blue-200/40'
+                                                    : `${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border border-gray-100 text-gray-800'} rounded-bl-none shadow-gray-200/10`
                                                     }`}>
-                                                    {msg.attachment && (
-                                                        <div className="mb-2">
+                                                    {activeContact?.isGroup && msg.sender === 'contact' && (
+                                                        <p className="text-[10px] font-bold text-blue-400 mb-1 uppercase tracking-wider">{msg.senderInfo?.nom}</p>
+                                                    )}
+                                                    {msg.attachment && msg.attachment.url && (
+                                                        <div className="mb-2.5">
                                                             {msg.attachment.type === 'image' ? (
                                                                 <img
                                                                     src={msg.attachment.url}
                                                                     alt={msg.attachment.name}
                                                                     onClick={() => setExpandedImage(msg.attachment?.url || null)}
-                                                                    className="rounded-lg max-w-full max-h-[200px] border border-blue-100/20 cursor-zoom-in hover:opacity-95 transition-opacity"
+                                                                    className="rounded-xl max-w-full max-h-[220px] border border-white/5 cursor-zoom-in hover:scale-[1.02] transition-transform duration-300"
                                                                 />
                                                             ) : (
                                                                 <a
                                                                     href={msg.attachment.url}
                                                                     download={msg.attachment.name}
-                                                                    className={`flex items-center gap-2 p-2 rounded-lg text-xs font-medium border ${msg.sender === 'me' ? 'bg-blue-500/20 border-blue-400 text-white' : `${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'} text-blue-600`
+                                                                    className={`flex items-center gap-3 p-2.5 rounded-xl text-xs font-semibold border ${msg.sender === 'me' ? 'bg-white/10 border-white/10 text-white' : `${isDarkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-100'} text-blue-600`
                                                                         }`}
                                                                 >
-                                                                    <div className="w-8 h-8 bg-blue-100 rounded flex items-center justify-center text-blue-600">
-                                                                        <FileText size={14} />
+                                                                    <div className={`w-9 h-9 ${msg.sender === 'me' ? 'bg-white/10' : 'bg-blue-50'} rounded-lg flex items-center justify-center`}>
+                                                                        <FileText size={16} />
                                                                     </div>
                                                                     <span className="truncate max-w-[150px]">{msg.attachment.name}</span>
                                                                 </a>
                                                             )}
                                                         </div>
                                                     )}
-                                                    {msg.content && <p className="text-sm leading-relaxed">{msg.content || msg.text}</p>}
+                                                    {msg.content && <p className="text-[13px] leading-relaxed break-words font-medium">{msg.content || msg.text}</p>}
                                                     {msg._id === editingMessageId && (
-                                                        <span className="block text-[10px] italic text-blue-200 mt-1">(Editing...)</span>
+                                                        <span className="block text-[9px] italic text-blue-200 mt-1">Édition en cours...</span>
                                                     )}
-                                                    <span className={`text-[10px] mt-1 block ${msg.sender === 'me' ? 'text-blue-100 text-right' : 'text-gray-400'
-                                                        }`}>
-                                                        {msg.time}
-                                                    </span>
+                                                    <div className="flex items-center justify-end gap-1.5 mt-1.5 opacity-90">
+                                                        <span className={`text-[10px] font-medium ${msg.sender === 'me' ? 'text-blue-100/70' : 'text-gray-400'}`}>
+                                                            {msg.time}
+                                                        </span>
+                                                        {msg.sender === 'me' && (
+                                                            <div className="flex items-center ml-0.5 min-w-[16px] justify-end">
+                                                                {msg.read ? (
+                                                                    <div className="animate-checkmarkPop">
+                                                                        <CheckCheck size={14} className="text-emerald-400 fill-emerald-400/10 drop-shadow-sm" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <Check size={13} className="text-white/40" />
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -784,6 +883,18 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                                         <Trash2 size={16} />
                                                         Clear Chat
                                                     </button>
+                                                    {activeContact?.isGroup && (
+                                                        <>
+                                                            <div className={`h-px ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} my-1 mx-1`}></div>
+                                                            <button
+                                                                onClick={() => { handleLeaveGroup(); setIsSettingsOpen(false); }}
+                                                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-red-600 ${isDarkMode ? 'hover:bg-red-950/30' : 'hover:bg-red-50'} transition-all`}
+                                                            >
+                                                                <Minus size={16} />
+                                                                Leave Group
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -933,6 +1044,14 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         @keyframes slideLeft {
           from { opacity: 0; transform: translateX(20px); }
           to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes checkmarkPop {
+          0% { transform: scale(0.6); opacity: 0; }
+          50% { transform: scale(1.2); }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-checkmarkPop {
+          animation: checkmarkPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         @keyframes chatFadeIn {
           from { opacity: 0; transform: scale(0.9); }
