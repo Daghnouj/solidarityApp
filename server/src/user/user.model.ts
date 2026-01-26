@@ -141,7 +141,15 @@ const UserSchema: Schema<UserDocument> = new mongoose.Schema({
   currentPeriodEnd: {
     type: Date,
     default: null
-  }
+  },
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  groups: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Group'
+  }]
 }, {
   timestamps: true
 });

@@ -44,11 +44,12 @@ const Header = () => {
           const otherUser = conv.participants.find((p: any) => p._id !== user?._id);
           return {
             id: conv._id,
-            sender: otherUser?.nom || "Unknown",
+            sender: conv.isGroup ? (conv.groupName || "Group Chat") : (otherUser?.nom || "Unknown"),
             preview: conv.lastMessage?.content || "No messages yet",
             time: conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
             read: conv.lastMessage ? conv.lastMessage.read : true,
-            otherUserId: otherUser?._id
+            otherUserId: otherUser?._id,
+            isGroup: conv.isGroup
           };
         });
         setNotificationMessages(snippets.slice(0, 5)); // show latest 5
@@ -189,9 +190,15 @@ const Header = () => {
   };
 
 
-  const handleMessageClick = (otherUserId: string) => {
+  const handleMessageClick = (msg: any) => {
     setMessagesOpen(false);
-    window.dispatchEvent(new CustomEvent('open_chat', { detail: { userId: otherUserId } }));
+    window.dispatchEvent(new CustomEvent('open_chat', {
+      detail: {
+        userId: msg.isGroup ? undefined : msg.otherUserId,
+        conversationId: msg.isGroup ? msg.id : undefined,
+        isGroup: msg.isGroup
+      }
+    }));
   };
 
   return (
@@ -350,7 +357,7 @@ const Header = () => {
                           notificationMessages.map((msg) => (
                             <div
                               key={msg.id}
-                              onClick={() => handleMessageClick(msg.otherUserId)}
+                              onClick={() => handleMessageClick(msg)}
                               className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!msg.read ? 'bg-blue-50/20' : ''}`}
                             >
                               <div className="flex justify-between items-start">

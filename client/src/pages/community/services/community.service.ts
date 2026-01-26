@@ -136,6 +136,47 @@ const CommunityService = {
     });
     return response.data;
   },
+
+  getExploreData: async () => {
+    const response = await axios.get(`${API_URL}/explore`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  },
+
+  getGroups: async () => {
+    const response = await axios.get(`${API_URL}/explore/groups`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  },
+
+  toggleFollow: async (followId: string) => {
+    const response = await axios.post(
+      `${API_URL}/explore/follow/${followId}`,
+      {},
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  },
+
+  toggleGroupJoin: async (groupId: string) => {
+    const response = await axios.post(
+      `${API_URL}/explore/groups/join/${groupId}`,
+      {},
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  },
+
+  createGroup: async (groupData: { name: string, description: string, category: string }) => {
+    const response = await axios.post(
+      `${API_URL}/explore/groups`,
+      groupData,
+      { headers: getAuthHeaders() }
+    );
+    return response.data;
+  },
 };
 
 export default CommunityService;

@@ -20,6 +20,7 @@ import favoritesRoutes from "./src/community/favorites/favorites.routes";
 import professionnelRouter from "./src/professional/professional.routes";
 import appointmentRoutes from "./src/appointment/appointment.routes";
 import notificationRoutes from "./src/community/notification/notification.routes";
+import exploreRoutes from "./src/community/explore/explore.routes";
 import chatRoutes from "./src/chat/chat.routes";
 import { authLimiter, basicSecurity, generalLimiter, noSqlInjectionMiddleware } from "./middlewares/security";
 import { requestLogger } from "./middlewares/logger";
@@ -91,6 +92,7 @@ app.use('/api/community/favorites', favoritesRoutes);
 app.use('/api/availabilities', availabilityRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/community/notifications', notificationRoutes);
+app.use('/api/community/explore', exploreRoutes);
 app.use('/api/chat', chatRoutes);
 // 🏠 8. Route de test  
 app.get("/", (req: Request, res: Response) => {

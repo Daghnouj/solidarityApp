@@ -83,80 +83,117 @@ export const initSocket = (io: Server): void => {
       userSocketMap[userId] = socket.id;
       socket.join(userId);
 
+      // Join rooms for all user conversations (private & groups)
+      const userConversations = await Conversation.find({ participants: userId });
+      userConversations.forEach(conv => {
+        socket.join(conv._id.toString());
+      });
+
       // Update online status
       await User.findByIdAndUpdate(userId, { isOnline: true });
 
-      // --- Private Messaging Events ---
-      socket.on('edit_message', async (data: { messageId: string, content: string, receiverId: string }) => {
+      // --- Messaging Events ---
+      socket.on('edit_message', async (data: { messageId: string, content: string, conversationId: string }) => {
         try {
-          const { messageId, content, receiverId } = data;
-          io.to(receiverId).emit('message_edited', { messageId, content });
-          socket.emit('message_edited', { messageId, content });
+          const { messageId, content, conversationId } = data;
+
+          // Verify participant
+          const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+          if (!conversation) return;
+
+          // Broadcast to all participants in their own rooms
+          conversation.participants.forEach((pId: any) => {
+            io.to(pId.toString()).emit('message_edited', { messageId, content, conversationId });
+          });
         } catch (error) {
           console.error("Error in edit_message socket event:", error);
         }
       });
 
-      socket.on('delete_message', async (data: { messageId: string, receiverId: string }) => {
+      socket.on('delete_message', async (data: { messageId: string, conversationId: string }) => {
         try {
-          const { messageId, receiverId } = data;
-          io.to(receiverId).emit('message_deleted', { messageId });
-          socket.emit('message_deleted', { messageId });
+          const { messageId, conversationId } = data;
+
+          // Verify participant
+          const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+          if (!conversation) return;
+
+          conversation.participants.forEach((pId: any) => {
+            io.to(pId.toString()).emit('message_deleted', { messageId, conversationId });
+          });
         } catch (error) {
           console.error("Error in delete_message socket event:", error);
         }
       });
 
-      socket.on('clear_chat', async (data: { receiverId: string }) => {
+      socket.on('clear_chat', async (data: { conversationId: string }) => {
         try {
-          const { receiverId } = data;
-          io.to(receiverId).emit('chat_cleared', { senderId: userId });
-          socket.emit('chat_cleared', { senderId: receiverId });
+          const { conversationId } = data;
+
+          // Verify participant
+          const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+          if (!conversation) return;
+
+          io.to(userId).emit('chat_cleared', { conversationId });
         } catch (error) {
           console.error("Error in clear_chat socket event:", error);
         }
       });
 
-      socket.on('send_message', async (data: { receiverId: string, content: string, attachment?: any }) => {
+      socket.on('send_message', async (data: { receiverId?: string, conversationId?: string, content: string, attachment?: any }) => {
         try {
-          const { receiverId, content, attachment } = data;
+          const { receiverId, conversationId, content, attachment } = data;
 
-          // 1. Create and save message
+          let targetConversation;
+
+          if (conversationId) {
+            targetConversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+          } else if (receiverId) {
+            targetConversation = await Conversation.findOne({
+              isGroup: false,
+              participants: { $all: [userId, receiverId] }
+            });
+
+            if (!targetConversation) {
+              targetConversation = new Conversation({
+                participants: [userId, receiverId],
+                isGroup: false
+              });
+              await targetConversation.save();
+            }
+          }
+
+          if (!targetConversation) {
+            throw new Error("Conversation not found or unauthorized");
+          }
+
           const newMessage = new Message({
             sender: userId,
-            receiver: receiverId,
+            conversationId: targetConversation._id,
             content,
             attachment
           });
           await newMessage.save();
 
-          // 2. Find or create conversation
-          let conversation = await Conversation.findOne({
-            participants: { $all: [userId, receiverId] }
-          });
+          targetConversation.lastMessage = newMessage._id as any;
+          await targetConversation.save();
 
-          if (!conversation) {
-            conversation = new Conversation({
-              participants: [userId, receiverId]
-            });
-          }
-
-          conversation.lastMessage = newMessage._id as any;
-          await conversation.save();
-
-          // 3. Emit to receiver room if they are online
-          io.to(receiverId).emit('receive_message', {
+          // Broadcast to ALL participants via their private rooms (multi-tab sync)
+          const messageData = {
             _id: newMessage._id,
             sender: userId,
-            receiver: receiverId,
+            conversationId: targetConversation._id,
             content: newMessage.content,
             attachment: newMessage.attachment,
             timestamp: newMessage.timestamp,
-            read: newMessage.read
-          });
+            read: newMessage.read,
+            isGroup: targetConversation.isGroup,
+            groupName: targetConversation.groupName
+          };
 
-          // 4. Acknowledge to sender
-          socket.emit('message_sent', newMessage);
+          targetConversation.participants.forEach((pId: any) => {
+            io.to(pId.toString()).emit('receive_message', messageData);
+          });
 
         } catch (error) {
           console.error("Error in send_message socket event:", error);
