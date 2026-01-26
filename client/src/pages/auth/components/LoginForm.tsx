@@ -19,14 +19,7 @@ const LoginForm: React.FC = () => {
       const result = await login(form);
       // Check if login was successful based on the returned action
       if (result.meta.requestStatus === 'fulfilled') {
-        const user = result.payload.user;
-        if (user.role === 'admin') {
-          navigate('/admin');
-        } else if (user.isProfessional || user.role === 'professional') {
-          navigate('/');
-        } else {
-          navigate('/'); // Or /dashboard for patients too
-        }
+        navigate('/dashboard');
       }
     } catch (err) {
       console.error("Login failed", err);

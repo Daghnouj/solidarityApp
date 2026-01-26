@@ -1,13 +1,82 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, Activity, TrendingUp, Clock, ArrowRight } from 'lucide-react';
+import { useAuth } from '../../pages/auth/hooks/useAuth';
+import UserAppointmentService from '../services/appointment.service';
+import type { Appointment } from '../services/appointment.service';
+import CommunityService from '../../pages/community/services/community.service';
 
 const UserOverview: React.FC = () => {
+    const { user } = useAuth();
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [postStats, setPostStats] = useState({ myPosts: 0, savedPosts: 0 });
+    const [loadingStats, setLoadingStats] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchOverviewData = async () => {
+            try {
+                const [appointmentsData, myPosts, savedPosts] = await Promise.all([
+                    UserAppointmentService.getMyAppointments(),
+                    CommunityService.getMyPosts(),
+                    CommunityService.getFavoritePosts()
+                ]);
+
+                if (!isMounted) return;
+                setAppointments(appointmentsData);
+                setPostStats({ myPosts: myPosts.length || 0, savedPosts: savedPosts.length || 0 });
+            } catch (error) {
+                console.error('Failed to load overview data', error);
+            } finally {
+                if (isMounted) setLoadingStats(false);
+            }
+        };
+
+        fetchOverviewData();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const now = new Date();
+    const upcomingAppointments = useMemo(
+        () => appointments.filter((appt) => !['cancelled', 'rejected'].includes(appt.status) && new Date(appt.time) >= now),
+        [appointments, now]
+    );
+    const completedAppointments = useMemo(
+        () => appointments.filter((appt) => appt.status === 'completed'),
+        [appointments]
+    );
+
+    const parseDurationHours = (duration?: string) => {
+        if (!duration) return 1;
+        const hourMatch = duration.match(/(\d+(?:\.\d+)?)\s*h/i);
+        const minuteMatch = duration.match(/(\d+(?:\.\d+)?)\s*m/i);
+        let hours = 0;
+        if (hourMatch) hours += parseFloat(hourMatch[1]);
+        if (minuteMatch) hours += parseFloat(minuteMatch[1]) / 60;
+        if (!hourMatch && !minuteMatch) {
+            const numeric = Number(duration);
+            hours += Number.isNaN(numeric) ? 1 : numeric;
+        }
+        return hours;
+    };
+
+    const totalHours = completedAppointments.reduce((sum, appt) => sum + parseDurationHours(appt.duration), 0);
+    const totalHoursLabel = `${totalHours.toFixed(1).replace(/\.0$/, '')}h`;
+
     const stats = [
-        { label: 'Upcoming Sessions', value: '3', icon: Calendar, color: 'from-blue-500 to-blue-600', lightColor: 'bg-blue-50', iconColor: 'text-blue-600', trend: '+1 this week' },
-        { label: 'Wellness Score', value: '8.2', icon: Activity, color: 'from-orange-500 to-orange-600', lightColor: 'bg-orange-50', iconColor: 'text-orange-600', trend: '+0.4 average' },
-        { label: 'Engagement', value: '85%', icon: TrendingUp, color: 'from-green-500 to-green-600', lightColor: 'bg-green-50', iconColor: 'text-green-600', trend: 'On track' },
-        { label: 'Total Time', value: '12h', icon: Clock, color: 'from-purple-500 to-purple-600', lightColor: 'bg-purple-50', iconColor: 'text-purple-600', trend: 'Last 30 days' },
+        { label: 'Upcoming Sessions', value: loadingStats ? '...' : `${upcomingAppointments.length}`, icon: Calendar, color: 'from-blue-500 to-blue-600', lightColor: 'bg-blue-50', iconColor: 'text-blue-600', trend: 'Next 7 days' },
+        { label: 'Sessions Completed', value: loadingStats ? '...' : `${completedAppointments.length}`, icon: Activity, color: 'from-orange-500 to-orange-600', lightColor: 'bg-orange-50', iconColor: 'text-orange-600', trend: 'Last 30 days' },
+        { label: 'Community Posts', value: loadingStats ? '...' : `${postStats.myPosts}`, icon: TrendingUp, color: 'from-green-500 to-green-600', lightColor: 'bg-green-50', iconColor: 'text-green-600', trend: 'Your activity' },
+        { label: 'Total Time', value: loadingStats ? '...' : totalHoursLabel, icon: Clock, color: 'from-purple-500 to-purple-600', lightColor: 'bg-purple-50', iconColor: 'text-purple-600', trend: 'Completed sessions' },
     ];
+
+    const nextAppointments = useMemo(
+        () => [...upcomingAppointments].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()).slice(0, 2),
+        [upcomingAppointments]
+    );
 
     return (
         <div className="space-y-8 animate-fadeIn">
@@ -15,7 +84,7 @@ const UserOverview: React.FC = () => {
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold text-gray-800">
-                        Hello, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400">John</span>
+                        Hello, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-blue-400">{user?.nom?.split(' ')[0] || user?.name?.split(' ')[0] || 'there'}</span>
                     </h1>
                     <p className="text-gray-500 mt-1">Here's what's happening with your wellness journey today.</p>
                 </div>
@@ -53,38 +122,47 @@ const UserOverview: React.FC = () => {
                     </div>
 
                     <div className="space-y-4">
-                        {[
-                            { doctor: "Dr. Sarah Johnson", type: "Psychology Session", time: "Tomorrow at 10:00 AM", status: "Confirmed", bg: "bg-blue-50", text: "text-blue-700" },
-                            { doctor: "Dr. Ahmed Ben Ali", type: "General Consultation", time: "Jan 28, 2:00 PM", status: "Pending", bg: "bg-orange-50", text: "text-orange-700" }
-                        ].map((ppt, i) => (
-                            <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-gray-50/50 hover:bg-white border border-transparent hover:border-gray-100 rounded-2xl transition-all duration-300 hover:shadow-md group">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-gray-400 font-bold text-xl shadow-sm border border-gray-100 group-hover:border-blue-200 transition-colors">
-                                        <img
-                                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${ppt.doctor}`}
-                                            alt="avatar"
-                                            className="w-10 h-10 rounded-full"
-                                        />
+                        {nextAppointments.length > 0 ? (
+                            nextAppointments.map((appt, i) => {
+                                const professionalName = appt.professional?.nom || appt.professional?.name || 'Specialist';
+                                const timeLabel = new Date(appt.time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                                const statusStyles = appt.status === 'confirmed' ? { bg: 'bg-blue-50', text: 'text-blue-700' } : appt.status === 'pending' ? { bg: 'bg-orange-50', text: 'text-orange-700' } : { bg: 'bg-gray-50', text: 'text-gray-700' };
+
+                                return (
+                                    <div key={`${appt._id}-${i}`} className="flex flex-col sm:flex-row sm:items-center justify-between p-5 bg-gray-50/50 hover:bg-white border border-transparent hover:border-gray-100 rounded-2xl transition-all duration-300 hover:shadow-md group">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center text-gray-400 font-bold text-xl shadow-sm border border-gray-100 group-hover:border-blue-200 transition-colors">
+                                                <img
+                                                    src={appt.professional?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${professionalName}`}
+                                                    alt="avatar"
+                                                    className="w-10 h-10 rounded-full"
+                                                />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-bold text-gray-900">{professionalName}</h4>
+                                                <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mt-0.5">
+                                                    {appt.type}
+                                                    <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                                                    {timeLabel}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="mt-4 sm:mt-0 flex items-center gap-3">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusStyles.bg} ${statusStyles.text}`}>
+                                                {appt.status}
+                                            </span>
+                                            <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                                                <ArrowRight size={18} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-gray-900">{ppt.doctor}</h4>
-                                        <p className="text-sm text-gray-500 font-medium flex items-center gap-2 mt-0.5">
-                                            {ppt.type}
-                                            <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                                            {ppt.time}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="mt-4 sm:mt-0 flex items-center gap-3">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${ppt.bg} ${ppt.text}`}>
-                                        {ppt.status}
-                                    </span>
-                                    <button className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                                        <ArrowRight size={18} />
-                                    </button>
-                                </div>
+                                );
+                            })
+                        ) : (
+                            <div className="text-center py-10 bg-gray-50/60 rounded-2xl border border-dashed border-gray-200">
+                                <p className="text-sm text-gray-500">No upcoming appointments yet.</p>
                             </div>
-                        ))}
+                        )}
                     </div>
                 </div>
 

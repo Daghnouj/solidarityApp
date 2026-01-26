@@ -21,13 +21,13 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ center, onImageClick }) => 
     <article className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-1 h-full flex flex-col">
       {/* Image Carousel */}
       <div className="relative h-48 lg:h-56 overflow-hidden">
-        <img 
-          src={center.images[currentImageIndex]} 
+        <img
+          src={center.images[currentImageIndex]}
           alt={center.name}
           className="w-full h-full object-cover cursor-pointer transition-transform duration-300 hover:scale-105"
           onClick={() => onImageClick(center, currentImageIndex)}
         />
-        
+
         {/* Image Navigation */}
         {center.images.length > 1 && (
           <>
@@ -43,16 +43,15 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ center, onImageClick }) => 
             >
               ›
             </button>
-            
+
             {/* Image Indicators */}
             <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
               {center.images.map((_, index) => (
                 <button
                   key={index}
                   onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(index); }}
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
-                  }`}
+                  className={`w-2 h-2 rounded-full transition-colors ${index === currentImageIndex ? 'bg-white' : 'bg-white bg-opacity-50'
+                    }`}
                 />
               ))}
             </div>
@@ -65,7 +64,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ center, onImageClick }) => 
         <h3 className="text-xl lg:text-2xl font-bold text-gray-900 mb-2">
           {center.name}
         </h3>
-        
+
         <div className="flex items-start gap-2 text-gray-600 mb-3">
           <span className="text-lg mt-0.5">📍</span>
           <span className="text-sm lg:text-base leading-tight">{center.address}</span>
@@ -75,7 +74,7 @@ const ActivityCard: React.FC<ActivityCardProps> = ({ center, onImageClick }) => 
         <div className="mb-4">
           <div className="flex flex-wrap gap-2">
             {center.activities.slice(0, 3).map((activity, index) => (
-              <div 
+              <div
                 key={index}
                 className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2"
               >

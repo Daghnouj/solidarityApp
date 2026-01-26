@@ -7,9 +7,12 @@ import {
   forgotPasswordUser,
   verifyOtpUser,
   resetPasswordUser,
-  logout
+  logout,
+  // @ts-ignore
+  setUser
 } from "../../../redux/slices/auth.slice";
 import type { RegisterData, LoginData } from "../auth.types";
+import AuthService from "../services/auth.service";
 
 export const useAuth = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -43,5 +46,24 @@ export const useAuth = () => {
       localStorage.removeItem('token');
       dispatch(logout());
     },
+
+    refreshCurrentUser: async () => {
+      try {
+        const me = await AuthService.getCurrentUser();
+        // Ensure we keep any existing fields mapping
+        // Backend may return 'nom'; map to 'name' for consistency
+        // The service already maps, but keep as safe-guard
+        // @ts-ignore
+        if ((me as any).nom && !(me as any).name) {
+          // @ts-ignore
+          (me as any).name = (me as any).nom;
+        }
+        dispatch(setUser(me) as any);
+        return me;
+      } catch (e) {
+        // Silently ignore for UI convenience
+        return null;
+      }
+    }
   };
 };

@@ -102,6 +102,12 @@ const authSlice = createSlice({
       state.resetUserId = null;
       state.otpVerified = false;
     },
+    setUser: (state, action: PayloadAction<any>) => {
+      state.user = action.payload;
+      try {
+        localStorage.setItem("user", JSON.stringify(action.payload));
+      } catch {}
+    },
     clearError: (state) => {
       state.error = null;
     },
@@ -174,5 +180,9 @@ const authSlice = createSlice({
   },
 });
 
+
+export const { logout, clearError, setUser } = authSlice.actions;
+
 export const { logout, clearError, updateFollowing } = authSlice.actions;
+
 export default authSlice.reducer;
