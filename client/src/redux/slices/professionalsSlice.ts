@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { Professional } from '../../pages/Professionals/types';
-import { getProfessionals } from '../../pages/Professionals/services/professionalsService';
+import { listProfessionals, type ListParams } from '../../pages/Professionals/services/professionalsService';
 
 interface ProfessionalsState {
   professionals: Professional[];
@@ -24,9 +24,9 @@ const initialState: ProfessionalsState = {
 
 export const fetchProfessionals = createAsyncThunk(
   'professionals/fetchProfessionals',
-  async () => {
-    const data = await getProfessionals();
-    return data;
+  async (params: ListParams | undefined) => {
+    const resp = await listProfessionals(params);
+    return resp;
   }
 );
 
@@ -50,8 +50,10 @@ const professionalsSlice = createSlice({
       })
       .addCase(fetchProfessionals.fulfilled, (state, action) => {
         state.loading = false;
-        state.professionals = action.payload;
-        state.totalItems = action.payload.length; // ✅ SET TOTAL ITEMS
+        state.professionals = action.payload.data;
+        state.totalItems = action.payload.total; // server total
+        state.itemsPerPage = action.payload.limit;
+        state.currentPage = action.payload.page;
       })
       .addCase(fetchProfessionals.rejected, (state, action) => {
         state.loading = false;

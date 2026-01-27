@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Professional } from '../../Professionals/types';
-import { mockProfessionals } from '../../Professionals/data/mockProfessionals';
+import { getProfessionalById } from '../../Professionals/services/professionalsService';
 
 interface UseTherapistResult {
   therapist: Professional | null;
@@ -23,20 +23,30 @@ export const useTherapist = (therapistId: string | undefined): UseTherapistResul
 
     const fetchTherapist = async () => {
       try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        const foundTherapist = mockProfessionals.find(pro => pro._id === therapistId);
-        
-        if (!foundTherapist) {
+        setState(prev => ({ ...prev, loading: true, error: null }));
+        const data = await getProfessionalById(therapistId);
+        if (!data || !(data as any)._id) {
           setState({ therapist: null, loading: false, error: 'Therapist not found' });
           return;
         }
-
-        setState({ therapist: foundTherapist, loading: false, error: null });
+        // Ensure shape matches Professional interface
+        const therapist: Professional = {
+          _id: (data as any)._id,
+          nom: (data as any).nom,
+          specialite: (data as any).specialite,
+          adresse: (data as any).adresse,
+          photo: (data as any).photo,
+          email: (data as any).email,
+          telephone: (data as any).telephone,
+          bio: (data as any).bio,
+          services: (data as any).services,
+        };
+        setState({ therapist, loading: false, error: null });
       } catch (err) {
-        setState({ 
-          therapist: null, 
-          loading: false, 
-          error: err instanceof Error ? err.message : 'Failed to load therapist' 
+        setState({
+          therapist: null,
+          loading: false,
+          error: err instanceof Error ? err.message : 'Failed to load therapist',
         });
       }
     };

@@ -226,9 +226,11 @@ const UserHeader: React.FC = () => {
                                     </p>
                                     <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 ${isProfileOpen ? 'rotate-180' : ''}`} />
                                 </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    Patient
-                                </p>
+                                {user?.role && user.role !== 'patient' && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                                        {user.role}
+                                    </p>
+                                )}
                             </div>
                         </button>
 
