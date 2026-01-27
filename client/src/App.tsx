@@ -38,7 +38,7 @@ import DashboardLoginPage from "./dashboard/DashboardLoginPage";
 import UserLayout from "./dashboarduser/UserLayout";
 import UserOverview from "./dashboarduser/pages/UserOverview";
 import UserAppointments from "./dashboarduser/pages/UserAppointments";
-import UserFavorites from "./dashboarduser/pages/UserFavorites";
+import UserSavedSpecialists from "./dashboarduser/pages/UserSavedSpecialists";
 import UserCommunity from "./dashboarduser/pages/UserCommunity";
 import UserSavedPosts from "./dashboarduser/pages/UserSavedPosts";
 import UserProfile from "./dashboarduser/pages/UserProfile";
@@ -97,7 +97,7 @@ const App: React.FC = () => {
             <Route path="/dashboard/user" element={<UserLayout />}>
               <Route index element={<UserOverview />} />
               <Route path="appointments" element={<UserAppointments />} />
-              <Route path="favorites" element={<UserFavorites />} />
+              <Route path="favorites" element={<UserSavedSpecialists />} />
               <Route path="community" element={<UserCommunity />} />
               <Route path="saved" element={<UserSavedPosts />} />
               <Route path="profile" element={<UserProfile />} />

@@ -27,6 +27,27 @@ const UserService = {
     });
     return response.data;
   },
+
+  getSavedSpecialists: async (userId: string) => {
+    const response = await axios.get(`${API_URL}/profile/${userId}/saved-specialists`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data?.data || [];
+  },
+
+  saveSpecialist: async (userId: string, professionalId: string) => {
+    const response = await axios.post(`${API_URL}/profile/${userId}/saved-specialists/${professionalId}`, {}, {
+      headers: getAuthHeaders(),
+    });
+    return response.data?.data || [];
+  },
+
+  unsaveSpecialist: async (userId: string, professionalId: string) => {
+    const response = await axios.delete(`${API_URL}/profile/${userId}/saved-specialists/${professionalId}`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data?.data || [];
+  },
 };
 
 export default UserService;

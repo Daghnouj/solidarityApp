@@ -15,7 +15,8 @@ const UserProfile: React.FC = () => {
         lastName: '',
         email: '',
         phoneNumber: '',
-        bio: ''
+        bio: '',
+        dateNaissance: ''
     });
 
     useEffect(() => {
@@ -30,7 +31,8 @@ const UserProfile: React.FC = () => {
                 lastName,
                 email: (user as any).email || '',
                 phoneNumber: (user as any).telephone || (user as any).phoneNumber || '',
-                bio: (user as any).bio || (user as any).professionalInfo?.biography || ''
+                bio: (user as any).bio || (user as any).professionalInfo?.biography || '',
+                dateNaissance: (user as any).dateNaissance ? new Date((user as any).dateNaissance).toISOString().slice(0, 10) : ''
             });
         }
     }, [user]);
@@ -45,12 +47,15 @@ const UserProfile: React.FC = () => {
 
         setLoading(true);
         try {
-            const updateData = {
+            const updateData: any = {
                 nom: `${profile.firstName} ${profile.lastName}`.trim(),
                 email: profile.email,
                 telephone: profile.phoneNumber,
                 bio: profile.bio
             };
+            if (profile.dateNaissance) {
+                updateData.dateNaissance = new Date(profile.dateNaissance);
+            }
 
             const response = await UserService.updateProfile(user._id, updateData);
             if (response?.success) {
@@ -130,7 +135,9 @@ const UserProfile: React.FC = () => {
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-gray-800">{user?.nom || user?.name}</h3>
-                        <p className="text-sm text-gray-500 capitalize">{user?.role || 'User'}</p>
+                        {user?.role && user.role !== 'patient' && (
+                            <p className="text-sm text-gray-500 capitalize">{user.role}</p>
+                        )}
                         <p className="text-xs text-gray-500 mt-1">JPG or PNG, max 2MB</p>
                     </div>
                 </div>
@@ -155,6 +162,15 @@ const UserProfile: React.FC = () => {
                                 onChange={(event) => handleChange('lastName', event.target.value)}
                                 className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all"
                                 required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-semibold text-gray-700">Date of Birth</label>
+                            <input
+                                type="date"
+                                value={profile.dateNaissance}
+                                onChange={(event) => handleChange('dateNaissance', event.target.value)}
+                                className="w-full px-4 py-2 rounded-xl border border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-all"
                             />
                         </div>
                         <div className="space-y-2">

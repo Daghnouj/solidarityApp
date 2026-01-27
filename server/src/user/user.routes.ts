@@ -2,6 +2,9 @@
 import express from "express";
 import {
   getProfile,
+  getSavedSpecialists,
+  saveSpecialist,
+  unsaveSpecialist,
   updateProfile,
   updatePassword,
   updateProfilePhoto,
@@ -26,9 +29,16 @@ router.put("/profile/:userId/photo", protect, uploadProfile.single("photo"), upd
 router.delete("/profile/:userId", protect, deleteProfile);
 router.put("/profile/:userId/deactivate", protect, deactivateAccount);
 router.put("/profile/:userId/activate", protect, activateAccount);
+// Saved specialists (patients only)
+router.get('/profile/:userId/saved-specialists', protect, getSavedSpecialists);
+router.post('/profile/:userId/saved-specialists/:professionalId', protect, saveSpecialist);
+router.delete('/profile/:userId/saved-specialists/:professionalId', protect, unsaveSpecialist);
 router.get('/me', protect, getCurrentUser);
 router.get('/:id', protect, getUserById);
 router.get('/', protect, getAllUsers);
 
+router.get('/public/:id', getUserById);
+router.get('/:id', protect, getUserById);  
+router.get('/', getAllUsers);
 
 export default router;

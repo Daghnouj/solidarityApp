@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import axios from 'axios';
 import type { BookingFormData } from '../types';
 
 interface UseBookingResult {
@@ -19,19 +20,32 @@ export const useBooking = (): UseBookingResult => {
     setState({ loading: true, error: null, success: false });
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // In real app: await axios.post('/api/booking', formData);
-      console.log('Booking submitted:', formData);
-      
+      const API_URL = `${import.meta.env.VITE_API_URL}/appointments`;
+      const token = localStorage.getItem('token');
+
+      // Map Booking form to backend payload
+      const payload = {
+        professional: formData.therapistId,
+        time: formData.date,
+        type: 'Consultation',
+        reason: formData.probleme,
+        // Optional extra patient info snapshot (if backend chooses to store later)
+        // nom: formData.nom,
+        // prenom: formData.prenom,
+        // email: formData.email,
+        // ville: formData.ville,
+        // antecedentsMedicaux: formData.antecedentsMedicaux,
+        // phone: formData.phone,
+      };
+
+      await axios.post(API_URL, payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
       setState({ loading: false, error: null, success: true });
     } catch (err) {
-      setState({ 
-        loading: false, 
-        error: err instanceof Error ? err.message : 'Booking failed', 
-        success: false 
-      });
+      const message = err?.response?.data?.message || err?.message || 'Booking failed';
+      setState({ loading: false, error: message, success: false });
     }
   };
 
