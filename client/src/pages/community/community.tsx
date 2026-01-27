@@ -8,6 +8,7 @@ import AddPostModal from "./components/AddPostModal";
 import CommentModal from "./components/CommentModal";
 import DiscoverView from "./components/DiscoverView";
 import GroupsView from "./components/GroupsView";
+import FollowersView from "./components/FollowersView";
 import { useCommunity } from "./hooks/useCommunity";
 import type { Post } from "./types";
 
@@ -28,12 +29,14 @@ export default function Community() {
     removeComment,
     editReply,
     removeReply,
+    trendingTags,
   } = useCommunity();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [postPrefill, setPostPrefill] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-  const [activeView, setActiveView] = useState<'feed' | 'following' | 'groups'>('feed');
+  const [activeView, setActiveView] = useState<'feed' | 'following' | 'groups' | 'followers'>('feed');
 
   // Update selected post if it changes in the posts list (to show new comments/replies)
   const currentSelectedPost = selectedPost ? posts.find(p => p._id === selectedPost._id) || selectedPost : null;
@@ -49,7 +52,10 @@ export default function Community() {
 
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           <LeftSidebar
-            onAddPost={() => setShowAddModal(true)}
+            onAddPost={() => {
+              setPostPrefill("");
+              setShowAddModal(true);
+            }}
             activeView={activeView}
             onViewChange={setActiveView}
           />
@@ -78,7 +84,10 @@ export default function Community() {
                   onComment={(p) => setSelectedPost(p)}
                   onEditPost={editPost}
                   onDeletePost={removePost}
-                  onAddPost={() => setShowAddModal(true)}
+                  onAddPost={(prefill) => {
+                    setPostPrefill(prefill || "");
+                    setShowAddModal(true);
+                  }}
                 />
               )
             ) : activeView === 'following' ? (
@@ -89,12 +98,18 @@ export default function Community() {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
-            ) : (
+            ) : activeView === 'groups' ? (
               <GroupsView />
+            ) : (
+              <FollowersView />
             )}
           </main>
 
-          <RightSidebar searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+          <RightSidebar
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            trendingTags={trendingTags}
+          />
         </div>
       </div>
 
@@ -105,6 +120,7 @@ export default function Community() {
           addPost(content);
           setShowAddModal(false);
         }}
+        initialContent={postPrefill}
       />
 
       <CommentModal

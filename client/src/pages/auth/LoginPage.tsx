@@ -2,6 +2,8 @@ import React from "react";
 import { Link } from "react-router-dom";
 import LoginForm from "./components/LoginForm";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 const LoginPage: React.FC = () => (
   <div className="h-screen w-full flex bg-white">
     {/* Left Panel - Visuals & Branding (50%) */}
@@ -74,14 +76,14 @@ const LoginPage: React.FC = () => (
 
         <div className="grid grid-cols-2 gap-4">
           <button
-            onClick={() => window.location.href = "http://localhost:5000/api/auth/google"}
+            onClick={() => window.location.href = `${API_URL}/auth/google`}
             className="flex items-center justify-center px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
           >
             <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="h-5 w-5 mr-2" alt="Google" />
             <span className="text-sm font-medium text-slate-700">Google</span>
           </button>
           <button
-            onClick={() => window.location.href = "http://localhost:5000/api/auth/facebook"}
+            onClick={() => window.location.href = `${API_URL}/auth/facebook`}
             className="flex items-center justify-center px-4 py-2 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors"
           >
             <img src="https://www.svgrepo.com/show/475647/facebook-color.svg" className="h-5 w-5 mr-2" alt="Facebook" />

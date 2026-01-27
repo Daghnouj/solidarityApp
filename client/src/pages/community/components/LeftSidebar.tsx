@@ -2,8 +2,8 @@ import { FaPlus, FaUsers, FaCompass, FaHome } from "react-icons/fa";
 
 interface Props {
   onAddPost: () => void;
-  activeView: 'feed' | 'following' | 'groups';
-  onViewChange: (view: 'feed' | 'following' | 'groups') => void;
+  activeView: 'feed' | 'following' | 'groups' | 'followers';
+  onViewChange: (view: 'feed' | 'following' | 'groups' | 'followers') => void;
 }
 
 export default function LeftSidebar({
@@ -44,6 +44,14 @@ export default function LeftSidebar({
           >
             <FaCompass className={activeView === 'following' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600 transition'} />
             <span className="font-medium">Following</span>
+          </button>
+
+          <button
+            onClick={() => onViewChange('followers')}
+            className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl transition group relative ${activeView === 'followers' ? 'bg-indigo-50 text-indigo-600 shadow-sm' : 'text-gray-700 hover:bg-white hover:shadow-sm'}`}
+          >
+            <FaUsers className={activeView === 'followers' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-indigo-600 transition'} />
+            <span className="font-medium">Followers</span>
           </button>
         </nav>
       </div>

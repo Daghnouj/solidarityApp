@@ -9,6 +9,9 @@ import {
     Send,
     Minus,
     MoreHorizontal,
+    MoreVertical,
+    LogOut,
+    Smile,
     Check,
     CheckCheck,
     Sun,
@@ -17,8 +20,28 @@ import {
     Pencil,
     Trash2
 } from 'lucide-react';
-import { io, Socket } from 'socket.io-client';
+
+const EMOJI_CATEGORIES = [
+    {
+        name: "Feelings",
+        emojis: ["😊", "😂", "😍", "🥰", "😎", "🤔", "😔", "😭", "😡", "😱", "😴", "😇", "🥳", "🥺", "🙄", "🤡", "💖", "✨", "🔥"]
+    },
+    {
+        name: "Health & Care",
+        emojis: ["🏥", "💊", "🧘", "🧠", "🎗️", "🫂", "🩸", "🌡️", "🩺", "🩹", "🧖", "🚶", "🏃", "🥗", "🍵"]
+    },
+    {
+        name: "Support",
+        emojis: ["🤝", "❤️", "🧡", "💛", "💚", "💙", "💜", "✨", "🌟", "🙌", "🤲", "💪", "🌈", "🕊️", "🍀"]
+    },
+    {
+        name: "Activities",
+        emojis: ["🎓", "💻", "📚", "✍️", "🎨", "🎭", "🎤", "🎧", "🎬", "🤳", "📅", "⏰", "💡", "⚡", "🌍"]
+    }
+];
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useSocket } from '../context/SocketContext';
 
 interface Message {
     id?: string;
@@ -62,7 +85,6 @@ interface QuickActionsMenuProps {
 }
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-const SOCKET_URL = API_URL.replace('/api', '');
 
 const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     actions,
@@ -82,19 +104,29 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     const [messageInput, setMessageInput] = useState("");
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [activeContactId, setActiveContactId] = useState<string | null>(null); // This is the conversationId
+
     const [messages, setMessages] = useState<Message[]>([]);
-    const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [allUsers, setAllUsers] = useState<Contact[]>([]); // This will store individual users for search
+    const [allUsers, setAllUsers] = useState<Contact[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        const savedMode = localStorage.getItem('chat_dark_mode');
+        return savedMode ? JSON.parse(savedMode) : false;
+    });
     const [isMinimized, setIsMinimized] = useState(false);
+    const [messageMenuId, setMessageMenuId] = useState<string | null>(null);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [typingUsers, setTypingUsers] = useState<{ [convId: string]: string[] }>({});
+    const typingTimeoutRef = useRef<{ [convId: string]: any }>({});
+    const activeContactIdRef = useRef<string | null>(null);
 
-    const socketRef = useRef<Socket | null>(null);
+    useEffect(() => {
+        activeContactIdRef.current = activeContactId;
+    }, [activeContactId]);
+    const { socket, onlineUsers } = useSocket();
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const activeContactIdRef = useRef<string | null>(null); // This is the conversationId
     const imageInputRef = useRef<HTMLInputElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -163,96 +195,128 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         e.target.value = '';
     };
 
-    // Sync ref with state
-    useEffect(() => {
-        activeContactIdRef.current = activeContactId;
-    }, [activeContactId]);
+
 
     // Scroll to bottom when messages change
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
-    // Socket Setup
+    // Close message menu on click away
     useEffect(() => {
-        if (!token || !isChatOpen) return;
+        const handleClick = () => {
+            setMessageMenuId(null);
+            setShowEmojiPicker(false);
+        };
+        document.addEventListener('click', handleClick);
+        return () => document.removeEventListener('click', handleClick);
+    }, []);
 
-        if (!socketRef.current) {
-            const socket = io(SOCKET_URL, {
-                auth: { token }
-            });
-            socketRef.current = socket;
+    // Persist dark mode
+    useEffect(() => {
+        localStorage.setItem('chat_dark_mode', JSON.stringify(isDarkMode));
+    }, [isDarkMode]);
 
-            socket.on('onlineUsers', (u: string[]) => {
-                setOnlineUsers(u);
-            });
+    // Typing emission logic
+    const handleTyping = () => {
+        if (!activeContactId || !socket) return;
+        const activeContact = contacts.find(c => c.id === activeContactId);
+        if (activeContact?.status === 'New Conversation') return;
 
-            socket.on('presenceUpdate', ({ userId, isOnline, lastSeen }: { userId: string, isOnline: boolean, lastSeen?: string }) => {
-                setOnlineUsers(prev => {
-                    if (isOnline && !prev.includes(userId)) return [...prev, userId];
-                    if (!isOnline) return prev.filter(id => id !== userId);
-                    return prev;
-                });
-                if (lastSeen) {
-                    setContacts(prev => prev.map(c => c._id === userId && !c.isGroup ? { ...c, lastSeen } : c));
-                    setAllUsers(prev => prev.map(c => c._id === userId && !c.isGroup ? { ...c, lastSeen } : c));
-                }
-            });
+        socket.emit('typing', { conversationId: activeContactId });
 
-            socket.on('receive_message', (msg: any) => {
-                // Use ref to check if this message belongs to currently open conversation
-                if (activeContactIdRef.current === msg.conversationId) {
-                    setMessages(prev => {
-                        // Prevent duplicates
-                        const exists = prev.some(m => m._id === msg._id || (m.timestamp === msg.timestamp && m.content === msg.content));
-                        if (exists) return prev;
-
-                        const formattedMsg = {
-                            ...msg,
-                            sender: msg.sender === user._id ? 'me' as const : 'contact' as const,
-                            senderType: msg.sender === user._id ? 'me' as const : 'contact' as const,
-                            time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                            attachment: msg.attachment
-                        };
-                        return [...prev, formattedMsg];
-                    });
-                    markMessagesAsRead(msg.conversationId);
-                }
-                fetchConversations();
-            });
-
-
-            socket.on('message_edited', ({ messageId, content }: { messageId: string, content: string }) => {
-                setMessages(prev => prev.map(m => (m._id === messageId ? { ...m, content } : m)));
-            });
-
-            socket.on('message_deleted', ({ messageId }: { messageId: string }) => {
-                setMessages(prev => prev.filter(m => m._id !== messageId));
-                fetchConversations();
-            });
-
-            socket.on('chat_cleared', ({ conversationId }: { conversationId: string }) => {
-                if (activeContactIdRef.current === conversationId) {
-                    setMessages([]);
-                }
-                fetchConversations();
-            });
-
-            socket.on('messages_read', ({ conversationId }: { conversationId: string }) => {
-                if (activeContactIdRef.current === conversationId) {
-                    setMessages(prev => prev.map(m => m.sender === 'me' ? { ...m, read: true } : m));
-                }
-                fetchConversations();
-            });
+        if (typingTimeoutRef.current[activeContactId]) {
+            clearTimeout(typingTimeoutRef.current[activeContactId]);
         }
 
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
-                socketRef.current = null;
+        typingTimeoutRef.current[activeContactId] = setTimeout(() => {
+            socket?.emit('stop_typing', { conversationId: activeContactId });
+            delete typingTimeoutRef.current[activeContactId];
+        }, 3000);
+    };
+
+    // Socket Setup
+    useEffect(() => {
+        if (!socket || !isChatOpen) return;
+
+        socket.on('presenceUpdate', ({ userId, lastSeen }: { userId: string, isOnline: boolean, lastSeen?: string }) => {
+            if (lastSeen) {
+                setContacts(prev => prev.map(c => c._id === userId && !c.isGroup ? { ...c, lastSeen } : c));
+                setAllUsers(prev => prev.map(c => c._id === userId && !c.isGroup ? { ...c, lastSeen } : c));
             }
+        });
+
+        socket.on('receive_message', (msg: any) => {
+            const currentId = activeContactIdRef.current;
+            const isMatch = currentId === msg.conversationId || (!msg.isGroup && currentId === msg.sender);
+
+            if (isMatch) {
+                setMessages(prev => {
+                    const exists = prev.some(m => m._id === msg._id || (m.timestamp === msg.timestamp && m.content === msg.content));
+                    if (exists) return prev;
+                    return [...prev, {
+                        ...msg,
+                        sender: msg.sender === user._id ? 'me' as const : 'contact' as const,
+                        senderType: msg.sender === user._id ? 'me' as const : 'contact' as const,
+                        time: new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                        attachment: msg.attachment
+                    }];
+                });
+                markMessagesAsRead(msg.conversationId);
+            }
+            fetchConversations();
+        });
+
+        socket.on('user_typing', ({ conversationId, userName }: { conversationId: string, userName: string }) => {
+            setTypingUsers(prev => {
+                const currentTyper = prev[conversationId] || [];
+                if (!currentTyper.includes(userName)) {
+                    return { ...prev, [conversationId]: [...currentTyper, userName] };
+                }
+                return prev;
+            });
+        });
+
+        socket.on('user_stop_typing', ({ conversationId }: { conversationId: string }) => {
+            setTypingUsers(prev => ({ ...prev, [conversationId]: [] }));
+        });
+
+        socket.on('message_edited', ({ messageId, content }: { messageId: string, content: string }) => {
+            setMessages(prev => prev.map(m => (m._id === messageId ? { ...m, content } : m)));
+        });
+
+        socket.on('message_deleted', ({ messageId }: { messageId: string }) => {
+            setMessages(prev => prev.filter(m => m._id !== messageId));
+            fetchConversations();
+        });
+
+        socket.on('chat_cleared', ({ conversationId }: { conversationId: string }) => {
+            if (activeContactIdRef.current === conversationId) {
+                setMessages([]);
+            }
+            fetchConversations();
+        });
+
+        socket.on('messages_read', ({ conversationId, readerId }: { conversationId: string, readerId: string }) => {
+            const currentUserId = user._id || user.id;
+            if (readerId !== currentUserId && activeContactIdRef.current === conversationId) {
+                setMessages(prev => prev.map(m => m.sender === 'me' ? { ...m, read: true } : m));
+            }
+            fetchConversations();
+        });
+
+        return () => {
+            socket.off('onlineUsers');
+            socket.off('presenceUpdate');
+            socket.off('receive_message');
+            socket.off('user_typing');
+            socket.off('user_stop_typing');
+            socket.off('message_edited');
+            socket.off('message_deleted');
+            socket.off('chat_cleared');
+            socket.off('messages_read');
         };
-    }, [isChatOpen, token]);
+    }, [socket, isChatOpen]);
 
     // Initial Data Load
     useEffect(() => {
@@ -263,50 +327,78 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     // External listener to open a specific chat
     useEffect(() => {
-        const handleOpenChat = (event: any) => {
-            const userId = event.detail?.userId; // This is the _id of the user, not conversationId
+        const handleOpenChat = async (event: any) => {
+            const userId = event.detail?.userId;
+            const userName = event.detail?.userName;
+            const userPhoto = event.detail?.userPhoto;
 
             setIsChatOpen(true);
             setIsSearching(false);
+            setIsMinimized(false);
 
             if (userId) {
-                // Find or create a conversation with this user
+                // 1. Check existing conversations
                 const existingContact = contacts.find(c => c._id === userId && !c.isGroup);
                 if (existingContact) {
                     setActiveContactId(existingContact.conversationId);
                     activeContactIdRef.current = existingContact.conversationId;
-                } else {
-                    // If not found, we might need to fetch or create a conversation
-                    // For now, we'll just set the activeContactId to the userId, assuming the backend will handle it
-                    // This might need refinement to ensure a conversationId is always available
-                    // For simplicity, let's assume fetchConversations will eventually pick it up
-                    // Or, we could make an API call to get/create conversation for this userId
-                    // For now, we'll rely on fetchConversations to update the contacts list
-                    // and then set activeContactId from there.
-                    // A more robust solution would be to create a conversation if it doesn't exist.
-                    // For this example, we'll just trigger a re-fetch and hope it appears.
-                    fetchConversations().then(() => {
-                        const newContact = contacts.find(c => c._id === userId && !c.isGroup);
-                        if (newContact) {
-                            setActiveContactId(newContact.conversationId);
-                            activeContactIdRef.current = newContact.conversationId;
-                        }
-                    });
+                    return;
                 }
+
+                // 2. Try to refresh conversations first
+                await fetchConversations();
+                const refreshedContact = contacts.find(c => c._id === userId && !c.isGroup);
+                if (refreshedContact) {
+                    setActiveContactId(refreshedContact.conversationId);
+                    activeContactIdRef.current = refreshedContact.conversationId;
+                    return;
+                }
+
+                // 3. If still not found, create a temporary "new chat" contact
+                // We need at least the name and photo. If not provided in event, we use defaults or fetch.
+                let finalName = userName || "New Contact";
+                let finalPhoto = userPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${finalName}`;
+
+                // Try to find in allUsers (search cache) if available
+                const userFromSearch = allUsers.find(u => u._id === userId);
+                if (userFromSearch) {
+                    finalName = userFromSearch.name;
+                    finalPhoto = userFromSearch.photo;
+                }
+
+                const tempContact: Contact = {
+                    id: userId, // Use userId as temporary conversationId
+                    _id: userId,
+                    conversationId: userId, // Simulated
+                    isGroup: false,
+                    name: finalName,
+                    photo: finalPhoto,
+                    status: 'New Conversation',
+                    messages: []
+                };
+
+                setContacts(prev => [tempContact, ...prev.filter(c => c._id !== userId)]);
+                setActiveContactId(userId);
+                activeContactIdRef.current = userId;
+                setMessages([]); // Clear messages for new chat
             }
         };
 
         window.addEventListener('open_chat', handleOpenChat);
         return () => window.removeEventListener('open_chat', handleOpenChat);
-    }, [contacts]); // Add contacts to dependency array to ensure it has the latest list
+    }, [contacts, allUsers]); // Add contacts to dependency array to ensure it has the latest list
 
     // Load messages when contact changes
     useEffect(() => {
-        if (activeContactId && !isSearching) {
+        const activeContact = contacts.find(c => c.id === activeContactId);
+        // Only fetch if it's not a "New Conversation" placeholder (which uses userId as id)
+        if (activeContactId && !isSearching && activeContact && activeContact.status !== 'New Conversation') {
             fetchMessages(activeContactId);
             markMessagesAsRead(activeContactId);
+        } else if (activeContact?.status === 'New Conversation') {
+            setMessages([]);
         }
-    }, [activeContactId, isSearching]);
+    }, [activeContactId, isSearching, contacts]);
 
     const markMessagesAsRead = async (conversationId: string) => {
         try {
@@ -320,7 +412,12 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         }
     };
 
+    const lastFetchRef = useRef<number>(0);
     const fetchConversations = async () => {
+        const now = Date.now();
+        if (now - lastFetchRef.current < 1000) return; // Limit to 1 call per second
+        lastFetchRef.current = now;
+
         try {
             const res = await axios.get(`${API_URL}/chat/conversations`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -329,32 +426,46 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             const formattedContacts = res.data.map((conv: any) => {
                 if (conv.isGroup) {
                     return {
-                        id: conv._id, // conversationId
-                        _id: conv._id, // group _id
+                        id: conv._id,
+                        _id: conv._id,
                         conversationId: conv._id,
                         isGroup: true,
                         name: conv.groupName,
-                        photo: `https://api.dicebear.com/7.x/initials/svg?seed=${conv.groupName}`, // Placeholder for group photo
+                        photo: `https://api.dicebear.com/7.x/initials/svg?seed=${conv.groupName}`,
                         status: `${conv.participants.length} members`,
                         messages: []
                     };
                 }
                 const otherUser = conv.participants.find((p: any) => p._id !== user._id);
                 return {
-                    id: conv._id, // conversationId
-                    _id: otherUser._id, // other user's _id
+                    id: conv._id,
+                    _id: otherUser._id,
                     conversationId: conv._id,
                     isGroup: false,
                     name: otherUser.nom,
                     photo: otherUser.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUser.nom}`,
-                    status: onlineUsers.includes(otherUser._id) ? 'Active now' : 'Offline',
+                    status: (onlineUsers || []).includes(otherUser._id) ? 'Active now' : 'Offline',
                     lastSeen: otherUser.lastSeen,
                     messages: []
                 };
             });
 
-            setContacts(formattedContacts);
-            if (formattedContacts.length > 0 && !activeContactId) {
+            setContacts(prev => {
+                const tempContacts = prev.filter(c => c.status === 'New Conversation');
+                const stillTemp = tempContacts.filter(tc => !formattedContacts.find((fc: any) => fc._id === tc._id));
+                return [...stillTemp, ...formattedContacts];
+            });
+
+            // If we are on a "New Conversation", check if it's now become a real one
+            const currentActiveId = activeContactIdRef.current;
+            if (currentActiveId) {
+                const nowReal = formattedContacts.find((fc: any) => !fc.isGroup && fc._id === currentActiveId);
+                if (nowReal) {
+                    setActiveContactId(nowReal.id);
+                }
+            }
+
+            if (formattedContacts.length > 0 && !activeContactIdRef.current) {
                 setActiveContactId(formattedContacts[0].id);
             }
         } catch (err) {
@@ -382,13 +493,13 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     const handleSendMessage = (content?: string, attachment?: any) => {
         const text = content !== undefined ? content : messageInput;
-        if ((!text.trim() && !attachment) || !activeContactId || !socketRef.current) return;
+        if ((!text.trim() && !attachment) || !activeContactId || !socket) return;
 
         const activeConv = contacts.find(c => c.id === activeContactId);
 
-        socketRef.current.emit('send_message', {
-            conversationId: activeConv?.isGroup ? activeContactId : undefined,
-            receiverId: activeConv?.isGroup ? undefined : activeConv?._id,
+        socket.emit('send_message', {
+            conversationId: activeConv?.status === 'New Conversation' ? undefined : activeContactId,
+            receiverId: activeConv?.status === 'New Conversation' ? activeConv._id : (activeConv?.isGroup ? undefined : activeConv?._id),
             content: text,
             attachment
         });
@@ -401,7 +512,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             await axios.put(`${API_URL}/chat/message/${messageId}`, { content: newContent }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            socketRef.current?.emit('edit_message', { messageId, content: newContent, conversationId: activeContactId });
+            socket?.emit('edit_message', { messageId, content: newContent, conversationId: activeContactId });
             setEditingMessageId(null);
             setMessageInput("");
         } catch (err) {
@@ -415,7 +526,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             await axios.delete(`${API_URL}/chat/message/${messageId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            socketRef.current?.emit('delete_message', { messageId, conversationId: activeContactId });
+            socket?.emit('delete_message', { messageId, conversationId: activeContactId });
         } catch (err) {
             console.error("Error deleting message:", err);
         }
@@ -429,11 +540,15 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             await axios.delete(`${API_URL}/chat/clear/${activeContactId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            socketRef.current?.emit('clear_chat', { conversationId: activeContactId });
+            socket?.emit('clear_chat', { conversationId: activeContactId });
             setMessages([]);
         } catch (err) {
             console.error("Error clearing chat:", err);
         }
+    };
+
+    const addEmoji = (emoji: string) => {
+        setMessageInput(prev => prev + emoji);
     };
 
     const handleLeaveGroup = async () => {
@@ -716,22 +831,47 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                                 />
                                             )}
                                             <div className="relative flex items-center group/msg max-w-[85%]">
-                                                {/* Context Menu for Edit/Delete (Sent Messages) */}
+                                                {/* 3-dots Menu for Edit/Delete (Sent Messages) */}
                                                 {msg.sender === 'me' && (
-                                                    <div className="absolute -left-8 opacity-0 group-hover/msg:opacity-100 transition-all duration-200">
-                                                        <div className={`p-1 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg border border-gray-100/10 flex flex-col gap-1`}>
+                                                    <div className="absolute -left-8 flex items-center">
+                                                        <div className="relative">
                                                             <button
-                                                                onClick={() => { setEditingMessageId(msg._id || null); setMessageInput(msg.content || ""); }}
-                                                                className="p-1 hover:text-blue-500 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setMessageMenuId(messageMenuId === msg._id ? null : msg._id);
+                                                                }}
+                                                                className={`p-1 rounded-full ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-white'} text-gray-400 hover:text-gray-600 transition-colors pointer-events-auto`}
                                                             >
-                                                                <Pencil size={12} />
+                                                                <MoreVertical size={16} />
                                                             </button>
-                                                            <button
-                                                                onClick={() => handleDeleteMessage(msg._id || "")}
-                                                                className="p-1 hover:text-red-500 transition-colors"
-                                                            >
-                                                                <Trash2 size={12} />
-                                                            </button>
+
+                                                            {messageMenuId === msg._id && (
+                                                                <div className={`absolute bottom-full left-0 mb-2 w-32 ${isDarkMode ? 'bg-gray-900 border-gray-800 shadow-2xl' : 'bg-white border-gray-100 shadow-xl'} rounded-xl border p-1 z-50 animate-fadeIn`}>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setEditingMessageId(msg._id || null);
+                                                                            setMessageInput(msg.content || "");
+                                                                            setMessageMenuId(null);
+                                                                        }}
+                                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${isDarkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-50'} transition-all`}
+                                                                    >
+                                                                        <Pencil size={12} className="text-blue-500" />
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleDeleteMessage(msg._id || "");
+                                                                            setMessageMenuId(null);
+                                                                        }}
+                                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold text-red-500 ${isDarkMode ? 'hover:bg-red-950/30' : 'hover:bg-red-50'} transition-all`}
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                        Delete
+                                                                    </button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
@@ -740,8 +880,10 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                                     ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-br-none shadow-blue-200/40'
                                                     : `${isDarkMode ? 'bg-gray-800 border-gray-700 text-gray-100' : 'bg-white border border-gray-100 text-gray-800'} rounded-bl-none shadow-gray-200/10`
                                                     }`}>
-                                                    {activeContact?.isGroup && msg.sender === 'contact' && (
-                                                        <p className="text-[10px] font-bold text-blue-400 mb-1 uppercase tracking-wider">{msg.senderInfo?.nom}</p>
+                                                    {msg.sender === 'contact' && (
+                                                        <p className="text-[10px] font-bold text-blue-400 mb-1 uppercase tracking-wider">
+                                                            {msg.senderInfo?.nom || activeContact?.name || 'Contact'}
+                                                        </p>
                                                     )}
                                                     {msg.attachment && msg.attachment.url && (
                                                         <div className="mb-2.5">
@@ -779,10 +921,10 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                                             <div className="flex items-center ml-0.5 min-w-[16px] justify-end">
                                                                 {msg.read ? (
                                                                     <div className="animate-checkmarkPop">
-                                                                        <CheckCheck size={14} className="text-emerald-400 fill-emerald-400/10 drop-shadow-sm" />
+                                                                        <CheckCheck size={14} className="text-white drop-shadow-sm" />
                                                                     </div>
                                                                 ) : (
-                                                                    <Check size={13} className="text-white/40" />
+                                                                    <Check size={13} className="text-white/60" />
                                                                 )}
                                                             </div>
                                                         )}
@@ -792,6 +934,22 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                         </div>
                                     ))}
                                     <div ref={messagesEndRef} />
+
+                                    {/* Typing Indicator */}
+                                    {activeContactId && typingUsers[activeContactId]?.length > 0 && (
+                                        <div className="flex items-center gap-2 px-4 py-1 animate-pulse">
+                                            <div className="flex gap-1">
+                                                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                            </div>
+                                            <span className={`text-[10px] font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                {typingUsers[activeContactId].length === 1
+                                                    ? `${typingUsers[activeContactId][0]} is typing...`
+                                                    : 'Several people are typing...'}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Chat Input */}
@@ -810,7 +968,10 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                         <input
                                             type="text"
                                             value={messageInput}
-                                            onChange={(e) => setMessageInput(e.target.value)}
+                                            onChange={(e) => {
+                                                setMessageInput(e.target.value);
+                                                handleTyping();
+                                            }}
                                             placeholder={editingMessageId ? "Edit message..." : "Type a message..."}
                                             className={`flex-1 bg-transparent border-none focus:outline-none text-sm ${isDarkMode ? 'text-gray-100 placeholder-gray-600' : 'text-gray-800'} py-1`}
                                         />
@@ -829,6 +990,52 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                     </form>
                                     <div className="flex justify-between items-center mt-2 px-1">
                                         <div className="flex items-center gap-3 text-gray-400">
+                                            <div className="relative">
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setShowEmojiPicker(!showEmojiPicker);
+                                                    }}
+                                                    className={`p-1 rounded-lg transition-colors ${showEmojiPicker ? 'text-yellow-500 bg-yellow-500/10' : 'hover:text-yellow-500 hover:bg-yellow-500/5'}`}
+                                                >
+                                                    <Smile size={18} />
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {showEmojiPicker && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                            onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                                            className={`absolute bottom-full left-0 mb-3 w-64 ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} rounded-2xl shadow-2xl border p-4 z-[100] max-h-[300px] overflow-y-auto custom-scrollbar`}
+                                                        >
+                                                            <div className="flex items-center justify-between mb-3 sticky top-0 bg-inherit py-1">
+                                                                <span className={`font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'} text-xs`}>Emojis</span>
+                                                            </div>
+
+                                                            {EMOJI_CATEGORIES.map((category) => (
+                                                                <div key={category.name} className="mb-4">
+                                                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 px-1">{category.name}</h4>
+                                                                    <div className="grid grid-cols-6 gap-1">
+                                                                        {category.emojis.map((emoji, idx) => (
+                                                                            <button
+                                                                                key={`${category.name}-${idx}`}
+                                                                                onClick={() => addEmoji(emoji)}
+                                                                                className={`w-8 h-8 flex items-center justify-center text-lg ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'} rounded-lg transition-transform active:scale-90`}
+                                                                            >
+                                                                                {emoji}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+
                                             {user.role === 'professional' && (
                                                 <>
                                                     <input
@@ -876,24 +1083,27 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                                         {isDarkMode ? 'Light Mode' : 'Dark Mode'}
                                                     </button>
                                                     <div className={`h-px ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} my-1 mx-1`}></div>
-                                                    <button
-                                                        onClick={() => { handleClearChat(); setIsSettingsOpen(false); }}
-                                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-red-500 ${isDarkMode ? 'hover:bg-red-950/30' : 'hover:bg-red-50'} transition-all`}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                        Clear Chat
-                                                    </button>
-                                                    {activeContact?.isGroup && (
+                                                    {!activeContact?.isGroup && (
                                                         <>
-                                                            <div className={`h-px ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} my-1 mx-1`}></div>
                                                             <button
-                                                                onClick={() => { handleLeaveGroup(); setIsSettingsOpen(false); }}
-                                                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-red-600 ${isDarkMode ? 'hover:bg-red-950/30' : 'hover:bg-red-50'} transition-all`}
+                                                                onClick={() => { handleClearChat(); setIsSettingsOpen(false); }}
+                                                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-red-500 ${isDarkMode ? 'hover:bg-red-950/30' : 'hover:bg-red-50'} transition-all`}
                                                             >
-                                                                <Minus size={16} />
-                                                                Leave Group
+                                                                <Trash2 size={16} />
+                                                                Clear Chat
                                                             </button>
+                                                            <div className={`h-px ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} my-1 mx-1`}></div>
                                                         </>
+                                                    )}
+
+                                                    {activeContact?.isGroup && (
+                                                        <button
+                                                            onClick={() => { handleLeaveGroup(); setIsSettingsOpen(false); }}
+                                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-red-600 ${isDarkMode ? 'hover:bg-red-950/30' : 'hover:bg-red-50'} transition-all`}
+                                                        >
+                                                            <LogOut size={16} />
+                                                            Leave Group
+                                                        </button>
                                                     )}
                                                 </div>
                                             )}

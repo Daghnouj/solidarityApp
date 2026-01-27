@@ -170,7 +170,7 @@ export default function GroupsView() {
                 <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-indigo-600 mx-auto mb-4 shadow-sm">
                     <FaUsers size={32} />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Build Your Own Community</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Join and Grow Together</h3>
                 <p className="text-sm text-gray-500 max-w-sm mx-auto mb-6">
                     Can't find a group that matches your interests? Create one and invite others to join your journey.
                 </p>

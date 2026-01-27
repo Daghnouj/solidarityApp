@@ -164,14 +164,11 @@ export const markMessagesAsRead = async (req: ProtectedRequest, res: Response): 
             return;
         }
 
-        const query: any = { conversationId, read: false };
-        if (conversation.isGroup) {
-            // In group, mark messages not sent by me as read
-            query.sender = { $ne: userId };
-        } else {
-            // In private, mark messages received by me as read
-            query.receiver = userId;
-        }
+        const query: any = {
+            conversationId,
+            read: false,
+            sender: { $ne: userId }
+        };
 
         await Message.updateMany(query, { $set: { read: true } });
 

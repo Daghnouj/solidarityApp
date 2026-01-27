@@ -169,6 +169,7 @@ export const initSocket = (io: Server): void => {
 
           const newMessage = new Message({
             sender: userId,
+            receiver: receiverId || (targetConversation.isGroup ? undefined : targetConversation.participants.find((p: any) => p.toString() !== userId.toString())),
             conversationId: targetConversation._id,
             content,
             attachment
@@ -200,6 +201,39 @@ export const initSocket = (io: Server): void => {
           socket.emit('error', { message: 'Failed to send message' });
         }
       });
+      socket.on('typing', async (data: { conversationId: string }) => {
+        try {
+          const { conversationId } = data;
+          const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+          if (!conversation) return;
+
+          const senderName = socket.user.nom;
+          conversation.participants.forEach((pId: any) => {
+            if (pId.toString() !== userId) {
+              io.to(pId.toString()).emit('user_typing', { conversationId, userId, userName: senderName });
+            }
+          });
+        } catch (error) {
+          console.error("Error in typing socket event:", error);
+        }
+      });
+
+      socket.on('stop_typing', async (data: { conversationId: string }) => {
+        try {
+          const { conversationId } = data;
+          const conversation = await Conversation.findOne({ _id: conversationId, participants: userId });
+          if (!conversation) return;
+
+          conversation.participants.forEach((pId: any) => {
+            if (pId.toString() !== userId) {
+              io.to(pId.toString()).emit('user_stop_typing', { conversationId, userId });
+            }
+          });
+        } catch (error) {
+          console.error("Error in stop_typing socket event:", error);
+        }
+      });
+
       // --------------------------------
 
       io.emit('presenceUpdate', {

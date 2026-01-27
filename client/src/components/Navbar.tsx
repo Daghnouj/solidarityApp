@@ -4,7 +4,7 @@ import logo from "../assets/logo.png";
 import UserProfileDropdown from "./UserProfileDropdown";
 import { useAuth } from "../pages/auth/hooks/useAuth";
 import { Bell, MessageSquare, Menu, X, ChevronDown } from "lucide-react";
-import { io } from "socket.io-client";
+import { useSocket } from "../context/SocketContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -30,7 +30,12 @@ const Header = () => {
     logout();
   };
 
+  const lastFetchMessagesRef = useRef<number>(0);
   const fetchMessageNotifications = async () => {
+    const now = Date.now();
+    if (now - lastFetchMessagesRef.current < 2000) return; // Limit to 1 call per 2 seconds
+    lastFetchMessagesRef.current = now;
+
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -118,18 +123,17 @@ const Header = () => {
     }
   };
 
+  const { socket } = useSocket();
+
   useEffect(() => {
     if (isLoggedIn) {
       fetchNotifications();
       fetchMessageNotifications();
-      const token = localStorage.getItem('token');
-      if (!token) return;
+    }
+  }, [isLoggedIn]);
 
-      const socket = io(API_BASE_URL.replace('/api', ''), {
-        auth: { token },
-        transports: ['websocket']
-      });
-
+  useEffect(() => {
+    if (socket) {
       socket.on('new_notification', (newNotification: any) => {
         setNotifications(prev => [newNotification, ...prev]);
         setUnreadCount(prev => prev + 1);
@@ -140,26 +144,25 @@ const Header = () => {
         setUnreadCount(prev => prev + 1);
       });
 
-      // --- NEW: Real-time Message Notifications ---
       socket.on('receive_message', () => {
         setUnreadMessagesCount(prev => prev + 1);
-        // Refresh snippets to show the new message content
         fetchMessageNotifications();
       });
 
-      // Listen for custom "chat_read" event from QuickActionsMenu
       const handleChatRead = () => {
         setUnreadMessagesCount(0);
-        fetchMessageNotifications(); // Refresh to mark as read in UI
+        fetchMessageNotifications();
       };
       window.addEventListener('chat_opened', handleChatRead);
 
       return () => {
-        socket.disconnect();
+        socket.off('new_notification');
+        socket.off('notification');
+        socket.off('receive_message');
         window.removeEventListener('chat_opened', handleChatRead);
       };
     }
-  }, [isLoggedIn]);
+  }, [socket]);
 
   const handleNotificationClick = (notification: any) => {
     setNotificationsOpen(false);
