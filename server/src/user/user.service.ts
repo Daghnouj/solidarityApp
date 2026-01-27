@@ -248,7 +248,10 @@ class UserService {
       clinicName: user.clinicName,
       clinicAddress: user.clinicAddress,
       isOnline: user.isOnline,
-      lastLogin: user.lastLogin
+      lastLogin: user.lastLogin,
+      following: user.following?.map(id => id.toString()),
+      groups: user.groups?.map(id => id.toString()),
+      saved_specialist: (user as any).saved_specialist?.map((id: any) => id.toString())
     };
   }
 
@@ -280,8 +283,50 @@ class UserService {
       clinicName: user.clinicName,
       clinicAddress: user.clinicAddress,
       isOnline: user.isOnline,
-      lastLogin: user.lastLogin
+      lastLogin: user.lastLogin,
+      following: user.following?.map(id => id.toString()),
+      groups: user.groups?.map(id => id.toString()),
+      saved_specialist: (user as any).saved_specialist?.map((id: any) => id.toString())
     };
+  }
+
+  async getSavedSpecialists(userId: string) {
+    const user = await User.findById(userId)
+      .select('role saved_specialist')
+      .populate({
+        path: 'saved_specialist',
+        match: { role: 'professional' },
+        select: '-mdp -__v -stripeCustomerId'
+      });
+    if (!user) throw new Error('Utilisateur non trouvé');
+    if (user.role !== 'patient') throw new Error('Accès réservé aux patients');
+    return (user as any).saved_specialist || [];
+  }
+
+  async saveSpecialist(userId: string, professionalId: string) {
+    const prof = await User.findById(professionalId).select('role');
+    if (!prof) throw new Error('Professionnel introuvable');
+    if (prof.role !== 'professional') throw new Error('Seuls les professionnels peuvent être sauvegardés');
+
+    const updated = await User.findByIdAndUpdate(
+      userId,
+      { $addToSet: { saved_specialist: prof._id } },
+      { new: true }
+    ).select('saved_specialist role');
+    if (!updated) throw new Error('Utilisateur non trouvé');
+    if (updated.role !== 'patient') throw new Error('Accès réservé aux patients');
+    return updated.saved_specialist;
+  }
+
+  async unsaveSpecialist(userId: string, professionalId: string) {
+    const updated = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { saved_specialist: professionalId } },
+      { new: true }
+    ).select('saved_specialist role');
+    if (!updated) throw new Error('Utilisateur non trouvé');
+    if (updated.role !== 'patient') throw new Error('Accès réservé aux patients');
+    return updated.saved_specialist;
   }
 }
 

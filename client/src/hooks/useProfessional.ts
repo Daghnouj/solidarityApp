@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getProfessionalById } from '../pages/Professionals/services/professionalsService';
 
 interface Professional {
     id: string;
@@ -45,15 +46,19 @@ export const useProfessional = (id: string | undefined): UseProfessionalReturn =
                 setLoading(true);
                 setError(null);
 
-                const API_BASE_URL = import.meta.env.VITE_API_URL;
-                const response = await fetch(`${API_BASE_URL}/professionals/${id}`);
-
-                if (!response.ok) {
-                    throw new Error('Failed to fetch professional');
-                }
-
-                const data = await response.json();
-                setProfessional(data);
+                const data = await getProfessionalById(id);
+                setProfessional({
+                    id: (data as any)._id || (data as any).id,
+                    name: (data as any).nom,
+                    specialty: (data as any).specialite,
+                    bio: (data as any).bio,
+                    email: (data as any).email,
+                    phone: (data as any).telephone,
+                    location: (data as any).clinicAddress || (data as any).adresse,
+                    languages: (data as any).languages,
+                    services: (data as any).services,
+                    image: (data as any).photo,
+                });
             } catch (err) {
                 console.error('Error fetching professional:', err);
                 setError(err instanceof Error ? err.message : 'An error occurred');

@@ -6,7 +6,8 @@ interface BioSectionProps {
 }
 
 const BioSection: React.FC<BioSectionProps> = ({ professional }) => {
-  const firstName = professional.nom.split(' ')[0];
+  const fullName = (professional?.nom ?? '').trim();
+  const firstName = fullName ? fullName.split(/\s+/)[0] : 'the professional';
   
   return (
     <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-6">
@@ -14,7 +15,7 @@ const BioSection: React.FC<BioSectionProps> = ({ professional }) => {
         About {firstName}
       </h2>
       <p className="text-gray-700 leading-relaxed">
-        {professional.bio || 'No biography available. This professional has not yet provided a biography.'}
+        {professional?.bio ?? 'No biography available. This professional has not yet provided a biography.'}
       </p>
     </div>
   );
