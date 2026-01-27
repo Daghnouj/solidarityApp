@@ -14,9 +14,9 @@ export const getProfile = async (req: ProtectedRequest, res: Response): Promise<
     });
   } catch (error: any) {
     console.error('Erreur getProfile:', error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -64,9 +64,9 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     });
   } catch (error: any) {
     console.error("Erreur updateProfile:", error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -78,9 +78,9 @@ export const updatePassword = async (req: Request, res: Response): Promise<void>
     res.json(result);
   } catch (error: any) {
     console.error("Erreur updatePassword:", error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -89,20 +89,20 @@ export const updateProfilePhoto = async (req: Request, res: Response): Promise<v
   try {
     const userId = req.params.userId;
     if (!req.file) {
-      res.status(400).json({ 
+      res.status(400).json({
         success: false,
-        message: "Aucune image fournie" 
+        message: "Aucune image fournie"
       });
       return;
     }
-    
+
     const result = await userService.updateProfilePhoto(userId, req.file as any);
     res.json(result);
   } catch (error: any) {
     console.error("Erreur updateProfilePhoto:", error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -114,9 +114,9 @@ export const deleteProfile = async (req: Request, res: Response): Promise<void> 
     res.json(result);
   } catch (error: any) {
     console.error("Erreur deleteProfile:", error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -128,9 +128,9 @@ export const deactivateAccount = async (req: Request, res: Response): Promise<vo
     res.json(result);
   } catch (error: any) {
     console.error("Erreur deactivateAccount:", error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -142,9 +142,9 @@ export const activateAccount = async (req: Request, res: Response): Promise<void
     res.json(result);
   } catch (error: any) {
     console.error("Erreur activateAccount:", error);
-    res.status(400).json({ 
+    res.status(400).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -158,9 +158,9 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error: any) {
     console.error('[USER] Erreur:', error);
-    res.status(404).json({ 
+    res.status(404).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
@@ -174,14 +174,28 @@ export const getCurrentUser = async (req: ProtectedRequest, res: Response): Prom
     });
   } catch (error: any) {
     console.error('[CURRENT USER] Erreur:', error);
-    res.status(404).json({ 
+    res.status(404).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
+    // Admin-only endpoint - check if requester is admin
+    const isAdmin = (req as any).isAdmin;
+
+    if (!isAdmin) {
+      res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+      return;
+    }
+
+    const users = await User.find()
+      .select('-mdp -__v -stripeCustomerId')
+      .sort({ createdAt: -1 });
     // Public listing with optional filters/pagination for professionals directory
     const {
       role,
@@ -231,9 +245,9 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error: any) {
     console.error('Erreur getAllUsers:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: error.message 
+      message: error.message
     });
   }
 };

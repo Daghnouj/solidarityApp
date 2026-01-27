@@ -5,31 +5,39 @@ import CommunityService from "../services/community.service";
 
 export function useCommunity() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [trendingTags, setTrendingTags] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchPosts = useCallback(async () => {
+  const fetchPostsData = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await CommunityService.getAllPosts();
-      setPosts(data);
+      const [postsData, exploreData] = await Promise.all([
+        CommunityService.getAllPosts(),
+        CommunityService.getExploreData()
+      ]);
+      setPosts(postsData);
+      setTrendingTags(exploreData.trendingTags || []);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to fetch posts");
+      setError(err.response?.data?.message || "Failed to fetch data");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
+    fetchPostsData();
+  }, [fetchPostsData]);
 
   async function addPost(content: string) {
     try {
       const response = await CommunityService.createPost(content);
       if (response.success) {
         setPosts((s) => [response.post, ...s]);
+        // Refresh trending tags when a new post is added
+        const exploreData = await CommunityService.getExploreData();
+        setTrendingTags(exploreData.trendingTags || []);
       }
     } catch (err: any) {
       console.error("Failed to add post", err);
@@ -41,6 +49,8 @@ export function useCommunity() {
       const response = await CommunityService.updatePost(postId, content);
       if (response.success) {
         setPosts((s) => s.map((p) => (p._id === postId ? response.post : p)));
+        const exploreData = await CommunityService.getExploreData();
+        setTrendingTags(exploreData.trendingTags || []);
       }
     } catch (err: any) {
       console.error("Failed to edit post", err);
@@ -52,6 +62,8 @@ export function useCommunity() {
       const response = await CommunityService.deletePost(postId);
       if (response.success) {
         setPosts((s) => s.filter((p) => p._id !== postId));
+        const exploreData = await CommunityService.getExploreData();
+        setTrendingTags(exploreData.trendingTags || []);
       }
     } catch (err: any) {
       console.error("Failed to delete post", err);
@@ -91,7 +103,6 @@ export function useCommunity() {
         setPosts((s) =>
           s.map((p) => {
             if (p._id === postId) {
-              // Add the new comment to the existing post's comments array
               return {
                 ...p,
                 comments: [...(p.comments || []), response.comment]
@@ -241,6 +252,7 @@ export function useCommunity() {
 
   return {
     posts,
+    trendingTags,
     loading,
     error,
     addPost,
@@ -255,6 +267,6 @@ export function useCommunity() {
     editReply,
     removeReply,
     setPosts,
-    fetchPosts,
+    fetchPosts: fetchPostsData,
   };
 }

@@ -1,6 +1,6 @@
 // user.routes.ts - AVEC VOS ROUTES EXACTES
 import express from "express";
-import { 
+import {
   getProfile,
   getSavedSpecialists,
   saveSpecialist,
@@ -9,7 +9,7 @@ import {
   updatePassword,
   updateProfilePhoto,
   deleteProfile,
-  deactivateAccount,  
+  deactivateAccount,
   activateAccount,
   getUserById,
   getCurrentUser,
@@ -34,9 +34,11 @@ router.get('/profile/:userId/saved-specialists', protect, getSavedSpecialists);
 router.post('/profile/:userId/saved-specialists/:professionalId', protect, saveSpecialist);
 router.delete('/profile/:userId/saved-specialists/:professionalId', protect, unsaveSpecialist);
 router.get('/me', protect, getCurrentUser);
+router.get('/:id', protect, getUserById);
+router.get('/', protect, getAllUsers);
+
 router.get('/public/:id', getUserById);
 router.get('/:id', protect, getUserById);  
 router.get('/', getAllUsers);
 
- 
 export default router;

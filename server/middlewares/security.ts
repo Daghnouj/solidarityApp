@@ -9,7 +9,7 @@ export const securityHeaders = helmet();
 // 2. 🛡️ Limite les tentatives de connexion
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, 
+  max: 10,
   message: {
     success: false,
     message: 'Trop de tentatives de connexion, réessayez dans 15 minutes'
@@ -19,7 +19,7 @@ export const authLimiter = rateLimit({
 // 3. 📈 Limite générale des requêtes
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requêtes max
+  max: 1000, // 1000 requêtes max
   message: {
     success: false,
     message: 'Trop de requêtes, réessayez plus tard'
@@ -32,15 +32,15 @@ export const noSqlInjectionMiddleware = (req: Request, res: Response, next: Next
     // Nettoyage simple du body seulement (ne touche pas à query et params)
     const sanitizeBody = (body: any): any => {
       if (!body || typeof body !== 'object') return body;
-      
+
       const sanitized: any = Array.isArray(body) ? [] : {};
-      
+
       for (const [key, value] of Object.entries(body)) {
         // Supprime les opérateurs MongoDB dangereux
         if (typeof key === 'string' && key.startsWith('$')) {
           continue; // Ignore les clés qui commencent par $
         }
-        
+
         // Récursivement nettoie les objets imbriqués
         if (value && typeof value === 'object') {
           sanitized[key] = sanitizeBody(value);
@@ -48,7 +48,7 @@ export const noSqlInjectionMiddleware = (req: Request, res: Response, next: Next
           sanitized[key] = value;
         }
       }
-      
+
       return sanitized;
     };
 
@@ -68,7 +68,7 @@ export const noSqlInjectionMiddleware = (req: Request, res: Response, next: Next
 // 5. 📏 Limite la taille des données
 export const payloadSizeLimiter = (req: Request, res: Response, next: NextFunction): void => {
   const contentLength = parseInt(req.get('Content-Length') || '0');
-  
+
   if (contentLength > 10 * 1024 * 1024) { // 10MB max
     res.status(413).json({
       success: false,
@@ -76,7 +76,7 @@ export const payloadSizeLimiter = (req: Request, res: Response, next: NextFuncti
     });
     return;
   }
-  
+
   next();
 };
 

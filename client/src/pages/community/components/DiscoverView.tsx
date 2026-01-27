@@ -41,29 +41,53 @@ export default function DiscoverView({ onSearchTag }: DiscoverViewProps) {
     }, [user]);
 
     const handleToggleFollow = async (proId: string) => {
+        // Optimistic UI
+        const isCurrentlyFollowing = followingIds.includes(proId);
+        let newFollowingIds: string[];
+
+        if (isCurrentlyFollowing) {
+            newFollowingIds = followingIds.filter(id => id !== proId);
+        } else {
+            newFollowingIds = [...followingIds, proId];
+        }
+
+        // Update state immediately
+        setFollowingIds(newFollowingIds);
+        dispatch(updateFollowing(newFollowingIds));
+
         try {
             const res = await CommunityService.toggleFollow(proId);
             if (res.success) {
-                let newFollowingIds: string[];
+                // If follow was successful, show modal
                 if (res.isFollowing) {
-                    newFollowingIds = [...followingIds, proId];
+                    const followedUser = [
+                        ...suggestedUsers.map(u => u.user),
+                        ...suggestedPros
+                    ].find(u => (u?._id) === proId);
 
-                    // Show message modal after following
-                    const followedUser = [...suggestedUsers, ...suggestedPros.map(p => ({ user: p }))].find(u => (u.user?._id || u._id) === proId);
                     if (followedUser) {
-                        setRecentlyFollowedUser(followedUser.user || followedUser);
+                        setRecentlyFollowedUser(followedUser);
                         setShowMsgModal(true);
                     }
-                } else {
-                    newFollowingIds = followingIds.filter(id => id !== proId);
                 }
 
-                // Sync with local state AND Redux
-                setFollowingIds(newFollowingIds);
-                dispatch(updateFollowing(newFollowingIds));
+                // Final sync with server state (should match optimistic unless error)
+                const finalFollowingIds = res.isFollowing
+                    ? [...followingIds.filter(id => id !== proId), proId]
+                    : followingIds.filter(id => id !== proId);
+
+                setFollowingIds(finalFollowingIds);
+                dispatch(updateFollowing(finalFollowingIds));
+            } else {
+                // Rollback on failure
+                setFollowingIds(followingIds);
+                dispatch(updateFollowing(followingIds));
             }
         } catch (error) {
             console.error("Failed to toggle follow", error);
+            // Rollback on error
+            setFollowingIds(followingIds);
+            dispatch(updateFollowing(followingIds));
         }
     };
 
@@ -72,6 +96,8 @@ export default function DiscoverView({ onSearchTag }: DiscoverViewProps) {
             window.dispatchEvent(new CustomEvent('open_chat', {
                 detail: {
                     userId: recentlyFollowedUser._id,
+                    userName: recentlyFollowedUser.nom,
+                    userPhoto: recentlyFollowedUser.photo,
                     isGroup: false
                 }
             }));
@@ -89,7 +115,7 @@ export default function DiscoverView({ onSearchTag }: DiscoverViewProps) {
 
     return (
         <div className="space-y-12 pb-12">
-            {/* Suggested Professionals */}
+            {/* Suggested Professionals - People to Follow */}
             {suggestedPros.length > 0 && (
                 <section>
                     <div className="flex items-center gap-2 mb-6 px-2">
@@ -101,20 +127,19 @@ export default function DiscoverView({ onSearchTag }: DiscoverViewProps) {
                             <motion.div
                                 whileHover={{ y: -5 }}
                                 key={pro._id}
-                                className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm min-w-[240px] max-w-[240px] flex flex-col items-center text-center"
+                                className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm min-w-[240px] max-w-[240px] flex flex-col items-center text-center h-full"
                             >
                                 <img
                                     src={pro.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${pro.nom}`}
                                     alt={pro.nom}
-                                    className="w-18 h-18 rounded-full border-4 border-indigo-50 mb-4 object-cover shadow-sm"
+                                    className="w-16 h-16 rounded-full border-4 border-indigo-50 mb-3 object-cover shadow-sm"
                                 />
                                 <h3 className="font-bold text-gray-900 text-sm mb-1 truncate w-full">{pro.nom}</h3>
                                 <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-wider mb-2">{pro.specialite || 'Professional'}</p>
-                                <p className="text-[11px] text-gray-500 line-clamp-2 mb-5 h-8 leading-relaxed">{pro.bio || 'Sharing expert insights for our community.'}</p>
 
                                 <button
                                     onClick={() => handleToggleFollow(pro._id)}
-                                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${followingIds.includes(pro._id)
+                                    className={`w-full py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 mt-auto ${followingIds.includes(pro._id)
                                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
                                         : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white'
                                         }`}
@@ -131,37 +156,42 @@ export default function DiscoverView({ onSearchTag }: DiscoverViewProps) {
                 </section>
             )}
 
-            {/* Social Suggestions */}
+            {/* Social Suggestions - Suggestions (Mutual Connections) */}
             {suggestedUsers.length > 0 && (
                 <section>
                     <div className="flex items-center gap-2 mb-6 px-2">
                         <FaCompass className="text-indigo-600" size={20} />
-                        <h2 className="text-xl font-bold text-gray-800">Suggested for You</h2>
+                        <h2 className="text-xl font-bold text-gray-800">Suggestions</h2>
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar">
                         {suggestedUsers.map((item) => (
                             <motion.div
                                 whileHover={{ y: -5 }}
                                 key={item.user._id}
-                                className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm min-w-[260px] max-w-[260px] flex flex-col items-center text-center relative"
+                                className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm min-w-[240px] max-w-[240px] flex flex-col items-center text-center h-full relative"
                             >
                                 <img
                                     src={item.user.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${item.user.nom}`}
                                     alt={item.user.nom}
-                                    className="w-20 h-20 rounded-full border-4 border-indigo-50 mb-4 object-cover shadow-sm"
+                                    className="w-16 h-16 rounded-full border-4 border-indigo-50 mb-3 object-cover shadow-sm"
                                 />
                                 <h3 className="font-bold text-gray-900 text-sm mb-1 truncate w-full">{item.user.nom}</h3>
-                                <div className="text-[10px] text-gray-400 font-medium mb-5 min-h-[1.5rem] flex flex-col justify-center">
-                                    <p className="line-clamp-2 leading-relaxed">
-                                        {item.followedBy && item.followedBy.length === 1 && `Followed by ${item.followedBy[0].name}`}
-                                        {item.followedBy && item.followedBy.length === 2 && `Followed by ${item.followedBy[0].name} and ${item.followedBy[1].name}`}
-                                        {item.followedBy && item.followedBy.length > 2 && `Followed by ${item.followedBy[0].name} and ${item.followedBy.length - 1} others`}
+
+                                <div className="text-[10px] text-gray-400 font-medium mb-3 min-h-[1.5rem] flex flex-col justify-center">
+                                    <p className="line-clamp-2 leading-relaxed italic text-center">
+                                        {item.followedBy && item.followedBy.length > 0 ? (
+                                            item.followedBy.length === 1
+                                                ? `Followed by ${item.followedBy[0].name}`
+                                                : `${item.mutualCount || item.followedBy.length} mutual connections`
+                                        ) : (
+                                            `Suggested for you`
+                                        )}
                                     </p>
                                 </div>
 
                                 <button
                                     onClick={() => handleToggleFollow(item.user._id)}
-                                    className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 mt-auto ${followingIds.includes(item.user._id)
+                                    className={`w-full py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 mt-auto ${followingIds.includes(item.user._id)
                                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100'
                                         : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white'
                                         }`}

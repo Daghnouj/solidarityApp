@@ -1,17 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaTimes, FaHashtag, FaGlobeAmericas, FaCheckCircle } from "react-icons/fa";
+import { FaTimes, FaHashtag, FaGlobeAmericas, FaCheckCircle, FaCalendarAlt, FaSmile, FaChevronDown } from "react-icons/fa";
 import { useAppSelector } from "../../../redux/hooks";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   onSubmit: (content: string) => void;
+  initialContent?: string;
 }
 
-export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
-  const [content, setContent] = useState("");
+const EMOJI_CATEGORIES = [
+  {
+    name: "Feelings",
+    emojis: ["😊", "😂", "😍", "🥰", "😎", "🤔", "😔", "😔", "😭", "😡", "😱", "😴", "😇", "🥳", "🥺", "🙄", "🤡", "💖", "✨", "🔥"]
+  },
+  {
+    name: "Health & Care",
+    emojis: ["🏥", "💊", "🧘", "🧠", "🎗️", "🫂", "🩸", "🌡️", "🩺", "🩹", "🧖", "🚶", "🏃", "🥗", "🍵"]
+  },
+  {
+    name: "Support",
+    emojis: ["🤝", "❤️", "🧡", "💛", "💚", "💙", "💜", "✨", "🌟", "🙌", "🤲", "💪", "🌈", "🕊️", "🍀"]
+  },
+  {
+    name: "Activities",
+    emojis: ["🎓", "💻", "📚", "✍️", "🎨", "🎭", "🎤", "🎧", "🎬", "🤳", "📅", "⏰", "💡", "⚡", "🌍"]
+  }
+];
+
+export default function AddPostModal({ visible, onClose, onSubmit, initialContent = "" }: Props) {
+  const [content, setContent] = useState(initialContent);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const { user } = useAppSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (visible) {
+      setContent(initialContent);
+      setShowEmojiPicker(false);
+    }
+  }, [visible, initialContent]);
 
   const getAvatar = (photo?: string, name?: string) => {
     if (photo && photo !== 'default.png' && photo !== 'default-avatar.png' && photo.includes('http')) return photo;
@@ -27,6 +55,10 @@ export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
   const extractHashtags = (text: string): string[] => {
     const matches = text.match(/#\w+/g);
     return matches ? matches.map((tag) => tag.slice(1)) : [];
+  };
+
+  const addEmoji = (emoji: string) => {
+    setContent(prev => prev + emoji);
   };
 
   return (
@@ -95,20 +127,83 @@ export default function AddPostModal({ visible, onClose, onSubmit }: Props) {
               </div>
             </div>
 
-            <div className="p-6 pt-0 flex justify-between items-center">
-              <div className="flex gap-2">
-                {/* Placeholder for future attachments icons */}
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-indigo-600 cursor-pointer transition">
-                  <FaHashtag />
+            <div className="px-6 pb-6 relative">
+              <div className="flex justify-between items-center">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setContent(prev => prev + (prev && !prev.endsWith(' ') ? ' #' : '#'))}
+                    className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-indigo-50 hover:text-indigo-600 cursor-pointer transition"
+                    title="Add Hashtag"
+                  >
+                    <FaHashtag />
+                  </button>
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition cursor-pointer ${showEmojiPicker ? 'bg-yellow-50 text-yellow-600' : 'bg-gray-50 text-gray-400 hover:bg-yellow-50 hover:text-yellow-600'}`}
+                      title="Add Emoji"
+                    >
+                      <FaSmile />
+                    </button>
+
+                    <AnimatePresence>
+                      {showEmojiPicker && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setShowEmojiPicker(false)} />
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute bottom-full left-0 mb-3 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 z-30 max-h-[350px] overflow-y-auto no-scrollbar"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="font-bold text-gray-900 text-sm">Select Emoji</span>
+                              <FaTimes size={12} className="text-gray-400 cursor-pointer" onClick={() => setShowEmojiPicker(false)} />
+                            </div>
+
+                            {EMOJI_CATEGORIES.map((category) => (
+                              <div key={category.name} className="mb-4">
+                                <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">{category.name}</h4>
+                                <div className="grid grid-cols-6 gap-1">
+                                  {category.emojis.map((emoji, idx) => (
+                                    <button
+                                      key={`${category.name}-${idx}`}
+                                      onClick={() => addEmoji(emoji)}
+                                      className="w-8 h-8 flex items-center justify-center text-xl hover:bg-gray-50 rounded-lg transition-transform active:scale-90"
+                                    >
+                                      {emoji}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setContent(prev => prev + (prev && !prev.endsWith(' ') ? ' 📅 ' : '📅 '))}
+                    className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 hover:bg-amber-50 hover:text-amber-600 cursor-pointer transition"
+                    title="Add Event"
+                  >
+                    <FaCalendarAlt />
+                  </button>
                 </div>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={!content.trim()}
+                  className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-100"
+                >
+                  Post
+                </button>
               </div>
-              <button
-                onClick={handleSubmit}
-                disabled={!content.trim()}
-                className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-100"
-              >
-                Post
-              </button>
             </div>
           </motion.div>
         </div>

@@ -151,6 +151,13 @@ const CommunityService = {
     return response.data;
   },
 
+  getFollowers: async () => {
+    const response = await axios.get(`${API_URL}/explore/followers`, {
+      headers: getAuthHeaders(),
+    });
+    return response.data;
+  },
+
   toggleFollow: async (followId: string) => {
     const response = await axios.post(
       `${API_URL}/explore/follow/${followId}`,

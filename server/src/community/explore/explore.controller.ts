@@ -28,7 +28,7 @@ export class ExploreController {
                 const followingIds = (currentUser?.following || []).map(id => id.toString());
 
                 const myFollowers = await User.find({ following: userId }).select('nom following').lean();
-                const suggestionsMap: Map<string, { user: any, followedBy: { name: string, type: 'following' | 'follower' }[] }> = new Map();
+                const suggestionsMap: Map<string, { user: any, followedBy: { name: string, type: 'following' | 'follower' }[], mutualCount: number }> = new Map();
 
                 const addSuggestion = async (followedId: any, suggesterName: string, type: 'following' | 'follower') => {
                     const idStr = followedId.toString();
@@ -39,18 +39,20 @@ export class ExploreController {
                         if (suggestedUserInfo) {
                             suggestionsMap.set(idStr, {
                                 user: suggestedUserInfo,
-                                followedBy: [{ name: suggesterName, type }]
+                                followedBy: [{ name: suggesterName, type }],
+                                mutualCount: 1
                             });
                         }
                     } else {
                         const data = suggestionsMap.get(idStr)!;
                         if (!data.followedBy.some(fb => fb.name === suggesterName)) {
                             data.followedBy.push({ name: suggesterName, type });
+                            data.mutualCount = data.followedBy.length;
                         }
                     }
                 };
 
-                // Suggestions from people I FOLLOW
+                // Suggestions from people I FOLLOW (Mutual Connections)
                 const friendsFollowings = await User.find({ _id: { $in: followingIds } }).select('nom following').lean();
                 for (const friend of friendsFollowings) {
                     if (friend.following && Array.isArray(friend.following)) {
@@ -70,7 +72,7 @@ export class ExploreController {
                 }
 
                 suggestedUsers = Array.from(suggestionsMap.values())
-                    .sort((a, b) => b.followedBy.length - a.followedBy.length);
+                    .sort((a, b) => b.mutualCount - a.mutualCount);
 
                 // 4. Supplement with Global Suggestions if few (to ensure the list isn't empty)
                 if (suggestedUsers.length < 10) {
@@ -89,7 +91,8 @@ export class ExploreController {
                     for (const g of globals) {
                         suggestedUsers.push({
                             user: g,
-                            followedBy: [] // No mutual friends for these
+                            followedBy: [],
+                            mutualCount: 0
                         });
                     }
                 }
@@ -106,10 +109,20 @@ export class ExploreController {
                 .limit(10)
                 .lean();
 
+            // 5. Get My Followers (NEW)
+            let followers: any[] = [];
+            if (userId) {
+                followers = await User.find({ following: userId })
+                    .select('nom photo role specialite bio')
+                    .limit(10)
+                    .lean();
+            }
+
             res.status(200).json({
                 trendingTags,
                 suggestedPros,
-                suggestedUsers
+                suggestedUsers,
+                followers
             });
         } catch (error: any) {
             console.error("Explore Data Error:", error);
@@ -148,6 +161,20 @@ export class ExploreController {
             }));
 
             res.status(200).json(groupsWithCounts.sort((a, b) => b.membersCount - a.membersCount));
+        } catch (error: any) {
+            res.status(500).json({ message: error.message });
+        }
+    }
+
+    static async getFollowers(req: ProtectedRequest, res: Response): Promise<void> {
+        try {
+            const userId = req.user._id;
+            const followers = await User.find({ following: userId })
+                .select('nom photo role specialite bio lastSeen')
+                .sort({ nom: 1 })
+                .lean();
+
+            res.status(200).json(followers);
         } catch (error: any) {
             res.status(500).json({ message: error.message });
         }

@@ -2,6 +2,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../src/user/user.model';
+import { Admin } from '../src/admin/admin.model';
 import { ProtectedRequest } from '../src/types/express';
 import { env } from '../config/env';
 
@@ -31,9 +32,21 @@ const protect = async (req: Request, res: Response, next: NextFunction): Promise
     // Vérification du token
     const decoded = jwt.verify(token, env.JWT_SECRET) as JwtPayload;
 
-    // Récupération de l'utilisateur
-    const user = await User.findById(decoded.id).select("-mdp");
+    // Try to find a regular user first
+    let user = await User.findById(decoded.id).select("-mdp");
+
     if (!user) {
+      // If not found as a regular user, try as admin
+      const admin = await Admin.findById(decoded.id).select("-mdp");
+
+      if (admin) {
+        // Set admin as user for controller compatibility
+        (req as any).user = admin;
+        (req as any).isAdmin = true;
+        next();
+        return;
+      }
+
       res.status(401).json({
         success: false,
         message: "Token invalide. Utilisateur non trouvé."
@@ -52,6 +65,7 @@ const protect = async (req: Request, res: Response, next: NextFunction): Promise
 
     // Ajout de l'utilisateur à la requête
     (req as ProtectedRequest).user = user;
+    (req as any).isAdmin = false;
     next();
   } catch (error: any) {
     console.error("❌ Erreur d'authentification:", error);

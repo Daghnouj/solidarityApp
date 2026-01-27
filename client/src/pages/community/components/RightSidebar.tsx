@@ -3,10 +3,26 @@ import { FaHashtag } from "react-icons/fa";
 interface Props {
   searchQuery: string;
   setSearchQuery: (val: string) => void;
+  trendingTags: any[];
 }
 
-export default function RightSidebar({ searchQuery, setSearchQuery }: Props) {
-  const hashtags = ["breakthestigma", "therapyiscool", "youthsupport", "mentalhealth"];
+export default function RightSidebar({ searchQuery, setSearchQuery, trendingTags }: Props) {
+  // Fallback to static if no tags yet
+  const displayTags = trendingTags.length > 0
+    ? trendingTags
+    : [
+      { name: "breakthestigma", count: 1200 },
+      { name: "therapyiscool", count: 850 },
+      { name: "youthsupport", count: 640 },
+      { name: "mentalhealth", count: 2100 }
+    ];
+
+  const formatCount = (count: number) => {
+    if (count >= 1000) {
+      return (count / 1000).toFixed(1) + 'k';
+    }
+    return count;
+  };
 
   return (
     <aside className="md:col-span-3">
@@ -18,20 +34,25 @@ export default function RightSidebar({ searchQuery, setSearchQuery }: Props) {
             </div>
             <h5 className="font-bold text-gray-800">Trending</h5>
           </div>
-          
+
           <div className="space-y-3">
-            {hashtags.map((h) => (
-              <div
-                key={h}
-                onClick={() => setSearchQuery(`#${h}`)}
-                className="group cursor-pointer"
-              >
-                <div className="text-sm font-semibold text-gray-700 group-hover:text-indigo-600 transition">
-                  #{h}
+            {displayTags.map((tag) => {
+              const name = typeof tag === 'string' ? tag : (tag.name || tag._id);
+              const count = typeof tag === 'object' ? (tag.count || 0) : 0;
+
+              return (
+                <div
+                  key={name}
+                  onClick={() => setSearchQuery(`#${name}`)}
+                  className="group cursor-pointer"
+                >
+                  <div className="text-sm font-semibold text-gray-700 group-hover:text-indigo-600 transition">
+                    #{name}
+                  </div>
+                  <div className="text-[10px] text-gray-400">{formatCount(count)} posts</div>
                 </div>
-                <div className="text-[10px] text-gray-400">1.2k posts</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

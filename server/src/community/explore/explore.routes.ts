@@ -9,6 +9,7 @@ const router = Router();
 // Added optionalProtect to extract user if logged in for personalized suggestions
 router.get('/', optionalProtect, ExploreController.getExploreData);
 router.get('/groups', optionalProtect, ExploreController.getGroups);
+router.get('/followers', protect, ExploreController.getFollowers);
 router.post('/groups', protect, ExploreController.createGroup);
 
 // Protected follow and group actions
