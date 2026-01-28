@@ -142,6 +142,11 @@ const UserSchema: Schema<UserDocument> = new mongoose.Schema({
     type: Date,
     default: null
   },
+  // For patients: saved professionals
+  saved_specialist: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   following: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

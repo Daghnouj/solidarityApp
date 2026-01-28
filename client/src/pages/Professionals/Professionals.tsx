@@ -16,13 +16,13 @@ const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 const Professionals: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { 
-    professionals, 
-    loading, 
-    error, 
-    currentPage, 
-    itemsPerPage, 
-    totalItems 
+  const {
+    professionals,
+    loading,
+    error,
+    currentPage,
+    itemsPerPage,
+    totalItems
   } = useAppSelector((state) => state.professionals);
 
   const [filters, setFilters] = useState<FiltersState>({
@@ -41,34 +41,28 @@ const Professionals: React.FC = () => {
   };
 
   useEffect(() => {
-    dispatch(fetchProfessionals());
-  }, [dispatch]);
+    dispatch(fetchProfessionals({
+      page: currentPage,
+      limit: itemsPerPage,
+      search: debouncedSearch,
+      specialty: filters.specialty,
+      sort: 'latest',
+      role: 'professional'
+    }));
+  }, [dispatch, currentPage, itemsPerPage, debouncedSearch, filters.specialty]);
 
-  // ✅ RESET TO PAGE 1 WHEN FILTERS CHANGE
+  // ✅ RESET TO PAGE 1 WHEN FILTERS CHANGE OR SEARCH TYPING STOPS
   useEffect(() => {
     dispatch(setCurrentPage(1));
-  }, [filters, dispatch]);
+  }, [filters.specialty, filters.location, debouncedSearch, dispatch]);
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
   };
 
-  // ✅ PAGINATION LOGIC
-  const filteredProfessionals = professionals.filter(p => {
-    const matchSpec = !filters.specialty || p.specialite === filters.specialty;
-    const matchLoc = !filters.location || p.adresse === filters.location;
-    const matchSearch =
-      !debouncedSearch ||
-      p.nom.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
-      p.specialite.toLowerCase().includes(debouncedSearch.toLowerCase());
-    return matchSpec && matchLoc && matchSearch;
-  });
-
-  // ✅ CALCULATE PAGINATED PROFESSIONALS
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentProfessionals = filteredProfessionals.slice(indexOfFirstItem, indexOfLastItem);
+  // Data already paginated by server; we may still filter by client-only fields like location if needed later
+  const currentProfessionals = professionals;
 
   const handlePageChange = (page: number) => {
     dispatch(setCurrentPage(page));
@@ -95,7 +89,7 @@ const Professionals: React.FC = () => {
         <div className="max-w-7xl mx-auto text-center">
           <div className="text-2xl font-semibold text-red-600 mb-4">Error Loading Professionals</div>
           <div className="text-gray-600 mb-6">{error}</div>
-          <button 
+          <button
             onClick={() => dispatch(fetchProfessionals())}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-medium transition-all duration-300"
           >
@@ -135,7 +129,7 @@ const Professionals: React.FC = () => {
             {/* ✅ PAGINATION COMPONENT */}
             <Pagination
               currentPage={currentPage}
-              totalItems={filteredProfessionals.length}
+              totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={handlePageChange}
             />

@@ -8,9 +8,9 @@ interface FiltersProps {
   isSearching?: boolean;
 }
 
-const Filters: React.FC<FiltersProps> = ({ 
-  filters, 
-  filterOptions, 
+const Filters: React.FC<FiltersProps> = ({
+  filters,
+  filterOptions,
   handleFilterChange,
   isSearching = false
 }) => {
@@ -76,7 +76,7 @@ const Filters: React.FC<FiltersProps> = ({
           )}
         </div>
       </div>
-      
+
       {/* ✅ Search status text */}
       {filters.search && (
         <div className="mt-2 text-sm text-gray-600 text-center md:text-right">

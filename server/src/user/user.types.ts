@@ -27,6 +27,8 @@ export interface IUser {
   subscriptionStatus: 'active' | 'inactive' | 'trialing' | 'canceled';
   plan?: 'monthly' | 'yearly' | null;
   currentPeriodEnd?: Date;
+  // For patients: list of saved professionals
+  saved_specialist?: Types.ObjectId[];
   following: Types.ObjectId[];
   groups: Types.ObjectId[];
   // New Profile Fields
@@ -137,4 +139,5 @@ export interface UserResponse {
   lastLogin?: Date;
   following?: string[];
   groups?: string[];
+  saved_specialist?: string[];
 }
