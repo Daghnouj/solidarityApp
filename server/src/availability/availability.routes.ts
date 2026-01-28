@@ -10,5 +10,6 @@ router.put('/:id', protect, AvailabilityController.updateAvailability);
 router.delete('/:id', protect, AvailabilityController.deleteAvailability);
 // router.get('/colors', protect, AvailabilityController.getColorOptions);
 router.get('/professionals', protect, AvailabilityController.getProfessionals);
+router.get('/slots', AvailabilityController.getSlots);
 
 export default router;
