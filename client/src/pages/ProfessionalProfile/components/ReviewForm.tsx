@@ -90,8 +90,7 @@ const ReviewForm: React.FC<ReviewFormProps> = ({ professionalId, professionalNam
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
                             placeholder="Share your experience..."
-                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-opacity-50 resize-none"
-                            style={{ focusRingColor: '#4FB2E5' }}
+                            className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#4FB2E5] focus:ring-opacity-50 resize-none"
                             rows={5}
                             maxLength={1000}
                         />

@@ -105,6 +105,45 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [activeContactId, setActiveContactId] = useState<string | null>(null); // This is the conversationId
 
+    // Listen for requests to open chat with specific user
+    useEffect(() => {
+        const handleOpenChat = (e: CustomEvent) => {
+            const { userId, userName, userPhoto } = e.detail;
+
+            setIsOpen(false); // Close quick actions menu if open
+            setIsChatOpen(true);
+            setIsMinimized(false);
+
+            // Check if contact/conversation already exists
+            const existingContact = contacts.find(c => c._id === userId && !c.isGroup);
+
+            if (existingContact) {
+                setActiveContactId(existingContact.id);
+            } else {
+                // Determine if it's a new conversation start (client-side specific logic)
+                // We'll treat this as a "New Conversation" temporary contact until first message sent
+                const newContactTemp: Contact = {
+                    id: `new-${userId}`,
+                    _id: userId,
+                    conversationId: '',
+                    isGroup: false,
+                    name: userName,
+                    photo: userPhoto,
+                    status: 'New Conversation',
+                    messages: []
+                };
+
+                setContacts(prev => [...prev, newContactTemp]);
+                setActiveContactId(newContactTemp.id);
+            }
+        };
+
+        window.addEventListener('open_chat_with_user', handleOpenChat as EventListener);
+        return () => {
+            window.removeEventListener('open_chat_with_user', handleOpenChat as EventListener);
+        };
+    }, [contacts]);
+
     const [messages, setMessages] = useState<Message[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [allUsers, setAllUsers] = useState<Contact[]>([]);
@@ -246,15 +285,22 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             }
         });
 
+
         socket.on('receive_message', (msg: any) => {
+            console.log('📥 Received message:', msg);
             const currentId = activeContactIdRef.current;
             const isMatch = currentId === msg.conversationId || (!msg.isGroup && currentId === msg.sender);
 
             if (isMatch) {
                 setMessages(prev => {
-                    const exists = prev.some(m => m._id === msg._id || (m.timestamp === msg.timestamp && m.content === msg.content));
+                    // Remove temporary optimistic message if it exists
+                    const filtered = prev.filter(m => !m._id?.toString().startsWith('temp-'));
+
+                    // Check if real message already exists
+                    const exists = filtered.some(m => m._id === msg._id);
                     if (exists) return prev;
-                    return [...prev, {
+
+                    return [...filtered, {
                         ...msg,
                         sender: msg.sender === user._id ? 'me' as const : 'contact' as const,
                         senderType: msg.sender === user._id ? 'me' as const : 'contact' as const,
@@ -493,9 +539,38 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     const handleSendMessage = (content?: string, attachment?: any) => {
         const text = content !== undefined ? content : messageInput;
-        if ((!text.trim() && !attachment) || !activeContactId || !socket) return;
+        if ((!text.trim() && !attachment) || !activeContactId || !socket) {
+            console.log('❌ Cannot send message:', {
+                hasText: !!text.trim(),
+                hasAttachment: !!attachment,
+                hasActiveContact: !!activeContactId,
+                hasSocket: !!socket
+            });
+            return;
+        }
 
         const activeConv = contacts.find(c => c.id === activeContactId);
+
+        console.log('📤 Sending message:', {
+            conversationId: activeConv?.status === 'New Conversation' ? undefined : activeContactId,
+            receiverId: activeConv?.status === 'New Conversation' ? activeConv._id : (activeConv?.isGroup ? undefined : activeConv?._id),
+            content: text,
+            hasAttachment: !!attachment
+        });
+
+        // Optimistically add message to UI
+        const optimisticMessage = {
+            _id: `temp-${Date.now()}`,
+            sender: 'me' as const,
+            senderType: 'me' as const,
+            content: text,
+            attachment,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: new Date().toISOString(),
+            read: false
+        };
+
+        setMessages(prev => [...prev, optimisticMessage]);
 
         socket.emit('send_message', {
             conversationId: activeConv?.status === 'New Conversation' ? undefined : activeContactId,
@@ -689,7 +764,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         <div className={`fixed ${positionClasses[position]} z-50`}>
             {/* Facebook-style Chat Box */}
             {isChatOpen && (
-                <div className={`absolute bottom-24 right-0 w-[450px] ${isMinimized ? 'h-[56px]' : 'h-[480px]'} ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} rounded-2xl shadow-2xl border flex overflow-hidden animate-chatFadeIn origin-bottom-right transition-all duration-300`}>
+                <div className={`fixed bottom-4 right-4 w-[450px] ${isMinimized ? 'h-[56px]' : 'h-[480px]'} ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} rounded-2xl shadow-2xl border flex overflow-hidden animate-chatFadeIn origin-bottom-right transition-all duration-300 z-[100]`}>
 
                     {/* Sidebar - Contact List */}
                     <div className={`w-16 border-r ${isDarkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-gray-50/50'} flex flex-col items-center py-4 gap-4`}>
@@ -1159,21 +1234,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                     <action.icon size={24} className={action.id === 'chatbot-gemini' ? 'animate-pulse' : ''} />
                                 </button>
 
-                                {/* Static Message Preview for Messages Action */}
-                                {action.id === 'messages' && isOpen && !isChatOpen && (
-                                    <div className={`absolute right-16 top-0 w-48 ${isDarkMode ? 'bg-gray-900 border-gray-800 shadow-2xl shadow-black/50' : 'bg-white border-blue-50 shadow-2xl'} rounded-2xl border p-3 animate-slideLeft`}>
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">New Message</span>
-                                        </div>
-                                        <p className={`text-xs font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'} line-clamp-1`}>Support Team</p>
-                                        <p className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-2 mt-0.5`}>Welcome! How can we help you today?</p>
-                                        <div className={`mt-1.5 pt-1.5 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-50'} flex justify-between items-center text-[10px] text-blue-600 font-bold`}>
-                                            <span>Just now</span>
-                                            <span className={`${isDarkMode ? 'bg-gray-800' : 'bg-blue-50'} px-1.5 py-0.5 rounded`}>View</span>
-                                        </div>
-                                    </div>
-                                )}
+
                             </div>
                         </div>
                     </div>

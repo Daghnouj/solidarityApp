@@ -32,7 +32,17 @@ const BookingWidget: React.FC<BookingWidgetProps> = ({ professional }) => {
             </Link>
 
             <button
-                className="w-full bg-white py-3 rounded-xl font-medium transition-colors mb-6"
+                onClick={() => {
+                    const event = new CustomEvent('open_chat_with_user', {
+                        detail: {
+                            userId: professional._id,
+                            userName: professional.nom,
+                            userPhoto: professional.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(professional.nom)}`
+                        }
+                    });
+                    window.dispatchEvent(event);
+                }}
+                className="w-full bg-white py-3 rounded-xl font-medium transition-colors mb-6 hover:bg-sky-50 active:scale-95"
                 style={{ border: '1px solid #4FB2E5', color: '#4FB2E5' }}
             >
                 Send Message
