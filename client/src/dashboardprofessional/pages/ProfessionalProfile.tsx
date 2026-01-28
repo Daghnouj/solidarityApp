@@ -33,6 +33,8 @@ interface UserProfile {
     services?: Service[];
     clinicName?: string;
     clinicAddress?: string;
+    is_verified?: boolean;
+    adresse?: string;
 }
 
 const ProfessionalProfile: React.FC = () => {
@@ -42,15 +44,7 @@ const ProfessionalProfile: React.FC = () => {
     const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
 
-    const API_URL = import.meta.env.VITE_API_URL + '/auth'; // Adjusted to match auth service base
-    // Actually, user routes are likely under /api/users or similar. 
-    // Let's check user.routes.ts again implies mounted at some path. 
-    // Assuming /api/users based on typical structure, but checking auth service it uses /auth.
-    // user.routes.ts is user router.
-    // I will assume /api/users for now based on common patterns or check where user routes are mounted.
-    // Wait, let's use the full path from .env if possible or guess.
-    // Auth service uses: import.meta.env.VITE_API_URL + "/auth"
-    // I will use import.meta.env.VITE_API_URL + "/users" for user routes.
+
 
     const USERS_API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '') + '/users';
 

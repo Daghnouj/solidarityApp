@@ -5,7 +5,6 @@ import DashboardAddPostModal from '../../dashboard/components/ui/DashboardAddPos
 import CommunityService from '../../pages/community/services/community.service';
 import CommentModal from '../../pages/community/components/CommentModal';
 import type { Post } from '../../pages/community/types';
-import { useNavigate } from 'react-router-dom';
 
 const ProfessionalCommunity: React.FC = () => {
     const { user } = useAuth();
@@ -16,7 +15,6 @@ const ProfessionalCommunity: React.FC = () => {
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
     const [likersModalOpen, setLikersModalOpen] = useState(false);
     const [selectedPostLikers, setSelectedPostLikers] = useState<any[]>([]);
-    const navigate = useNavigate();
 
     const currentSelectedPost = selectedPost ? posts.find(p => p._id === selectedPost._id) || selectedPost : null;
 
