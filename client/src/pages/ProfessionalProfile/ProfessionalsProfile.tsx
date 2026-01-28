@@ -3,9 +3,11 @@ import { useParams } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
 import LoadingSkeleton from './components/LoadingSkeleton';
 import ProfileHeader from './components/ProfileHeader';
-import ContactCard from './components/ContactCard';
 import BioSection from './components/BioSection';
 import ServicesList from './components/ServicesList';
+import ProfileCredentials from './components/ProfileCredentials';
+import BookingWidget from './components/BookingWidget';
+import ProfileReviews from './components/ProfileReviews';
 import { useProfessional } from '../../hooks/useProfessional'; // ✅ UPDATED IMPORT PATH
 
 const ProfessionalProfileContent: React.FC = () => {
@@ -23,8 +25,8 @@ const ProfessionalProfileContent: React.FC = () => {
           <div className="text-6xl mb-4">😞</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Professional Not Found</h2>
           <p className="text-gray-600 mb-6">{error}</p>
-          <a 
-            href="/professionals" 
+          <a
+            href="/professionals"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
           >
             Back to Professionals
@@ -46,15 +48,19 @@ const ProfessionalProfileContent: React.FC = () => {
     <div className="min-h-screen bg-gray-50 mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <ProfileHeader professional={professional} />
-        
-        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-          <div className="lg:w-1/3">
-            <ContactCard professional={professional} />
-          </div>
-          
+
+        <div className="flex flex-col lg:flex-row gap-8">
+          {/* Main Content - Left Column */}
           <div className="lg:w-2/3">
             <BioSection professional={professional} />
+            <ProfileCredentials professional={professional} />
             <ServicesList professional={professional} />
+            <ProfileReviews professional={professional} />
+          </div>
+
+          {/* Sidebar - Right Column */}
+          <div className="lg:w-1/3">
+            <BookingWidget professional={professional} />
           </div>
         </div>
       </div>

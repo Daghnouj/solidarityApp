@@ -22,6 +22,7 @@ import appointmentRoutes from "./src/appointment/appointment.routes";
 import notificationRoutes from "./src/community/notification/notification.routes";
 import exploreRoutes from "./src/community/explore/explore.routes";
 import chatRoutes from "./src/chat/chat.routes";
+import reviewRoutes from "./src/review/review.routes";
 import { authLimiter, basicSecurity, generalLimiter, noSqlInjectionMiddleware } from "./middlewares/security";
 import { requestLogger } from "./middlewares/logger";
 import { notFoundHandler, errorHandler } from "./middlewares/errorHandler";
@@ -94,6 +95,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/community/notifications', notificationRoutes);
 app.use('/api/community/explore', exploreRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/reviews', reviewRoutes);
 // 🏠 8. Route de test  
 app.get("/", (req: Request, res: Response) => {
   res.json({

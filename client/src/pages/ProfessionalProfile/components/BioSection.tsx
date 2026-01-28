@@ -6,19 +6,21 @@ interface BioSectionProps {
 }
 
 const BioSection: React.FC<BioSectionProps> = ({ professional }) => {
-  const fullName = (professional?.nom ?? '').trim();
-  const firstName = fullName ? fullName.split(/\s+/)[0] : 'the professional';
-  
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-200 mb-6">
-      <h2 className="text-2xl font-bold text-gray-900 mb-4">
-        About {firstName}
-      </h2>
-      <p className="text-gray-700 leading-relaxed">
-        {professional?.bio ?? 'No biography available. This professional has not yet provided a biography.'}
-      </p>
-    </div>
-  );
+    <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-sm mb-8">
+      <h3 className="text-2xl font-bold text-slate-900 mb-6">About Me</h3>
+      <div className="prose prose-slate max-w-none text-slate-600 leading-relaxed">
+        <p className="mb-4">
+          {professional.bio ||
+            `As a dedicated ${professional.specialite}, I focus on creating a supportive and non-judgmental environment. My approach combines evidence-based techniques with genuine empathy to help you navigate life's challenges. I believe in the power of collaborative therapy to foster growth and resilience.`}
+        </p>
+        {!professional.bio && (
+          <p>
+            I have experience working with diverse populations and specialize in anxiety, depression, and stress management. My goal is to empower you with the tools needed for long-term well-being.
+          </p>
+        )}
+      </div>
+    </div>);
 };
 
 export default React.memo(BioSection);
