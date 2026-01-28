@@ -35,10 +35,10 @@ router.post('/profile/:userId/saved-specialists/:professionalId', protect, saveS
 router.delete('/profile/:userId/saved-specialists/:professionalId', protect, unsaveSpecialist);
 router.get('/me', protect, getCurrentUser);
 router.get('/:id', protect, getUserById);
-router.get('/', protect, getAllUsers);
+
 
 router.get('/public/:id', getUserById);
-router.get('/:id', protect, getUserById);  
+router.get('/:id', protect, getUserById);
 router.get('/', getAllUsers);
 
 export default router;

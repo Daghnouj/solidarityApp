@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { Server } from 'socket.io';
 import User from '../user/user.model';
 import { NotificationService } from '../community/notification/notification.service';
+import { AvailabilityService } from '../availability/availability.service'; // Import AvailabilityService
 
 export class AppointmentService {
 
@@ -11,6 +12,27 @@ export class AppointmentService {
             ...data,
             patient: new Types.ObjectId(patientId)
         });
+
+        // VALIDATION: Check if slot is free
+        const professionalId = data.professional?.toString();
+        const requestedTime = new Date(data.time!);
+
+        if (!professionalId || isNaN(requestedTime.getTime())) {
+            throw new Error("Invalid professional or time");
+        }
+
+        // We can reuse getAvailableSlots or just check for overlap directly
+        // Reuse getAvailableSlots to ensure consistency with what user saw
+        const availableSlots = await AvailabilityService.getAvailableSlots(professionalId, requestedTime.toISOString());
+
+        const isSlotAvailable = availableSlots.some(slot =>
+            Math.abs(slot.start.getTime() - requestedTime.getTime()) < 1000 // tolerance appropriate? exact match expected
+        );
+
+        if (!isSlotAvailable) {
+            throw new Error("Chosen slot is no longer available.");
+        }
+
         const savedAppointment = await appointment.save();
 
         // Notify Professional via Socket.IO AND Persistent Notification

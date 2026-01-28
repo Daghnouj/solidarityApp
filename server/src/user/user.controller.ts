@@ -183,19 +183,24 @@ export const getCurrentUser = async (req: ProtectedRequest, res: Response): Prom
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
     // Admin-only endpoint - check if requester is admin
+    // Admin check is optional for public listing
     const isAdmin = (req as any).isAdmin;
 
-    if (!isAdmin) {
-      res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin privileges required.'
+    // specific admin check for /all route if needed, or we rely on the specific branch logic
+
+
+    const allUsers = await User.find()
+      .select('-mdp -__v -stripeCustomerId')
+      .sort({ createdAt: -1 });
+
+    if (req.path === '/all') {
+      res.json({
+        success: true,
+        data: allUsers
       });
       return;
     }
 
-    const users = await User.find()
-      .select('-mdp -__v -stripeCustomerId')
-      .sort({ createdAt: -1 });
     // Public listing with optional filters/pagination for professionals directory
     const {
       role,

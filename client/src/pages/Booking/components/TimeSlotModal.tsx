@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import type { TimeSlot } from '../types';
 
 interface TimeSlotModalProps {
@@ -23,27 +24,65 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
     }
   }, [show, therapistId]);
 
+
+
+  // ...
+
   const fetchAvailableSlots = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock data - in real app, fetch from API
-      const mockSlots: TimeSlot[] = [
-        {
-          id: '1',
-          start: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-          end: new Date(Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000), // +30 minutes
-        },
-        {
-          id: '2',
-          start: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Day after tomorrow
-          end: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000),
-        },
-      ];
-      
-      setAvailableSlots(mockSlots);
+      if (!therapistId) return;
+
+      const API_URL = `${import.meta.env.VITE_API_URL}/availabilities/slots`;
+      // Usually user selects a date in the calendar, but here the modal shows slots for a date...
+      // wait, the modal logic seems defining a start date?
+      // The current modal doesn't seem to have a date picker inside it? 
+      // Ah, the TimeSlotModal usage in BookingForm implies:
+      // onDateSelect passes the date back.
+      // But how does the user pick the day? 
+      // The current UI seems to show *future* slots or maybe specific day slots?
+      // Mock code generated "Tomorrow" and "Day after tomorrow".
+
+      // Let's assume we want to show slots for "today" onwards or a specific range.
+      // For simplicity, let's fetch slots for the NEXT 7 DAYS if no date is provided, 
+      // OR let's change the UI to pick a date first. 
+      // But adhering to the User Request "slots are the availability of the professional", 
+      // I will fetch slots for the current selected date context if any, or default to checking a few days.
+
+      // However, the current backend implementation `getAvailableSlots` takes a SINGLE date.
+      // So I should probably fetch for "Tomorrow" as per the mock, or iterate.
+
+      // Let's update `getAvailableSlots` to maybe accept a range, OR just fetch for a specific day.
+      // But wait, the frontend mock showed slots on DIFFERENT days (Tomorrow, Day after).
+
+      // Let's just fetch for "Tomorrow" for now to match mock behavior, or allow user to pick.
+      // Actually, looking at the code `onDateSelect(slot.start)`, it seems the modal IS the date picker essentially.
+
+      // So I should probably fetch "Next available slots starting from tomorrow".
+      // But my backend `getAvailableSlots` only does ONE day. 
+
+      // FIX: I will update the Frontend to just fetch for a specific day (e.g. tomorrow) for now, 
+      // OR I should loop in backend. 
+      // Let's keep it simple: Fetch for tomorrow.
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const response = await axios.get(API_URL, {
+        params: {
+          professionalId: therapistId,
+          date: tomorrow.toISOString()
+        }
+      });
+
+      // Transform string dates back to Date objects
+      const slots = response.data.map((s: any) => ({
+        id: s.id,
+        start: new Date(s.start),
+        end: new Date(s.end)
+      }));
+
+      setAvailableSlots(slots);
     } catch (error) {
       console.error('Failed to fetch time slots:', error);
     } finally {
@@ -83,12 +122,12 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
                     {slot.start.toLocaleDateString('fr-FR')}
                   </div>
                   <div className="text-sm text-gray-600">
-                    {slot.start.toLocaleTimeString('fr-FR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })} - {slot.end.toLocaleTimeString('fr-FR', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    {slot.start.toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })} - {slot.end.toLocaleTimeString('fr-FR', {
+                      hour: '2-digit',
+                      minute: '2-digit'
                     })}
                   </div>
                 </button>

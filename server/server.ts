@@ -47,4 +47,13 @@ connectDB();
 server.listen(env.PORT, () => {
   console.log(`✅ Serveur lancé sur http://localhost:${env.PORT}`);
   console.log(`🔌 Socket.IO initialisé`);
+  console.log(`🌐 Origins autorisées:`, ["http://localhost:3000", "http://localhost:5173"]);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
 });
