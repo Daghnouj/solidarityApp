@@ -1,3 +1,10 @@
+export interface Service {
+  _id?: string;
+  name: string;
+  price?: string;
+  duration?: string;
+}
+
 export interface Professional {
   _id: string;
   nom: string;
@@ -7,7 +14,7 @@ export interface Professional {
   email?: string;
   telephone?: string;
   bio?: string;
-  services?: string[];
+  services?: Service[];
 }
 
 export interface FiltersState {
