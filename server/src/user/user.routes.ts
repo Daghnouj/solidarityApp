@@ -35,7 +35,6 @@ router.put("/profile/:userId/activate", protect, activateAccount);
 router.get('/profile/:userId/saved-specialists', protect, getSavedSpecialists);
 router.post('/profile/:userId/saved-specialists/:professionalId', protect, saveSpecialist);
 router.delete('/profile/:userId/saved-specialists/:professionalId', protect, unsaveSpecialist);
-<<<<<<< HEAD
 // Public route for viewing professional profiles (no auth required)
 router.get('/public/:id', getPublicProfessional);
 
@@ -43,7 +42,6 @@ router.get('/me', protect, getCurrentUser);
 router.get('/:id', protect, getUserById);
 router.get('/', optionalAuth, getAllUsers);
 
-=======
 router.get('/me', protect, getCurrentUser);
 router.get('/:id', protect, getUserById);
 router.get('/', protect, getAllUsers);
@@ -51,6 +49,5 @@ router.get('/', protect, getAllUsers);
 router.get('/public/:id', getUserById);
 router.get('/:id', protect, getUserById);  
 router.get('/', getAllUsers);
->>>>>>> 5fde16ced134c2b87695abd1fb3d43fdaff29606
 
 export default router;

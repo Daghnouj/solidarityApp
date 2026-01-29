@@ -218,10 +218,6 @@ export const getCurrentUser = async (req: ProtectedRequest, res: Response): Prom
 };
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-<<<<<<< HEAD
-    const isAdmin = (req as any).isAdmin || false;
-
-=======
     // Admin-only endpoint - check if requester is admin
     const isAdmin = (req as any).isAdmin;
 
@@ -232,11 +228,6 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
       });
       return;
     }
-
-    const users = await User.find()
-      .select('-mdp -__v -stripeCustomerId')
-      .sort({ createdAt: -1 });
->>>>>>> 5fde16ced134c2b87695abd1fb3d43fdaff29606
     // Public listing with optional filters/pagination for professionals directory
     const {
       role,
