@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { MapPin, ShieldCheck, Star } from 'lucide-react';
 import type { Professional } from '../../Professionals/types';
 
 interface ProfileHeaderProps {
@@ -7,61 +7,65 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ professional }) => {
-  // Normalize fields coming from different shapes (list vs. detailed hook)
-  const proId = (professional as any)._id || (professional as any).id;
-  const name = (professional as any).nom || (professional as any).name || 'Professional';
-  const specialty = (professional as any).specialite || (professional as any).specialty || 'Specialist';
-  const photo =
-    (professional as any).photo ||
-    (professional as any).image ||
-    `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+  const name = professional.nom;
+  const specialty = professional.specialite;
+  const photo = professional.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`;
+  const address = professional.adresse;
+  const isVerified = true; // We can use professional.is_verified from backend if available
+  const rating = 4.9; // Mock rating for now
+  const reviewCount = 24; // Mock count
 
   return (
-    <div className="bg-purple-900 rounded-2xl p-6 mb-8">
-      <div className="flex flex-col lg:flex-row items-center lg:items-start gap-6 lg:gap-8">
-        {/* Professional Image */}
-        <div className="flex-shrink-0">
-          <img
-            src={photo}
-            alt={name}
-            loading="lazy"
-            className="w-48 h-48 lg:w-64 lg:h-64 rounded-full object-cover border-4 border-blue-500 mx-auto"
-          />
+    <div className="bg-white rounded-3xl p-8 mb-8 border border-slate-100 shadow-sm relative overflow-hidden">
+      {/* Background Decoration */}
+      <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl -mr-16 -mt-16 opacity-30 pointer-events-none" style={{ backgroundColor: '#4FB2E5' }}></div>
+
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-10 w-full md:w-auto">
+        {/* Avatar */}
+        <div className="relative">
+          <div className="w-32 h-32 md:w-40 md:h-40 rounded-full p-1 bg-gradient-to-tr from-[#4FB2E5] to-[#F5A146]">
+            <img
+              src={photo}
+              alt={name}
+              className="w-full h-full rounded-full object-cover border-4 border-white"
+            />
+          </div>
+          {isVerified && (
+            <div className="absolute bottom-2 right-2 p-1.5 rounded-full border-4 border-white shadow-sm" style={{ backgroundColor: '#FF90BC' }} title="Verified Professional">
+              <ShieldCheck size={20} fill="white" className="text-white" />
+            </div>
+          )}
         </div>
 
-        {/* Professional Info */}
-        <div className="flex-1 text-center lg:text-left">
-          <h1 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-            {name}
-          </h1>
-          
-          <p className="text-blue-300 text-xl lg:text-2xl font-medium mb-6 lg:mb-8">
-            {specialty}
-          </p>
+        {/* Info */}
+        <div className="flex-1 text-center md:text-left w-full md:w-auto">
+          <div className="flex flex-col md:flex-row md:justify-between items-center md:items-start w-full">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-2 font-display">
+                {name}
+              </h1>
 
-          {/* Pricing & Booking */}
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="text-white">
-              <span className="text-2xl lg:text-3xl font-bold">60 DT</span>
-              <span className="text-lg lg:text-xl ml-2">consultation</span>
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4 text-slate-600 mb-4 justify-center md:justify-start">
+                <span className="text-lg font-medium px-3 py-1 rounded-full" style={{ backgroundColor: '#4FB2E520', color: '#4FB2E5' }}>
+                  {specialty}
+                </span>
+                {address && (
+                  <span className="flex items-center gap-1 text-sm">
+                    <MapPin size={16} />
+                    {address}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 justify-center md:justify-start">
+                <div className="flex items-center" style={{ color: '#F5A146' }}>
+                  <Star size={20} fill="#F5A146" />
+                  <span className="ml-1 font-bold text-slate-900">{rating}</span>
+                </div>
+                <span className="text-slate-400">•</span>
+                <span className="text-slate-500 underline decoration-slate-300 underline-offset-4">{reviewCount} reviews</span>
+              </div>
             </div>
-            
-            {proId ? (
-              <Link 
-                to={`/book/${proId}`}
-                className="bg-pink-500 hover:bg-pink-600 text-white px-8 py-4 rounded-full font-semibold text-lg transition-all duration-300 hover:scale-105 hover:shadow-lg inline-block text-center"
-              >
-                Book Appointment
-              </Link>
-            ) : (
-              <button
-                disabled
-                className="bg-gray-400 text-white px-8 py-4 rounded-full font-semibold text-lg inline-block text-center cursor-not-allowed"
-                title="Loading professional..."
-              >
-                Book Appointment
-              </button>
-            )}
           </div>
         </div>
       </div>

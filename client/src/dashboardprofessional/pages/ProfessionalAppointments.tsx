@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, User, MessageCircle, FileText, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, MessageCircle, FileText, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 

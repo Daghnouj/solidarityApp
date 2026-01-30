@@ -5,7 +5,7 @@ import UserService from '../services/user.service';
 import { toast } from 'react-hot-toast';
 
 const UserProfile: React.FC = () => {
-    const { user, login, refreshCurrentUser } = useAuth();
+    const { user, refreshCurrentUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -25,7 +25,7 @@ const UserProfile: React.FC = () => {
             const nameParts = fullName.trim().split(/\s+/);
             const firstName = nameParts[0] || '';
             const lastName = nameParts.slice(1).join(' ') || '';
-            
+
             setProfile({
                 firstName,
                 lastName,
@@ -118,7 +118,7 @@ const UserProfile: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                        <button 
+                        <button
                             onClick={() => fileInputRef.current?.click()}
                             className="absolute bottom-0 right-0 p-2 bg-orange-500 text-white rounded-full shadow-lg hover:bg-orange-600 transition-colors"
                             disabled={uploading}
@@ -205,8 +205,8 @@ const UserProfile: React.FC = () => {
                     </div>
 
                     <div className="pt-4 border-t border-gray-100 flex justify-end">
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             disabled={loading}
                             className="flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-orange-200"
                         >

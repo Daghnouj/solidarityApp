@@ -7,7 +7,7 @@ export class AvailabilityController {
   static async addAvailability(req: ProtectedRequest, res: Response): Promise<void> {
     try {
       const professional = req.user;
-      
+
       if (!professional) {
         res.status(400).json({ message: 'Professionnel non trouvé' });
         return;
@@ -17,7 +17,7 @@ export class AvailabilityController {
         req.body,
         new Types.ObjectId(professional._id)
       );
-      
+
       res.status(201).json(savedAvailability);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -28,12 +28,12 @@ export class AvailabilityController {
     try {
       const user = req.user;
       const { professionalId } = req.query;
-      
+
       const formattedEvents = await AvailabilityService.getAvailabilities(
         { professionalId: professionalId as string },
         user
       );
-      
+
       res.json(formattedEvents);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
@@ -43,9 +43,9 @@ export class AvailabilityController {
   static async updateAvailability(req: ProtectedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      
+
       const updatedAvailability = await AvailabilityService.updateAvailability(id, req.body);
-      
+
       if (!updatedAvailability) {
         res.status(404).json({ message: 'Disponibilité non trouvée' });
         return;
@@ -60,9 +60,9 @@ export class AvailabilityController {
   static async deleteAvailability(req: ProtectedRequest, res: Response): Promise<void> {
     try {
       const { id } = req.params;
-      
+
       const deletedAvailability = await AvailabilityService.deleteAvailability(id);
-      
+
       if (!deletedAvailability) {
         res.status(404).json({ message: 'Disponibilité non trouvée' });
         return;
@@ -74,15 +74,34 @@ export class AvailabilityController {
     }
   }
 
-//   static async getColorOptions(req: ProtectedRequest, res: Response): Promise<void> {
-//     const colorOptions = AvailabilityService.getColorOptions();
-//     res.json(colorOptions);
-//   }
+  //   static async getColorOptions(req: ProtectedRequest, res: Response): Promise<void> {
+  //     const colorOptions = AvailabilityService.getColorOptions();
+  //     res.json(colorOptions);
+  //   }
 
   static async getProfessionals(req: ProtectedRequest, res: Response): Promise<void> {
     try {
       const professionals = await AvailabilityService.getProfessionals();
       res.json(professionals);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
+
+  static async getSlots(req: Request, res: Response): Promise<void> {
+    try {
+      const { professionalId, date } = req.query;
+
+      if (!professionalId || !date) {
+        res.status(400).json({ message: 'Professional ID and Date are required' });
+        return;
+      }
+
+      const slots = await AvailabilityService.getAvailableSlots(
+        professionalId as string,
+        date as string
+      );
+      res.json(slots);
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

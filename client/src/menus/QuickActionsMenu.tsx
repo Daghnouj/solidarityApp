@@ -105,6 +105,74 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [activeContactId, setActiveContactId] = useState<string | null>(null); // This is the conversationId
 
+    // Consolidated listener to open a specific chat (User or Group)
+    useEffect(() => {
+        const handleOpenChat = async (e: any) => {
+            const { userId, userName, userPhoto, isGroup } = e.detail;
+
+            setIsOpen(false); // Close quick actions menu if open
+            setIsChatOpen(true);
+            setIsMinimized(false);
+            setIsSearching(false);
+
+            if (userId) {
+                // 1. Check existing conversations
+                // If isGroup is true, 'userId' passed is actually the conversationId/groupId
+                const existingContact = contacts.find(c =>
+                    isGroup ? (c.id === userId || c.conversationId === userId) : (c._id === userId && !c.isGroup)
+                );
+
+                if (existingContact) {
+                    setActiveContactId(existingContact.id);
+                    activeContactIdRef.current = existingContact.id;
+                    return;
+                }
+
+                // 2. Try to refresh conversations first
+                const latestContacts = await fetchConversations();
+                const refreshedContact = (latestContacts || []).find((c: any) =>
+                    isGroup ? (c.id === userId || c.conversationId === userId) : (c._id === userId && !c.isGroup)
+                );
+
+                if (refreshedContact) {
+                    setActiveContactId(refreshedContact.id);
+                    activeContactIdRef.current = refreshedContact.id;
+                    return;
+                }
+
+                // 3. If still not found, create a temporary placeholder
+                const finalName = userName || (isGroup ? "New Group" : "New Contact");
+                const finalPhoto = userPhoto || (isGroup
+                    ? `https://api.dicebear.com/7.x/initials/svg?seed=${finalName}`
+                    : `https://api.dicebear.com/7.x/avataaars/svg?seed=${finalName}`);
+
+                const tempContact: Contact = {
+                    id: isGroup ? userId : `new-${userId}`,
+                    _id: userId,
+                    conversationId: isGroup ? userId : '',
+                    isGroup: !!isGroup,
+                    name: finalName,
+                    photo: finalPhoto,
+                    status: 'New Conversation',
+                    messages: []
+                };
+
+                setContacts(prev => [tempContact, ...prev.filter(c => c._id !== userId)]);
+                setActiveContactId(tempContact.id);
+                activeContactIdRef.current = tempContact.id;
+                setMessages([]);
+            }
+        };
+
+        window.addEventListener('open_chat', handleOpenChat as EventListener);
+        window.addEventListener('open_chat_with_user', handleOpenChat as EventListener);
+
+        return () => {
+            window.removeEventListener('open_chat', handleOpenChat as EventListener);
+            window.removeEventListener('open_chat_with_user', handleOpenChat as EventListener);
+        };
+    }, [contacts]);
+
     const [messages, setMessages] = useState<Message[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [allUsers, setAllUsers] = useState<Contact[]>([]);
@@ -246,15 +314,22 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             }
         });
 
+
         socket.on('receive_message', (msg: any) => {
+            console.log('📥 Received message:', msg);
             const currentId = activeContactIdRef.current;
             const isMatch = currentId === msg.conversationId || (!msg.isGroup && currentId === msg.sender);
 
             if (isMatch) {
                 setMessages(prev => {
-                    const exists = prev.some(m => m._id === msg._id || (m.timestamp === msg.timestamp && m.content === msg.content));
+                    // Remove temporary optimistic message if it exists
+                    const filtered = prev.filter(m => !m._id?.toString().startsWith('temp-'));
+
+                    // Check if real message already exists
+                    const exists = filtered.some(m => m._id === msg._id);
                     if (exists) return prev;
-                    return [...prev, {
+
+                    return [...filtered, {
                         ...msg,
                         sender: msg.sender === user._id ? 'me' as const : 'contact' as const,
                         senderType: msg.sender === user._id ? 'me' as const : 'contact' as const,
@@ -325,68 +400,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         }
     }, [isChatOpen]);
 
-    // External listener to open a specific chat
-    useEffect(() => {
-        const handleOpenChat = async (event: any) => {
-            const userId = event.detail?.userId;
-            const userName = event.detail?.userName;
-            const userPhoto = event.detail?.userPhoto;
 
-            setIsChatOpen(true);
-            setIsSearching(false);
-            setIsMinimized(false);
-
-            if (userId) {
-                // 1. Check existing conversations
-                const existingContact = contacts.find(c => c._id === userId && !c.isGroup);
-                if (existingContact) {
-                    setActiveContactId(existingContact.conversationId);
-                    activeContactIdRef.current = existingContact.conversationId;
-                    return;
-                }
-
-                // 2. Try to refresh conversations first
-                await fetchConversations();
-                const refreshedContact = contacts.find(c => c._id === userId && !c.isGroup);
-                if (refreshedContact) {
-                    setActiveContactId(refreshedContact.conversationId);
-                    activeContactIdRef.current = refreshedContact.conversationId;
-                    return;
-                }
-
-                // 3. If still not found, create a temporary "new chat" contact
-                // We need at least the name and photo. If not provided in event, we use defaults or fetch.
-                let finalName = userName || "New Contact";
-                let finalPhoto = userPhoto || `https://api.dicebear.com/7.x/avataaars/svg?seed=${finalName}`;
-
-                // Try to find in allUsers (search cache) if available
-                const userFromSearch = allUsers.find(u => u._id === userId);
-                if (userFromSearch) {
-                    finalName = userFromSearch.name;
-                    finalPhoto = userFromSearch.photo;
-                }
-
-                const tempContact: Contact = {
-                    id: userId, // Use userId as temporary conversationId
-                    _id: userId,
-                    conversationId: userId, // Simulated
-                    isGroup: false,
-                    name: finalName,
-                    photo: finalPhoto,
-                    status: 'New Conversation',
-                    messages: []
-                };
-
-                setContacts(prev => [tempContact, ...prev.filter(c => c._id !== userId)]);
-                setActiveContactId(userId);
-                activeContactIdRef.current = userId;
-                setMessages([]); // Clear messages for new chat
-            }
-        };
-
-        window.addEventListener('open_chat', handleOpenChat);
-        return () => window.removeEventListener('open_chat', handleOpenChat);
-    }, [contacts, allUsers]); // Add contacts to dependency array to ensure it has the latest list
 
     // Load messages when contact changes
     useEffect(() => {
@@ -415,7 +429,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     const lastFetchRef = useRef<number>(0);
     const fetchConversations = async () => {
         const now = Date.now();
-        if (now - lastFetchRef.current < 1000) return; // Limit to 1 call per second
+        if (now - lastFetchRef.current < 1000) return contacts; // Limit to 1 call per second
         lastFetchRef.current = now;
 
         try {
@@ -437,6 +451,8 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                     };
                 }
                 const otherUser = conv.participants.find((p: any) => p._id !== user._id);
+                if (!otherUser) return null;
+
                 return {
                     id: conv._id,
                     _id: otherUser._id,
@@ -448,7 +464,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                     lastSeen: otherUser.lastSeen,
                     messages: []
                 };
-            });
+            }).filter(Boolean);
 
             setContacts(prev => {
                 const tempContacts = prev.filter(c => c.status === 'New Conversation');
@@ -459,17 +475,24 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             // If we are on a "New Conversation", check if it's now become a real one
             const currentActiveId = activeContactIdRef.current;
             if (currentActiveId) {
-                const nowReal = formattedContacts.find((fc: any) => !fc.isGroup && fc._id === currentActiveId);
+                const nowReal = formattedContacts.find((fc: any) =>
+                    (fc._id === currentActiveId && !fc.isGroup) ||
+                    (fc.id === currentActiveId && fc.isGroup) ||
+                    (fc.conversationId === currentActiveId)
+                );
                 if (nowReal) {
                     setActiveContactId(nowReal.id);
                 }
             }
 
+            // Auto-selection removed to allow neutral state
             if (formattedContacts.length > 0 && !activeContactIdRef.current) {
-                setActiveContactId(formattedContacts[0].id);
+                // setActiveContactId(formattedContacts[0].id); // Auto-selection removed
             }
+            return formattedContacts;
         } catch (err) {
             console.error("Error fetching conversations:", err);
+            return [];
         }
     };
 
@@ -478,13 +501,17 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             const res = await axios.get(`${API_URL}/chat/messages/${conversationId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
-            const formattedMessages = res.data.map((m: any) => ({
-                ...m,
-                sender: m.sender._id === user._id || m.sender === user._id ? 'me' : 'contact',
-                senderType: m.sender._id === user._id || m.sender === user._id ? 'me' : 'contact',
-                senderInfo: m.sender,
-                time: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }));
+            const formattedMessages = res.data.map((m: any) => {
+                const senderId = m.sender?._id || m.sender;
+                const isMe = senderId === user?._id;
+                return {
+                    ...m,
+                    sender: isMe ? 'me' : 'contact',
+                    senderType: isMe ? 'me' : 'contact',
+                    senderInfo: m.sender || { nom: 'Unknown' },
+                    time: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+            });
             setMessages(formattedMessages);
         } catch (err) {
             console.error("Error fetching messages:", err);
@@ -493,9 +520,38 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     const handleSendMessage = (content?: string, attachment?: any) => {
         const text = content !== undefined ? content : messageInput;
-        if ((!text.trim() && !attachment) || !activeContactId || !socket) return;
+        if ((!text.trim() && !attachment) || !activeContactId || !socket) {
+            console.log('❌ Cannot send message:', {
+                hasText: !!text.trim(),
+                hasAttachment: !!attachment,
+                hasActiveContact: !!activeContactId,
+                hasSocket: !!socket
+            });
+            return;
+        }
 
         const activeConv = contacts.find(c => c.id === activeContactId);
+
+        console.log('📤 Sending message:', {
+            conversationId: activeConv?.status === 'New Conversation' ? undefined : activeContactId,
+            receiverId: activeConv?.status === 'New Conversation' ? activeConv._id : (activeConv?.isGroup ? undefined : activeConv?._id),
+            content: text,
+            hasAttachment: !!attachment
+        });
+
+        // Optimistically add message to UI
+        const optimisticMessage = {
+            _id: `temp-${Date.now()}`,
+            sender: 'me' as const,
+            senderType: 'me' as const,
+            content: text,
+            attachment,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            timestamp: new Date().toISOString(),
+            read: false
+        };
+
+        setMessages(prev => [...prev, optimisticMessage]);
 
         socket.emit('send_message', {
             conversationId: activeConv?.status === 'New Conversation' ? undefined : activeContactId,
@@ -689,7 +745,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
         <div className={`fixed ${positionClasses[position]} z-50`}>
             {/* Facebook-style Chat Box */}
             {isChatOpen && (
-                <div className={`absolute bottom-24 right-0 w-[450px] ${isMinimized ? 'h-[56px]' : 'h-[480px]'} ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} rounded-2xl shadow-2xl border flex overflow-hidden animate-chatFadeIn origin-bottom-right transition-all duration-300`}>
+                <div className={`fixed bottom-4 right-4 w-[450px] ${isMinimized ? 'h-[56px]' : 'h-[480px]'} ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} rounded-2xl shadow-2xl border flex overflow-hidden animate-chatFadeIn origin-bottom-right transition-all duration-300 z-[100]`}>
 
                     {/* Sidebar - Contact List */}
                     <div className={`w-16 border-r ${isDarkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-gray-50/50'} flex flex-col items-center py-4 gap-4`}>
@@ -919,13 +975,65 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                                         </span>
                                                         {msg.sender === 'me' && (
                                                             <div className="flex items-center ml-0.5 min-w-[16px] justify-end">
-                                                                {msg.read ? (
-                                                                    <div className="animate-checkmarkPop">
-                                                                        <CheckCheck size={14} className="text-white drop-shadow-sm" />
-                                                                    </div>
-                                                                ) : (
-                                                                    <Check size={13} className="text-white/60" />
-                                                                )}
+                                                                <div className="flex flex-col items-end">
+                                                                    {msg.read ? (
+                                                                        <div className="relative group/read flex flex-col items-end">
+                                                                            <div className="animate-checkmarkPop">
+                                                                                <CheckCheck size={14} className="text-white drop-shadow-sm" />
+                                                                            </div>
+
+                                                                            {/* High-Clarity Solid Tooltip (Non-Bold but Strong Contrast) */}
+                                                                            {activeContact?.isGroup && msg.readBy && msg.readBy.length > 0 && (
+                                                                                <div className="relative group/readreceipts mt-2 flex items-center -space-x-1.5 cursor-help">
+                                                                                    {/* Mini Avatar Pile */}
+                                                                                    {msg.readBy.slice(0, 3).map((u: any, i: number) => (
+                                                                                        <img
+                                                                                            key={i}
+                                                                                            src={u.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.nom}`}
+                                                                                            alt={u.nom}
+                                                                                            className="w-[20px] h-[20px] rounded-full border-2 border-white ring-1 ring-gray-200 object-cover shadow-sm transition-transform group-hover/readreceipts:scale-110"
+                                                                                        />
+                                                                                    ))}
+                                                                                    {msg.readBy.length > 3 && (
+                                                                                        <div className="w-[20px] h-[20px] rounded-full bg-gray-100 flex items-center justify-center border-2 border-white text-[9px] font-bold text-gray-600 shadow-sm">
+                                                                                            +{msg.readBy.length - 3}
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* High-Contrast Solid Tooltip */}
+                                                                                    <div className="absolute right-0 bottom-full mb-3 hidden group-hover/readreceipts:block bg-white p-1 rounded-2xl border-2 border-gray-100 shadow-[0_15px_50px_-10px_rgba(0,0,0,0.25)] min-w-[220px] z-[60] animate-in fade-in zoom-in duration-300 origin-bottom-right">
+                                                                                        <div className="px-4 py-2.5 border-b border-gray-100 mb-1 flex items-center justify-between">
+                                                                                            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-[0.2em]">Lu par</span>
+                                                                                            <span className="text-[11px] font-medium text-blue-600">{msg.readBy.length} membres</span>
+                                                                                        </div>
+                                                                                        {/* Ultra-Fine Solid Scrollbar Container */}
+                                                                                        <div className="flex flex-col max-h-[280px] overflow-y-auto p-1 [&::-webkit-scrollbar]:w-[4px] [&::-webkit-scrollbar-track]:bg-white [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full">
+                                                                                            {msg.readBy.map((u: any, i: number) => (
+                                                                                                <div key={i} className="flex items-center gap-4 px-3 py-2.5 hover:bg-gray-50 transition-all rounded-xl mb-1 border border-transparent hover:border-gray-100">
+                                                                                                    <div className="relative shrink-0">
+                                                                                                        <img
+                                                                                                            src={u.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.nom}`}
+                                                                                                            alt={u.nom}
+                                                                                                            className="w-9 h-9 rounded-full border border-gray-200 object-cover shadow-sm"
+                                                                                                        />
+                                                                                                        <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
+                                                                                                    </div>
+                                                                                                    <span className="text-[14px] font-medium text-gray-900 whitespace-nowrap tracking-tight">
+                                                                                                        {u.nom}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                        {/* Solid White Arrow */}
+                                                                                        <div className="absolute -bottom-1.5 right-6 w-3.5 h-3.5 bg-white rotate-45 border-r-2 border-b-2 border-gray-100" />
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Check size={13} className="text-white/60" />
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
@@ -934,8 +1042,6 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                         </div>
                                     ))}
                                     <div ref={messagesEndRef} />
-
-                                    {/* Typing Indicator */}
                                     {activeContactId && typingUsers[activeContactId]?.length > 0 && (
                                         <div className="flex items-center gap-2 px-4 py-1 animate-pulse">
                                             <div className="flex gap-1">
@@ -1159,21 +1265,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                     <action.icon size={24} className={action.id === 'chatbot-gemini' ? 'animate-pulse' : ''} />
                                 </button>
 
-                                {/* Static Message Preview for Messages Action */}
-                                {action.id === 'messages' && isOpen && !isChatOpen && (
-                                    <div className={`absolute right-16 top-0 w-48 ${isDarkMode ? 'bg-gray-900 border-gray-800 shadow-2xl shadow-black/50' : 'bg-white border-blue-50 shadow-2xl'} rounded-2xl border p-3 animate-slideLeft`}>
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                                            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">New Message</span>
-                                        </div>
-                                        <p className={`text-xs font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'} line-clamp-1`}>Support Team</p>
-                                        <p className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} line-clamp-2 mt-0.5`}>Welcome! How can we help you today?</p>
-                                        <div className={`mt-1.5 pt-1.5 border-t ${isDarkMode ? 'border-gray-800' : 'border-gray-50'} flex justify-between items-center text-[10px] text-blue-600 font-bold`}>
-                                            <span>Just now</span>
-                                            <span className={`${isDarkMode ? 'bg-gray-800' : 'bg-blue-50'} px-1.5 py-0.5 rounded`}>View</span>
-                                        </div>
-                                    </div>
-                                )}
+
                             </div>
                         </div>
                     </div>

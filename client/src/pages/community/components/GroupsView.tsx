@@ -19,7 +19,7 @@ const getCategoryIcon = (category: string) => {
 };
 
 export default function GroupsView() {
-    const { user } = useAuth();
+    const { user, refreshCurrentUser } = useAuth();
     const { socket } = useSocket();
     const [groups, setGroups] = useState<any[]>([]);
     const [userGroups, setUserGroups] = useState<string[]>([]);
@@ -67,14 +67,22 @@ export default function GroupsView() {
         try {
             const res = await CommunityService.toggleGroupJoin(groupId);
             if (res.success) {
+                // Refresh user profile to sync groups array
+                await refreshCurrentUser();
+
                 if (res.isMember) {
                     setUserGroups(prev => [...prev, groupId]);
                     setGroups(prev => prev.map(g => g._id === groupId ? { ...g, membersCount: g.membersCount + 1 } : g));
 
                     // Auto-open group chat
                     if (res.conversationId) {
+                        const joinedGroup = groups.find(g => g._id === groupId);
                         window.dispatchEvent(new CustomEvent('open_chat', {
-                            detail: { userId: res.conversationId, isGroup: true }
+                            detail: {
+                                userId: res.conversationId,
+                                userName: joinedGroup?.name || "Group Chat",
+                                isGroup: true
+                            }
                         }));
                     }
                 } else {
@@ -91,13 +99,20 @@ export default function GroupsView() {
         try {
             const res = await CommunityService.createGroup(groupData);
             if (res.success) {
+                // Refresh user profile to sync groups array
+                await refreshCurrentUser();
+
                 setGroups(prev => [res.group, ...prev]);
                 setUserGroups(prev => [...prev, res.group._id]);
 
                 // Auto-open new group chat
                 if (res.conversationId) {
                     window.dispatchEvent(new CustomEvent('open_chat', {
-                        detail: { userId: res.conversationId, isGroup: true }
+                        detail: {
+                            userId: res.conversationId,
+                            userName: res.group.name,
+                            isGroup: true
+                        }
                     }));
                 }
             }

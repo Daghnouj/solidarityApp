@@ -218,16 +218,9 @@ export const getCurrentUser = async (req: ProtectedRequest, res: Response): Prom
 };
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Admin-only endpoint - check if requester is admin
+    // Admin check is optional for public listing
     const isAdmin = (req as any).isAdmin;
 
-    if (!isAdmin) {
-      res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin privileges required.'
-      });
-      return;
-    }
     // Public listing with optional filters/pagination for professionals directory
     const {
       role,

@@ -47,18 +47,27 @@ const Header = () => {
         // Format snippets for the dropdown
         const snippets = data.map((conv: any) => {
           const otherUser = conv.participants.find((p: any) => p._id !== user?._id);
+          const photoUrl = conv.isGroup
+            ? `https://api.dicebear.com/7.x/initials/svg?seed=${conv.groupName}`
+            : (otherUser?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUser?.nom}`);
+
           return {
             id: conv._id,
             sender: conv.isGroup ? (conv.groupName || "Group Chat") : (otherUser?.nom || "Unknown"),
+            photo: photoUrl,
             preview: conv.lastMessage?.content || "No messages yet",
             time: conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
             read: conv.lastMessage ? conv.lastMessage.read : true,
             otherUserId: otherUser?._id,
-            isGroup: conv.isGroup
+            isGroup: conv.isGroup,
+            unreadCount: conv.unreadCount || 0
           };
         });
         setNotificationMessages(snippets.slice(0, 5)); // show latest 5
-        setUnreadMessagesCount(data.filter((c: any) => c.lastMessage && !c.lastMessage.read && c.lastMessage.sender !== user?._id).length);
+
+        // Sum all unreadCount from conversations
+        const totalUnread = snippets.reduce((acc: number, curr: any) => acc + (curr.unreadCount || 0), 0);
+        setUnreadMessagesCount(totalUnread);
       }
     } catch (error) {
       console.error("Failed to fetch message notifications", error);
@@ -150,7 +159,7 @@ const Header = () => {
       });
 
       const handleChatRead = () => {
-        setUnreadMessagesCount(0);
+        // Just refetch to get updated counts, don't zero it out eagerly
         fetchMessageNotifications();
       };
       window.addEventListener('chat_opened', handleChatRead);
@@ -345,7 +354,9 @@ const Header = () => {
                   >
                     <MessageSquare size={20} />
                     {unreadMessagesCount > 0 && (
-                      <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                      <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
+                        {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                      </span>
                     )}
                   </button>
 
@@ -363,11 +374,29 @@ const Header = () => {
                               onClick={() => handleMessageClick(msg)}
                               className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!msg.read ? 'bg-blue-50/20' : ''}`}
                             >
-                              <div className="flex justify-between items-start">
-                                <p className={`text-sm ${!msg.read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{msg.sender}</p>
-                                <p className="text-[10px] text-gray-400">{msg.time}</p>
+                              <div className="flex items-center gap-3">
+                                {/* User Photo */}
+                                <div className="relative">
+                                  <img
+                                    src={msg.photo}
+                                    alt={msg.sender}
+                                    className="w-10 h-10 rounded-full object-cover border border-gray-100 bg-gray-50 flex-shrink-0"
+                                  />
+                                  {(msg.unreadCount || 0) > 0 && (
+                                    <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
+                                      {msg.unreadCount > 9 ? '9+' : msg.unreadCount}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start">
+                                    <p className={`text-sm truncate ${!msg.read ? 'font-bold text-gray-900' : 'text-gray-700'}`}>{msg.sender}</p>
+                                    <p className="text-[10px] text-gray-400 whitespace-nowrap ml-2">{msg.time}</p>
+                                  </div>
+                                  <p className={`text-sm truncate mt-0.5 ${!msg.read ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>{msg.preview}</p>
+                                </div>
                               </div>
-                              <p className={`text-sm truncate mt-0.5 ${!msg.read ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>{msg.preview}</p>
                             </div>
                           ))
                         ) : (
