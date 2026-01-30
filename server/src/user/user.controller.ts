@@ -165,6 +165,42 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
   }
 };
 
+export const getPublicProfessional = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const professional = await User.findById(req.params.id)
+      .select('-mdp -__v -stripeCustomerId');
+
+    if (!professional) {
+      res.status(404).json({
+        success: false,
+        message: 'Professional not found'
+      });
+      return;
+    }
+
+    // Only return if it's an active, verified professional
+    if (professional.role !== 'professional' || !professional.isActive || !professional.is_verified) {
+      res.status(404).json({
+        success: false,
+        message: 'Professional not found'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: professional
+    });
+  } catch (error: any) {
+    console.error('[PUBLIC PROFESSIONAL] Erreur:', error);
+    res.status(404).json({
+      success: false,
+      message: 'Professional not found'
+    });
+  }
+};
+
+
 export const getCurrentUser = async (req: ProtectedRequest, res: Response): Promise<void> => {
   try {
     const user = await userService.getCurrentUser(req.user._id.toString());
@@ -182,24 +218,8 @@ export const getCurrentUser = async (req: ProtectedRequest, res: Response): Prom
 };
 export const getAllUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Admin-only endpoint - check if requester is admin
     // Admin check is optional for public listing
     const isAdmin = (req as any).isAdmin;
-
-    // specific admin check for /all route if needed, or we rely on the specific branch logic
-
-
-    const allUsers = await User.find()
-      .select('-mdp -__v -stripeCustomerId')
-      .sort({ createdAt: -1 });
-
-    if (req.path === '/all') {
-      res.json({
-        success: true,
-        data: allUsers
-      });
-      return;
-    }
 
     // Public listing with optional filters/pagination for professionals directory
     const {
@@ -215,7 +235,17 @@ export const getAllUsers = async (req: Request, res: Response): Promise<void> =>
     const limitNum = Math.min(Math.max(parseInt(limit as string, 10) || 12, 1), 100);
 
     const filter: any = {};
-    if (role) filter.role = role;
+
+    // For non-admin users, only show active professionals
+    if (!isAdmin) {
+      filter.role = 'professional';
+      filter.isActive = true;
+      filter.is_verified = true; // Only show verified professionals publicly
+    } else {
+      // Admins can filter by role if specified
+      if (role) filter.role = role;
+    }
+
     if (search) {
       filter.$or = [
         { nom: { $regex: search, $options: 'i' } },

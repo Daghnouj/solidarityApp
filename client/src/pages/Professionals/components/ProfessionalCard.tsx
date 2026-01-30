@@ -26,13 +26,13 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => 
       .join('')
       .toUpperCase()
       .slice(0, 2);
-    
+
     const colors = [
-      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500',
       'bg-red-500', 'bg-yellow-500', 'bg-indigo-500'
     ];
     const color = colors[initials.charCodeAt(0) % colors.length];
-    
+
     return (
       <div className={`w-full h-full ${color} flex flex-col items-center justify-center text-white p-4`}>
         <div className="text-3xl font-bold mb-1">{initials}</div>
@@ -49,7 +49,7 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => 
             <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
         )}
-        
+
         {imageError ? (
           // Fallback UI when image fails to load
           <div className="w-full h-full">
@@ -60,15 +60,14 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => 
           <img
             src={professional.photo || '/placeholder-professional.jpg'}
             alt={professional.nom}
-            className={`w-full h-full object-cover hover:scale-105 transition-transform duration-300 ${
-              imageLoading ? 'opacity-0' : 'opacity-100'
-            }`}
+            className={`w-full h-full object-cover hover:scale-105 transition-transform duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'
+              }`}
             onError={handleImageError}
             onLoad={handleImageLoad}
           />
         )}
       </div>
-      
+
       <div className="p-5 flex flex-col flex-grow justify-between">
         <div>
           <h3 className="text-xl font-semibold text-gray-900 text-center mb-2">

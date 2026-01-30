@@ -12,6 +12,8 @@ export interface IMessage extends Document {
     };
     timestamp: Date;
     read: boolean;
+    readBy: mongoose.Types.ObjectId[];
+    deletedBy: mongoose.Types.ObjectId[];
 }
 
 const MessageSchema: Schema = new Schema({
@@ -25,7 +27,9 @@ const MessageSchema: Schema = new Schema({
         name: { type: String }
     },
     timestamp: { type: Date, default: Date.now },
-    read: { type: Boolean, default: false }
+    read: { type: Boolean, default: false },
+    readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    deletedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }]
 }, { timestamps: true });
 
 // Index for conversation performance

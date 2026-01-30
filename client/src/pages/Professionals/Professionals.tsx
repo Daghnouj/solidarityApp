@@ -16,13 +16,13 @@ const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 const Professionals: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { 
-    professionals, 
-    loading, 
-    error, 
-    currentPage, 
-    itemsPerPage, 
-    totalItems 
+  const {
+    professionals,
+    loading,
+    error,
+    currentPage,
+    itemsPerPage,
+    totalItems
   } = useAppSelector((state) => state.professionals);
 
   const [filters, setFilters] = useState<FiltersState>({
@@ -89,7 +89,7 @@ const Professionals: React.FC = () => {
         <div className="max-w-7xl mx-auto text-center">
           <div className="text-2xl font-semibold text-red-600 mb-4">Error Loading Professionals</div>
           <div className="text-gray-600 mb-6">{error}</div>
-          <button 
+          <button
             onClick={() => dispatch(fetchProfessionals())}
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-full font-medium transition-all duration-300"
           >

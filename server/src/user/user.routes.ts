@@ -13,11 +13,13 @@ import {
   activateAccount,
   getUserById,
   getCurrentUser,
-  getAllUsers
+  getAllUsers,
+  getPublicProfessional
 } from "./user.controller";
 import { protect } from "../../middlewares/protect";
 import { uploadProfile } from "../../config/cloudinary/cloudinary";
 import { protectAdmin } from "../../middlewares/protectAdmin";
+import { optionalAuth } from "../../middlewares/optionalAuth";
 
 const router = express.Router();
 
@@ -33,6 +35,13 @@ router.put("/profile/:userId/activate", protect, activateAccount);
 router.get('/profile/:userId/saved-specialists', protect, getSavedSpecialists);
 router.post('/profile/:userId/saved-specialists/:professionalId', protect, saveSpecialist);
 router.delete('/profile/:userId/saved-specialists/:professionalId', protect, unsaveSpecialist);
+// Public route for viewing professional profiles (no auth required)
+router.get('/public/:id', getPublicProfessional);
+
+router.get('/me', protect, getCurrentUser);
+router.get('/:id', protect, getUserById);
+router.get('/', optionalAuth, getAllUsers);
+
 router.get('/me', protect, getCurrentUser);
 router.get('/:id', protect, getUserById);
 

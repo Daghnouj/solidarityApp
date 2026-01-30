@@ -12,10 +12,26 @@ export const getConversations = async (req: ProtectedRequest, res: Response): Pr
             participants: userId
         })
             .populate('participants', 'nom photo email role lastSeen')
-            .populate('lastMessage')
+            .populate({
+                path: 'lastMessage',
+                match: { deletedBy: { $ne: userId } } // Only populate if not deleted by user
+            })
             .sort({ updatedAt: -1 });
 
-        res.status(200).json(conversations);
+        // Calculate unread count for each conversation
+        const conversationsWithCount = await Promise.all(conversations.map(async (conv: any) => {
+            const unreadCount = await Message.countDocuments({
+                conversationId: conv._id,
+                read: false,
+                sender: { $ne: userId }
+            });
+            return {
+                ...conv.toObject(),
+                unreadCount
+            };
+        }));
+
+        res.status(200).json(conversationsWithCount);
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -38,9 +54,11 @@ export const getMessages = async (req: ProtectedRequest, res: Response): Promise
         }
 
         const messages = await Message.find({
-            conversationId
+            conversationId,
+            deletedBy: { $ne: userId } // Exclude messages deleted by this user
         })
             .populate('sender', 'nom photo role')
+            .populate('readBy', 'nom photo')
             .sort({ timestamp: 1 });
 
         res.status(200).json(messages);
@@ -131,23 +149,19 @@ export const deleteMessage = async (req: ProtectedRequest, res: Response): Promi
 export const clearConversation = async (req: ProtectedRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user._id;
-        const { otherUserId } = req.params;
+        const { conversationId } = req.params;
 
-        // Delete all messages between these two users
-        await Message.deleteMany({
-            $or: [
-                { sender: userId, receiver: otherUserId },
-                { sender: otherUserId, receiver: userId }
-            ]
-        });
-
-        // Update conversation
-        await Conversation.findOneAndUpdate(
-            { participants: { $all: [userId, otherUserId] } },
-            { $unset: { lastMessage: "" } }
+        // Soft delete: Add user to deletedBy array for all messages in this conversation
+        await Message.updateMany(
+            { conversationId: conversationId },
+            { $addToSet: { deletedBy: userId } }
         );
 
-        res.status(200).json({ message: "Conversation effacée" });
+        // Update conversation to clear last message ONLY if both deleted (optional, or just leave it)
+        // For now, we won't unset the last message reference entirely as the other user might still see it.
+        // A more advanced approach would be to check if both deleted, but for simplicity we keep it.
+
+        res.status(200).json({ message: "Conversation cleared successfully" });
     } catch (error: any) {
         res.status(500).json({ message: error.message });
     }
@@ -166,11 +180,14 @@ export const markMessagesAsRead = async (req: ProtectedRequest, res: Response): 
 
         const query: any = {
             conversationId,
-            read: false,
+            readBy: { $ne: userId },
             sender: { $ne: userId }
         };
 
-        await Message.updateMany(query, { $set: { read: true } });
+        await Message.updateMany(query, {
+            $addToSet: { readBy: userId },
+            $set: { read: true } // Keep this for now for legacy/simple checks
+        });
 
         // Real-time update via socket - Emit to each participant's room
         const io = req.app.get('io');
