@@ -10,7 +10,7 @@ export const addComment = async (req: SocketIORequest, res: Response): Promise<v
     }
 
     const { postId } = req.params;
-    const { comment } = req.body as { comment: string };
+    const { comment, isAnonymous } = req.body as { comment: string, isAnonymous?: boolean };
     const userId = req.user._id;
 
     console.log('💬 addComment called');
@@ -19,7 +19,7 @@ export const addComment = async (req: SocketIORequest, res: Response): Promise<v
 
     const result = await CommentService.addComment(
       postId,
-      { comment },
+      { comment, isAnonymous },
       userId,
       req.io
     );
@@ -43,13 +43,13 @@ export const addComment = async (req: SocketIORequest, res: Response): Promise<v
 export const addReply = async (req: SocketIORequest, res: Response): Promise<void> => {
   try {
     const { postId, commentId } = req.params;
-    const { replyText } = req.body;
+    const { replyText, isAnonymous, notifiedUserId } = req.body;
     const userId = req.user._id;
 
     const result = await CommentService.addReply(
       postId,
       commentId,
-      { replyText },
+      { replyText, isAnonymous, notifiedUserId },
       userId,
       req.io
     );

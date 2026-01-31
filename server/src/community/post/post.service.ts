@@ -17,7 +17,8 @@ export class PostService {
       username: user.nom,
       userPhoto: user.photo,
       userRole: user.role,
-      hashtags
+      hashtags,
+      isAnonymous: data.isAnonymous || false
     });
 
     await newPost.save();
@@ -282,7 +283,29 @@ export class PostService {
         }
       },
       { $sort: { count: -1 } },
-      { $limit: 3 }
+      { $limit: 10 }
     ]);
+  }
+
+  static async getPostLikers(postId: string): Promise<any[]> {
+    const post = await Post.findById(postId).populate('likedBy', 'nom photo role');
+    if (!post) {
+      throw new Error('Post non trouvé');
+    }
+    return post.likedBy;
+  }
+
+  static async getPostById(postId: string): Promise<IPost | null> {
+    return await Post.findById(postId)
+      .populate('user', 'nom photo role')
+      .populate('likedBy', 'nom photo role')
+      .populate({
+        path: 'comments.user',
+        select: 'nom photo role'
+      })
+      .populate({
+        path: 'comments.replies.user',
+        select: 'nom photo role'
+      });
   }
 }

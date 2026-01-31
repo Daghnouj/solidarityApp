@@ -453,12 +453,14 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                 const otherUser = conv.participants.find((p: any) => p._id !== user._id);
                 if (!otherUser) return null;
 
+                const contactName = otherUser.nom;
+
                 return {
                     id: conv._id,
                     _id: otherUser._id,
                     conversationId: conv._id,
                     isGroup: false,
-                    name: otherUser.nom,
+                    name: contactName,
                     photo: otherUser.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUser.nom}`,
                     status: (onlineUsers || []).includes(otherUser._id) ? 'Active now' : 'Offline',
                     lastSeen: otherUser.lastSeen,

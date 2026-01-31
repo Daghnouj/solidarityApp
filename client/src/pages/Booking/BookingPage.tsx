@@ -2,14 +2,14 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import BookingForm from './components/BookingForm';
 import { useTherapist } from './hooks/useTherapist';
-import LoadingSkeleton from '../ProfessionalProfile/components/LoadingSkeleton';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const BookingPage: React.FC = () => {
   const { therapistId } = useParams<{ therapistId: string }>();
   const { therapist, loading, error } = useTherapist(therapistId);
 
   if (loading) {
-    return <LoadingSkeleton />;
+    return <LoadingSpinner message="Loading booking information..." />;
   }
 
   if (error || !therapist) {
@@ -19,8 +19,8 @@ const BookingPage: React.FC = () => {
           <div className="text-6xl mb-4">😞</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Therapist Not Found</h2>
           <p className="text-gray-600 mb-6">{error || 'Therapist information is not available'}</p>
-          <a 
-            href="/professionals" 
+          <a
+            href="/professionals"
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
           >
             Back to Professionals

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, ThumbsUp, MessageSquare, Share2, RefreshCw } from 'lucide-react';
+import { Bookmark, ThumbsUp, MessageSquare, Share2 } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import CommunityService from '../../pages/community/services/community.service';
 
 const UserSavedPosts: React.FC = () => {
@@ -29,9 +30,7 @@ const UserSavedPosts: React.FC = () => {
             </div>
 
             {loading ? (
-                <div className="flex justify-center p-12">
-                    <RefreshCw className="animate-spin text-blue-600" size={32} />
-                </div>
+                <LoadingSpinner message="Loading saved posts..." fullScreen={false} />
             ) : posts.length > 0 ? (
                 <div className="space-y-4">
                     {posts.map((post) => (

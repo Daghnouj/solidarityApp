@@ -51,9 +51,12 @@ const Header = () => {
             ? `https://api.dicebear.com/7.x/initials/svg?seed=${conv.groupName}`
             : (otherUser?.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${otherUser?.nom}`);
 
+          const rawSenderName = conv.isGroup ? (conv.groupName || "Group Chat") : (otherUser?.nom || "Unknown");
+          const senderName = rawSenderName;
+
           return {
             id: conv._id,
-            sender: conv.isGroup ? (conv.groupName || "Group Chat") : (otherUser?.nom || "Unknown"),
+            sender: senderName,
             photo: photoUrl,
             preview: conv.lastMessage?.content || "No messages yet",
             time: conv.lastMessage ? new Date(conv.lastMessage.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "",
@@ -125,6 +128,11 @@ const Header = () => {
 
   const markOneAsRead = async (id: string) => {
     try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_BASE_URL}/community/notifications/${id}/mark-read`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -173,23 +181,30 @@ const Header = () => {
     }
   }, [socket]);
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = async (notification: any) => {
     setNotificationsOpen(false);
     if (!notification.read) {
-      markOneAsRead(notification._id);
+      await markOneAsRead(notification._id);
     }
 
     if (notification.type.includes('appointment')) {
-      navigate('/dashboard');
-    } else if (notification.post?._id) {
-      navigate(`/community/post/${notification.post._id}`);
-    } else if (notification.type === 'comment' || notification.type === 'reply') {
-      if (notification.post?._id) navigate(`/community/post/${notification.post._id}`);
+      if (user?.role === 'professional') {
+        navigate('/dashboard/professional/requests');
+      } else {
+        navigate('/dashboard/user/appointments');
+      }
+    } else if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'reply') {
+      const postId = notification.post?._id || notification.post;
+      if (postId) {
+        navigate(`/community?post=${postId}`);
+      } else {
+        navigate('/community');
+      }
     }
   };
 
   const getNotificationContent = (n: any) => {
-    const senderName = n.sender?.nom || 'Someone';
+    const senderName = n.isAnonymous ? 'Someone' : (n.sender?.nom || 'Unknown User');
     switch (n.type) {
       case 'appointment_request': return `New appointment request from ${senderName}`;
       case 'appointment_confirmed': return `Appointment confirmed with ${senderName}`;
@@ -290,13 +305,14 @@ const Header = () => {
                   <button
                     onClick={() => {
                       setNotificationsOpen(!notificationsOpen);
-                      if (!notificationsOpen) markAsRead();
                     }}
                     className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group"
                   >
                     <Bell size={20} />
                     {unreadCount > 0 && (
-                      <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                      <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
                     )}
                   </button>
 
@@ -314,17 +330,26 @@ const Header = () => {
                               onClick={() => handleNotificationClick(notification)}
                               className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!notification.read ? 'bg-blue-50/30' : ''}`}
                             >
-                              <div className="flex justify-between items-start gap-2">
-                                <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-                                  {getNotificationContent(notification)}
-                                </p>
-                                {!notification.read && (
-                                  <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
-                                )}
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={notification.isAnonymous ? `https://ui-avatars.com/api/?name=AU&background=random&color=fff` : (notification.sender?.photo || `https://ui-avatars.com/api/?name=${notification.sender ? encodeURIComponent(notification.sender.nom) : 'UU'}&background=random&color=fff`)}
+                                  alt={notification.isAnonymous ? "Anonymous User" : (notification.sender?.nom || "Unknown User")}
+                                  className="w-10 h-10 rounded-full object-cover border border-gray-100 bg-gray-50 flex-shrink-0"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex justify-between items-start gap-2">
+                                    <p className={`text-sm ${!notification.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                                      {getNotificationContent(notification)}
+                                    </p>
+                                    {!notification.read && (
+                                      <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    {new Date(notification.createdAt).toLocaleDateString()} {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </p>
+                                </div>
                               </div>
-                              <p className="text-xs text-gray-400 mt-1">
-                                {new Date(notification.createdAt).toLocaleDateString()} {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              </p>
                             </div>
                           ))
                         ) : (

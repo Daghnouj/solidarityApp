@@ -96,12 +96,35 @@ export class AppointmentService {
             .sort({ time: -1 });
     }
 
-    static async updateAppointmentStatus(appointmentId: string, status: string): Promise<IAppointment | null> {
-        return await Appointment.findByIdAndUpdate(
-            appointmentId,
-            { status },
-            { new: true }
-        );
+    static async updateAppointmentStatus(appointmentId: string, status: string, io?: any): Promise<IAppointment | null> {
+        const appointment = await Appointment.findById(appointmentId);
+        if (!appointment) return null;
+
+        const oldStatus = appointment.status;
+        appointment.status = status as any;
+        await appointment.save();
+
+        // Notify patient when professional updates status (confirmed or cancelled)
+        if (status === 'confirmed' || status === 'cancelled') {
+            try {
+                const type = status === 'confirmed' ? 'appointment_confirmed' : 'appointment_cancelled';
+                await NotificationService.createNotification({
+                    recipientId: appointment.patient,
+                    senderId: appointment.professional,
+                    type: type,
+                    postId: undefined,
+                    appointmentId: appointment._id.toString(),
+                    metadata: {
+                        message: `Rendez-vous ${status === 'confirmed' ? 'confirmé' : 'annulé'}`
+                    },
+                    io: io
+                });
+            } catch (err) {
+                console.error('❌ Error creating appointment update notification:', err);
+            }
+        }
+
+        return appointment;
     }
 
     static async getAppointmentById(appointmentId: string): Promise<IAppointment | null> {

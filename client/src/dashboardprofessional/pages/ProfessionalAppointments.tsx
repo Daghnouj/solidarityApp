@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, XCircle, MessageCircle, FileText, ChevronRight, RefreshCw, AlertCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, MessageCircle, FileText, ChevronRight, AlertCircle } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -81,7 +82,7 @@ const ProfessionalAppointments: React.FC = () => {
         return `${dayStr}, ${timeStr}`;
     };
 
-    if (loading) return <div className="flex justify-center p-10"><RefreshCw className="animate-spin text-blue-500" /></div>;
+    if (loading) return <LoadingSpinner message="Loading appointments..." />;
     if (error) return <div className="p-6 bg-red-50 text-red-600 rounded-xl flex items-center gap-2"><AlertCircle size={20} />{error}</div>;
 
     const requests = pendingRequests.map(req => ({

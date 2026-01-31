@@ -26,13 +26,31 @@ export function useCommunity() {
     }
   }, []);
 
+  const refreshPost = useCallback(async (postId: string) => {
+    try {
+      const freshPost = await CommunityService.getSinglePost(postId);
+      setPosts((s) => {
+        const exists = s.find(p => p._id === postId);
+        if (exists) {
+          return s.map(p => p._id === postId ? freshPost : p);
+        } else {
+          return [freshPost, ...s];
+        }
+      });
+      return freshPost;
+    } catch (err: any) {
+      console.error("Failed to refresh post", err);
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     fetchPostsData();
   }, [fetchPostsData]);
 
-  async function addPost(content: string) {
+  async function addPost(content: string, isAnonymous: boolean = false) {
     try {
-      const response = await CommunityService.createPost(content);
+      const response = await CommunityService.createPost(content, isAnonymous);
       if (response.success) {
         setPosts((s) => [response.post, ...s]);
         // Refresh trending tags when a new post is added
@@ -96,9 +114,9 @@ export function useCommunity() {
     }
   }
 
-  async function addComment(postId: string, text: string) {
+  async function addComment(postId: string, text: string, isAnonymous: boolean = false) {
     try {
-      const response = await CommunityService.addComment(postId, text);
+      const response = await CommunityService.addComment(postId, text, isAnonymous);
       if (response.success) {
         setPosts((s) =>
           s.map((p) => {
@@ -117,9 +135,9 @@ export function useCommunity() {
     }
   }
 
-  async function addReply(postId: string, commentId: string, text: string) {
+  async function addReply(postId: string, commentId: string, text: string, notifiedUserId?: string, isAnonymous: boolean = false) {
     try {
-      const response = await CommunityService.addReply(postId, commentId, text);
+      const response = await CommunityService.addReply(postId, commentId, text, notifiedUserId, isAnonymous);
       if (response.success) {
         setPosts((s) =>
           s.map((p) => {
@@ -268,5 +286,6 @@ export function useCommunity() {
     removeReply,
     setPosts,
     fetchPosts: fetchPostsData,
+    refreshPost,
   };
 }

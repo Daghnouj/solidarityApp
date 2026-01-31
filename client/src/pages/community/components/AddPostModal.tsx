@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaTimes, FaHashtag, FaGlobeAmericas, FaCheckCircle, FaCalendarAlt, FaSmile, FaChevronDown } from "react-icons/fa";
+import { FaTimes, FaHashtag, FaGlobeAmericas, FaCalendarAlt, FaSmile } from "react-icons/fa";
 import { useAppSelector } from "../../../redux/hooks";
+import { BadgeCheck } from "lucide-react";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (content: string) => void;
+  onSubmit: (content: string, isAnonymous?: boolean) => void;
   initialContent?: string;
 }
 
@@ -32,12 +33,14 @@ const EMOJI_CATEGORIES = [
 export default function AddPostModal({ visible, onClose, onSubmit, initialContent = "" }: Props) {
   const [content, setContent] = useState(initialContent);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     if (visible) {
       setContent(initialContent);
       setShowEmojiPicker(false);
+      setIsAnonymous(false);
     }
   }, [visible, initialContent]);
 
@@ -48,7 +51,7 @@ export default function AddPostModal({ visible, onClose, onSubmit, initialConten
 
   const handleSubmit = () => {
     if (!content.trim()) return;
-    onSubmit(content.trim());
+    onSubmit(content.trim(), isAnonymous);
     setContent("");
   };
 
@@ -98,10 +101,13 @@ export default function AddPostModal({ visible, onClose, onSubmit, initialConten
                 />
                 <div>
                   <div className="flex items-center gap-1.5">
-                    {user?.role === 'professional' && (
-                      <FaCheckCircle className="text-indigo-500 text-[13px]" title="Professional" />
-                    )}
                     <div className="font-bold text-gray-900">{user?.nom || "Guest User"}</div>
+                    {user?.role === 'professional' && (
+                      <div className="flex items-center gap-1 bg-blue-50/50 px-1.5 py-0.5 rounded-md border border-blue-100/50">
+                        <BadgeCheck className="text-blue-500 w-3.5 h-3.5" strokeWidth={2.5} />
+                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">PRO</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider">
                     <FaGlobeAmericas className="text-[9px]" /> Public
@@ -196,13 +202,26 @@ export default function AddPostModal({ visible, onClose, onSubmit, initialConten
                   </button>
                 </div>
 
-                <button
-                  onClick={handleSubmit}
-                  disabled={!content.trim()}
-                  className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-100"
-                >
-                  Post
-                </button>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsAnonymous(!isAnonymous)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${isAnonymous ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-900 hover:text-gray-900'}`}
+                  >
+                    <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'border-white bg-white' : 'border-gray-300'}`}>
+                      {isAnonymous && <div className="w-1.5 h-1.5 rounded-full bg-gray-900" />}
+                    </div>
+                    {isAnonymous ? "Posting Anonymously" : "Post Anonymously"}
+                  </button>
+
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!content.trim()}
+                    className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed transition-all shadow-lg shadow-indigo-100"
+                  >
+                    Post
+                  </button>
+                </div>
               </div>
             </div>
           </motion.div>

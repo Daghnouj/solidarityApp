@@ -5,6 +5,7 @@ export interface IComment extends Document {
   text: string;
   date: Date;
   edited: boolean;
+  isAnonymous: boolean;
   replies: IReply[];
 }
 
@@ -13,6 +14,7 @@ export interface IReply extends Document {
   text: string;
   date: Date;
   edited: boolean;
+  isAnonymous: boolean;
 }
 
 export interface IPost extends Document {
@@ -28,9 +30,10 @@ export interface IPost extends Document {
   hashtags: string[];
   date: Date;
   edited: boolean;
+  isAnonymous: boolean;
   createdAt: Date;
   updatedAt: Date;
-  
+
   // Méthodes Mongoose
   toObject(): any;
   populate(path: string, select?: string): Promise<IPost>;
@@ -38,6 +41,7 @@ export interface IPost extends Document {
 
 export interface CreatePostRequest {
   content: string;
+  isAnonymous?: boolean;
 }
 
 export interface UpdatePostRequest {

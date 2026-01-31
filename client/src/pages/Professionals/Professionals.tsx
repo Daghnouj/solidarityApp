@@ -6,6 +6,7 @@ import Filters from './components/Filters';
 import ProfessionalCard from './components/ProfessionalCard';
 import EmptyState from './components/EmptyState';
 import Pagination from './components/Pagination'; // ✅ IMPORT PAGINATION
+import LoadingSpinner from '../../components/LoadingSpinner';
 import type { FiltersState, FilterOptions } from './types';
 import { fetchProfessionals, setCurrentPage } from '../../redux/slices/professionalsSlice'; // ✅ ADD setCurrentPage
 import type { RootState, AppDispatch } from '../../redux/store';
@@ -72,14 +73,7 @@ const Professionals: React.FC = () => {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="min-h-screen py-8 px-4 sm:px-6 lg:px-8 mt-20">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="text-2xl font-semibold text-gray-600">Loading professionals...</div>
-          <div className="mt-4 text-gray-500">Please wait while we fetch the best healthcare professionals for you.</div>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading professionals..." />;
   }
 
   // Error state

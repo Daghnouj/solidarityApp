@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
-import { 
-  Search, 
-  Filter, 
+import LoadingSpinner from '../components/LoadingSpinner';
+import {
+  Search,
+  Filter,
   Plus,
   Edit,
   Trash2,
@@ -85,7 +86,7 @@ const ActivitiesCentersPage: React.FC = () => {
   const [editingCenter, setEditingCenter] = useState<Center | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  
+
   // Form states
   const [formData, setFormData] = useState({
     name: '',
@@ -125,7 +126,7 @@ const ActivitiesCentersPage: React.FC = () => {
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.data) {
         setBackendEvents(data.data);
         // Map backend events to frontend centers
@@ -133,13 +134,13 @@ const ActivitiesCentersPage: React.FC = () => {
           // Extract city from address (simple extraction)
           const addressParts = event.address.split(',');
           const city = addressParts.length > 1 ? addressParts[addressParts.length - 1].trim() : 'Unknown';
-          
+
           // Use first image as main image
           const image = event.images && event.images.length > 0 ? event.images[0] : 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400';
-          
+
           // Map category to type, or use category as type
           const type = event.category || 'therapy';
-          
+
           return {
             id: event._id,
             name: event.name,
@@ -160,7 +161,7 @@ const ActivitiesCentersPage: React.FC = () => {
             createdAt: event.createdAt
           };
         });
-        
+
         setCenters(mappedCenters);
       } else {
         throw new Error('Invalid response format');
@@ -181,8 +182,8 @@ const ActivitiesCentersPage: React.FC = () => {
   const totalCenters = centers.length;
   const activeCenters = centers.filter(c => c.status === 'active').length;
   const totalMembers = centers.reduce((sum, c) => sum + c.members, 0);
-  const avgRating = centers.length > 0 
-    ? centers.reduce((sum, c) => sum + c.rating, 0) / centers.length 
+  const avgRating = centers.length > 0
+    ? centers.reduce((sum, c) => sum + c.rating, 0) / centers.length
     : 0;
 
   // Get unique categories
@@ -194,17 +195,17 @@ const ActivitiesCentersPage: React.FC = () => {
   // Filter centers
   const getFilteredCenters = () => {
     return centers.filter(center => {
-      const matchesSearch = !searchQuery || 
+      const matchesSearch = !searchQuery ||
         center.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         center.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
         center.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
         center.type.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesCategory = selectedCategory === 'all' || 
+
+      const matchesCategory = selectedCategory === 'all' ||
         (center.category || center.type) === selectedCategory;
-      
+
       const matchesCity = selectedCity === 'all' || center.city === selectedCity;
-      
+
       return matchesSearch && matchesCategory && matchesCity;
     });
   };
@@ -262,19 +263,19 @@ const ActivitiesCentersPage: React.FC = () => {
       const file = e.target.files[0];
       const newImages = [...images];
       const newPreviews = [...imagePreviews];
-      
+
       // Validate file type
       if (!file.type.startsWith('image/')) {
         setFormError('Please select an image file');
         return;
       }
-      
+
       // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
         setFormError('Image size must be less than 5MB');
         return;
       }
-      
+
       newImages[index] = file;
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -366,7 +367,7 @@ const ActivitiesCentersPage: React.FC = () => {
         formDataToSend.append('category', formData.category);
       }
       formDataToSend.append('activities', JSON.stringify(formData.activities));
-      
+
       // Append images
       images.forEach((image, index) => {
         formDataToSend.append('photo', image);
@@ -461,7 +462,7 @@ const ActivitiesCentersPage: React.FC = () => {
         formDataToSend.append('category', formData.category);
       }
       formDataToSend.append('activities', JSON.stringify(formData.activities));
-      
+
       // Append images only if new ones are provided
       if (images.length === 4) {
         images.forEach((image) => {
@@ -548,7 +549,7 @@ const ActivitiesCentersPage: React.FC = () => {
   };
 
   const getTypeColor = (type: string) => {
-    switch(type.toLowerCase()) {
+    switch (type.toLowerCase()) {
       case 'therapy': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'wellness': return 'bg-teal-100 text-teal-700 border-teal-200';
       case 'meditation': return 'bg-purple-100 text-purple-700 border-purple-200';
@@ -558,20 +559,13 @@ const ActivitiesCentersPage: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    return status === 'active' 
-      ? 'bg-green-100 text-green-700 border-green-200' 
+    return status === 'active'
+      ? 'bg-green-100 text-green-700 border-green-200'
       : 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
   if (loading && centers.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Loading activity centers...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading activity centers..." />;
   }
 
   return (
@@ -583,17 +577,17 @@ const ActivitiesCentersPage: React.FC = () => {
           <p className="text-gray-600 text-sm md:text-base mt-1">Manage therapy centers and wellness facilities</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            icon={<RefreshCw size={18} />} 
+          <Button
+            variant="ghost"
+            icon={<RefreshCw size={18} />}
             onClick={fetchEvents}
           >
             Refresh
           </Button>
-        <Button icon={<Plus size={18} />} onClick={() => setShowAddModal(true)}>
-          Add New Center
-        </Button>
-      </div>
+          <Button icon={<Plus size={18} />} onClick={() => setShowAddModal(true)}>
+            Add New Center
+          </Button>
+        </div>
       </div>
 
       {/* Error Message */}
@@ -630,11 +624,11 @@ const ActivitiesCentersPage: React.FC = () => {
           <p className="text-sm text-gray-600 mb-1">Avg Rating</p>
           <p className="text-3xl font-bold text-orange-900">{avgRating.toFixed(1)}</p>
           <div className="flex items-center gap-1 mt-2">
-            {[1,2,3,4,5].map((star) => (
-              <Star 
-                key={star} 
-                size={12} 
-                className={star <= Math.round(avgRating) ? "text-orange-500 fill-orange-500" : "text-gray-300"} 
+            {[1, 2, 3, 4, 5].map((star) => (
+              <Star
+                key={star}
+                size={12}
+                className={star <= Math.round(avgRating) ? "text-orange-500 fill-orange-500" : "text-gray-300"}
               />
             ))}
           </div>
@@ -655,7 +649,7 @@ const ActivitiesCentersPage: React.FC = () => {
             />
           </div>
 
-          <select 
+          <select
             className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -666,7 +660,7 @@ const ActivitiesCentersPage: React.FC = () => {
             ))}
           </select>
 
-          <select 
+          <select
             className="px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500"
             value={selectedCity}
             onChange={(e) => setSelectedCity(e.target.value)}
@@ -685,8 +679,8 @@ const ActivitiesCentersPage: React.FC = () => {
           <Card key={center.id} hover className="overflow-hidden">
             {/* Center Image */}
             <div className="h-48 bg-gray-200 relative overflow-hidden">
-              <img 
-                src={center.image} 
+              <img
+                src={center.image}
                 alt={center.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -723,12 +717,12 @@ const ActivitiesCentersPage: React.FC = () => {
                   <span>{center.address}, {center.city}</span>
                 </div>
                 {center.website && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Globe size={14} className="text-teal-600" />
                     <a href={center.website} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:underline">
                       {center.website}
                     </a>
-                </div>
+                  </div>
                 )}
               </div>
 
@@ -758,9 +752,9 @@ const ActivitiesCentersPage: React.FC = () => {
                 <Button variant="ghost" icon={<Edit size={18} />} className="flex-1 text-sm" onClick={() => handleEdit(center)}>
                   Edit
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  icon={<Trash2 size={18} />} 
+                <Button
+                  variant="ghost"
+                  icon={<Trash2 size={18} />}
                   className="px-4 text-sm border-red-300 text-red-600 hover:bg-red-50"
                   onClick={() => handleDeleteClick(center.id)}
                 >
@@ -780,14 +774,14 @@ const ActivitiesCentersPage: React.FC = () => {
           </div>
           <h3 className="text-xl font-bold text-gray-700 mb-2">No centers found</h3>
           <p className="text-gray-500 mb-6">
-            {centers.length === 0 
-              ? 'Get started by adding your first center' 
+            {centers.length === 0
+              ? 'Get started by adding your first center'
               : 'No centers match your search criteria'}
           </p>
           {centers.length === 0 && (
             <Button icon={<Plus size={18} />} onClick={handleAddModalOpen}>
-            Add New Center
-          </Button>
+              Add New Center
+            </Button>
           )}
         </Card>
       )}
@@ -814,9 +808,9 @@ const ActivitiesCentersPage: React.FC = () => {
               {backendEvents.find(e => e._id === selectedCenter.id)?.images && (
                 <div className="grid grid-cols-2 gap-4">
                   {backendEvents.find(e => e._id === selectedCenter.id)!.images.map((img, idx) => (
-                    <img 
-                      key={idx} 
-                      src={img} 
+                    <img
+                      key={idx}
+                      src={img}
                       alt={`${selectedCenter.name} ${idx + 1}`}
                       className="w-full h-48 object-cover rounded-lg"
                       onError={(e) => {

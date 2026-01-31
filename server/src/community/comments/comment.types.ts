@@ -5,6 +5,7 @@ export interface IReplyBase {
   text: string;
   date: Date;
   edited: boolean;
+  isAnonymous: boolean;
 }
 
 export interface IReply extends IReplyBase, Document {
@@ -17,6 +18,7 @@ export interface CreateReplyData {
   text: string;
   date: Date;
   edited?: boolean;
+  isAnonymous?: boolean;
 }
 
 export interface ICommentBase {
@@ -24,6 +26,7 @@ export interface ICommentBase {
   text: string;
   date: Date;
   edited: boolean;
+  isAnonymous: boolean;
   replies: IReply[];
 }
 
@@ -37,15 +40,19 @@ export interface CreateCommentData {
   text: string;
   date: Date;
   edited?: boolean;
+  isAnonymous?: boolean;
   replies?: CreateReplyData[];
 }
 
 export interface AddCommentRequest {
   comment: string;
+  isAnonymous?: boolean;
 }
 
 export interface AddReplyRequest {
   replyText: string;
+  isAnonymous?: boolean;
+  notifiedUserId?: string;
 }
 
 export interface UpdateCommentRequest {

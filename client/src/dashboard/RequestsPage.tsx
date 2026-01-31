@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
+import LoadingSpinner from '../components/LoadingSpinner';
 import {
   Search,
   Filter,
@@ -437,14 +438,7 @@ const RequestsPage: React.FC = () => {
   const filteredRequests = getFilteredRequests();
 
   if (loading && requests.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Loading requests...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading activation requests..." />;
   }
 
   return (
@@ -567,8 +561,8 @@ const RequestsPage: React.FC = () => {
                 key={tab}
                 onClick={() => setActiveTab(tab as any)}
                 className={`flex-1 px-6 py-2.5 rounded-lg font-semibold transition-all ${activeTab === tab
-                    ? 'bg-white text-blue-900 shadow-md'
-                    : 'text-gray-600 hover:text-blue-900'
+                  ? 'bg-white text-blue-900 shadow-md'
+                  : 'text-gray-600 hover:text-blue-900'
                   }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)} (

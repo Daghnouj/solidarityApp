@@ -27,6 +27,7 @@ export class CommentService {
       text: data.comment.trim(),
       date: new Date(),
       edited: false,
+      isAnonymous: data.isAnonymous || false,
       replies: []
     };
 
@@ -47,7 +48,9 @@ export class CommentService {
           commentId: post.comments[post.comments.length - 1]._id,
           commentPreview: data.comment.slice(0, 50)
         },
-        io
+        io,
+        undefined,
+        data.isAnonymous
       );
       console.log('✅ Comment notification created');
     }
@@ -81,12 +84,16 @@ export class CommentService {
       user: userId,
       text: data.replyText.trim(),
       date: new Date(),
-      edited: false
+      edited: false,
+      isAnonymous: data.isAnonymous || false
     };
 
-    comment.replies.push(newReply as any); // Cast en any pour éviter l'erreur
+    comment.replies.push(newReply as any);
     await post.save();
 
+    const replyId = comment.replies[comment.replies.length - 1]._id;
+
+    // 1. Notify comment owner (standard behavior)
     if (comment.user.toString() !== userId.toString()) {
       await createNotification(
         comment.user,
@@ -95,10 +102,33 @@ export class CommentService {
         postId,
         {
           commentId: commentId,
-          replyId: comment.replies[comment.replies.length - 1]._id,
+          replyId: replyId,
           replyPreview: data.replyText.slice(0, 50)
         },
-        io
+        io,
+        undefined,
+        data.isAnonymous
+      );
+    }
+
+    // 2. Notify specific reply owner if it's a "reply to reply"
+    if (data.notifiedUserId &&
+      data.notifiedUserId !== userId.toString() &&
+      data.notifiedUserId !== comment.user.toString()) {
+      await createNotification(
+        new Types.ObjectId(data.notifiedUserId),
+        userId,
+        'reply',
+        postId,
+        {
+          commentId: commentId,
+          replyId: replyId,
+          replyPreview: data.replyText.slice(0, 50),
+          isNestedReply: true
+        },
+        io,
+        undefined,
+        data.isAnonymous
       );
     }
 

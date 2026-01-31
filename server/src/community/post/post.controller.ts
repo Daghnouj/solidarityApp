@@ -5,14 +5,14 @@ import { getIOInstance } from '../../socket';
 
 export const createPost = async (req: SocketIORequest, res: Response): Promise<void> => {
   try {
-    const { content } = req.body as { content: string };
+    const { content, isAnonymous } = req.body as { content: string, isAnonymous?: boolean };
 
     if (!req.user) {
       res.status(401).json({ message: 'Non autorisé' });
       return;
     }
 
-    const post = await PostService.createPost({ content }, req.user, getIOInstance());
+    const post = await PostService.createPost({ content, isAnonymous }, req.user, getIOInstance());
 
     res.status(201).json({
       success: true,
@@ -234,6 +234,38 @@ export const getPopularHashtags = async (req: Request, res: Response): Promise<v
     res.json(hashtags);
   } catch (error: any) {
     console.error('Erreur récupération hashtags:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+export const getPostLikers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { postId } = req.params;
+    const likers = await PostService.getPostLikers(postId);
+    res.json(likers);
+  } catch (error: any) {
+    console.error('Erreur récupération likers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Erreur serveur'
+    });
+  }
+};
+
+export const getPostById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { postId } = req.params;
+    const post = await PostService.getPostById(postId);
+    if (!post) {
+      res.status(404).json({ success: false, message: 'Post non trouvé' });
+      return;
+    }
+    res.json(post);
+  } catch (error: any) {
+    console.error('Erreur récupération post:', error);
     res.status(500).json({
       success: false,
       message: 'Erreur serveur'

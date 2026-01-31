@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Professional } from '../types';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 
 interface ProfessionalCardProps {
   professional: Professional;
@@ -46,7 +47,7 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ professional }) => 
       <div className="h-72 overflow-hidden relative bg-gray-100">
         {imageLoading && !imageError && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <LoadingSpinner fullScreen={false} size="sm" />
           </div>
         )}
 

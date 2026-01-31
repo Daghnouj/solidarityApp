@@ -1,7 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import ErrorBoundary from './components/ErrorBoundary';
-import LoadingSkeleton from './components/LoadingSkeleton';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import ProfileHeader from './components/ProfileHeader';
 import BioSection from './components/BioSection';
 import ServicesList from './components/ServicesList';
@@ -15,7 +15,7 @@ const ProfessionalProfileContent: React.FC = () => {
   const { professional, loading, error } = useProfessional(id);
 
   if (loading) {
-    return <LoadingSkeleton />;
+    return <LoadingSpinner message="Loading professional profile..." />;
   }
 
   if (error) {

@@ -11,6 +11,9 @@ import GroupsView from "./components/GroupsView";
 import FollowersView from "./components/FollowersView";
 import { useCommunity } from "./hooks/useCommunity";
 import type { Post } from "./types";
+import { useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
+import LoadingSpinner from "../../components/LoadingSpinner";
 
 
 export default function Community() {
@@ -30,13 +33,32 @@ export default function Community() {
     editReply,
     removeReply,
     trendingTags,
+    refreshPost,
   } = useCommunity();
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [postPrefill, setPostPrefill] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [activeView, setActiveView] = useState<'feed' | 'following' | 'groups' | 'followers'>('feed');
+
+  // Handle post link from notification
+  useEffect(() => {
+    const postId = searchParams.get('post');
+    if (postId && !loading) {
+      // Refresh the post to get the latest comments/replies
+      refreshPost(postId).then(freshPost => {
+        if (freshPost) {
+          setSelectedPost(freshPost);
+        }
+        // Clean up param so it doesn't stay in URL and re-open on refresh
+        const newParams = new URLSearchParams(searchParams);
+        newParams.delete('post');
+        setSearchParams(newParams, { replace: true });
+      });
+    }
+  }, [searchParams, setSearchParams, refreshPost, loading]);
 
   // Update selected post if it changes in the posts list (to show new comments/replies)
   const currentSelectedPost = selectedPost ? posts.find(p => p._id === selectedPost._id) || selectedPost : null;
@@ -63,12 +85,7 @@ export default function Community() {
           <main className="md:col-span-6 space-y-6">
             {activeView === 'feed' ? (
               loading ? (
-                <div className="flex justify-center py-20">
-                  <div className="relative">
-                    <div className="h-16 w-16 rounded-full border-t-4 border-b-4 border-indigo-200"></div>
-                    <div className="absolute top-0 left-0 h-16 w-16 rounded-full border-t-4 border-indigo-600 animate-spin"></div>
-                  </div>
-                </div>
+                <LoadingSpinner message="Loading community feed..." fullScreen={false} />
               ) : error ? (
                 <div className="bg-red-50 border border-red-100 text-red-600 px-6 py-4 rounded-2xl flex items-center gap-3">
                   <span className="text-xl">⚠️</span>
@@ -116,8 +133,8 @@ export default function Community() {
       <AddPostModal
         visible={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onSubmit={(content) => {
-          addPost(content);
+        onSubmit={(content, isAnonymous) => {
+          addPost(content, isAnonymous);
           setShowAddModal(false);
         }}
         initialContent={postPrefill}

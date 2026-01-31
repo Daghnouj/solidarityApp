@@ -31,6 +31,10 @@ const notificationSchema = new Schema({
     type: Boolean,
     default: false
   },
+  isAnonymous: {
+    type: Boolean,
+    default: false
+  },
   metadata: Schema.Types.Mixed
 }, { timestamps: true });
 

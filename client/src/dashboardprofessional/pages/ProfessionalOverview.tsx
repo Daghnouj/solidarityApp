@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users, Activity, Clock, MoreVertical, RefreshCw } from 'lucide-react';
+import { Calendar, Users, Activity, Clock, MoreVertical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -182,7 +183,7 @@ const ProfessionalOverview: React.FC = () => {
 
     const recentRequests = data?.recentRequests || [];
 
-    if (loading) return <div className="flex justify-center p-10"><RefreshCw className="animate-spin text-blue-500" /></div>;
+    if (loading) return <LoadingSpinner message="Loading professional dashboard..." />;
 
     return (
         <div className="space-y-6">

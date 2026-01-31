@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
-import { 
+import LoadingSpinner from '../components/LoadingSpinner';
+import {
   Camera,
   Mail,
   Phone,
@@ -234,7 +235,7 @@ const AdminProfilePage: React.FC = () => {
     if (!e.target.files || !e.target.files[0]) return;
 
     const file = e.target.files[0];
-    
+
     // Validate file type
     if (!file.type.startsWith('image/')) {
       setError('Please select an image file');
@@ -284,14 +285,7 @@ const AdminProfilePage: React.FC = () => {
   };
 
   if (loading && !adminData) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Loading profile...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading admin profile..." />;
   }
 
   if (!adminData) {
@@ -318,9 +312,9 @@ const AdminProfilePage: React.FC = () => {
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">Admin Profile</h1>
           <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1">Manage your account settings and preferences</p>
         </div>
-        <Button 
-          variant="ghost" 
-          icon={<RefreshCw size={18} />} 
+        <Button
+          variant="ghost"
+          icon={<RefreshCw size={18} />}
           onClick={fetchAdminProfile}
         >
           Refresh
@@ -343,7 +337,7 @@ const AdminProfilePage: React.FC = () => {
             <div className="relative">
               {photoLoading ? (
                 <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl sm:rounded-2xl border-4 border-orange-500 shadow-lg flex items-center justify-center bg-gray-100">
-                  <RefreshCw className="w-8 h-8 text-orange-500 animate-spin" />
+                  <LoadingSpinner fullScreen={false} size="sm" />
                 </div>
               ) : (
                 <img
@@ -384,8 +378,8 @@ const AdminProfilePage: React.FC = () => {
                 </Button>
               ) : (
                 <div className="flex gap-2 w-full sm:w-auto">
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     onClick={() => {
                       setIsEditing(false);
                       setFormError(null);
@@ -397,15 +391,15 @@ const AdminProfilePage: React.FC = () => {
                         location: 'Tunis, Tunisia',
                         bio: 'Platform administrator managing mental health services and community support.'
                       });
-                    }} 
-                    icon={<X size={16} className="sm:w-[18px] sm:h-[18px]" />} 
+                    }}
+                    icon={<X size={16} className="sm:w-[18px] sm:h-[18px]" />}
                     className="text-xs sm:text-sm flex-1 sm:flex-initial"
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    onClick={handleSave} 
-                    icon={<Save size={16} className="sm:w-[18px] sm:h-[18px]" />} 
+                  <Button
+                    onClick={handleSave}
+                    icon={<Save size={16} className="sm:w-[18px] sm:h-[18px]" />}
                     className="text-xs sm:text-sm flex-1 sm:flex-initial"
                     disabled={formLoading}
                   >
@@ -431,7 +425,7 @@ const AdminProfilePage: React.FC = () => {
                   <input
                     type="text"
                     value={formData.nom}
-                    onChange={(e) => setFormData({...formData, nom: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, nom: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500"
                   />
                 ) : (
@@ -446,7 +440,7 @@ const AdminProfilePage: React.FC = () => {
                   <input
                     type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500"
                   />
                 ) : (
@@ -464,7 +458,7 @@ const AdminProfilePage: React.FC = () => {
                   <input
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500"
                     placeholder="+216 XX XXX XXX"
                   />
@@ -483,7 +477,7 @@ const AdminProfilePage: React.FC = () => {
                   <input
                     type="text"
                     value={formData.location}
-                    onChange={(e) => setFormData({...formData, location: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500"
                   />
                 ) : (
@@ -501,7 +495,7 @@ const AdminProfilePage: React.FC = () => {
               {isEditing ? (
                 <textarea
                   value={formData.bio}
-                  onChange={(e) => setFormData({...formData, bio: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                   rows={4}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 resize-none"
                 />
@@ -582,12 +576,10 @@ const AdminProfilePage: React.FC = () => {
                 <p className="font-semibold text-blue-900">{pref.label}</p>
                 <p className="text-sm text-gray-600">{pref.description}</p>
               </div>
-              <button className={`w-14 h-7 rounded-full relative transition-colors ${
-                pref.enabled ? 'bg-orange-500' : 'bg-gray-300'
-              }`}>
-                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
-                  pref.enabled ? 'right-1' : 'left-1'
-                }`}></div>
+              <button className={`w-14 h-7 rounded-full relative transition-colors ${pref.enabled ? 'bg-orange-500' : 'bg-gray-300'
+                }`}>
+                <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform ${pref.enabled ? 'right-1' : 'left-1'
+                  }`}></div>
               </button>
             </div>
           ))}
@@ -597,7 +589,7 @@ const AdminProfilePage: React.FC = () => {
       {/* Account Activity */}
       <Card className="p-6 md:p-8">
         <h2 className="text-xl font-bold text-blue-900 mb-6">Account Activity</h2>
-        
+
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
             <div className="flex items-center gap-3">
@@ -617,8 +609,8 @@ const AdminProfilePage: React.FC = () => {
               <div>
                 <p className="font-semibold text-blue-900">Last Updated</p>
                 <p className="text-sm text-gray-600">
-                  {new Date(adminData.updatedAt).toLocaleDateString('en-US', { 
-                    month: 'long', 
+                  {new Date(adminData.updatedAt).toLocaleDateString('en-US', {
+                    month: 'long',
                     day: 'numeric',
                     year: 'numeric',
                     hour: '2-digit',

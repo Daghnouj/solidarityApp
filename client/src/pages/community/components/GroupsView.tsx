@@ -5,6 +5,7 @@ import CommunityService from '../services/community.service';
 import { useAuth } from '../../auth/hooks/useAuth';
 import CreateGroupModal from './CreateGroupModal';
 import { useSocket } from '../../../context/SocketContext';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 
 const getCategoryIcon = (category: string) => {
     switch (category.toLowerCase()) {
@@ -123,11 +124,7 @@ export default function GroupsView() {
     };
 
     if (loading) {
-        return (
-            <div className="flex justify-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            </div>
-        );
+        return <LoadingSpinner message="Loading groups..." fullScreen={false} />;
     }
 
     return (

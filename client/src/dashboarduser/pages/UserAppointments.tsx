@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Calendar, Clock, MapPin, Filter, MoreHorizontal, RefreshCw, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Filter, MoreHorizontal, AlertCircle } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import UserAppointmentService from '../services/appointment.service';
 import type { Appointment } from '../services/appointment.service';
 
@@ -106,9 +107,7 @@ const UserAppointments: React.FC = () => {
 
             {/* Appointment Cards */}
             {loading ? (
-                <div className="flex justify-center p-12">
-                    <RefreshCw className="animate-spin text-blue-600" size={32} />
-                </div>
+                <LoadingSpinner message="Loading appointments..." fullScreen={false} />
             ) : error ? (
                 <div className="p-6 bg-red-50 text-red-600 rounded-xl flex items-center gap-2">
                     <AlertCircle size={18} /> {error}

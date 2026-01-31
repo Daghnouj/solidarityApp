@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
+import LoadingSpinner from '../components/LoadingSpinner';
 import {
   Search,
   Plus,
@@ -342,14 +343,7 @@ const GalleryPage: React.FC = () => {
   };
 
   if (loading && galleryItems.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Loading gallery...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading gallery..." />;
   }
 
   return (
