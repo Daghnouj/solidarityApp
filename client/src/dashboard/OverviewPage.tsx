@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import StatsWidget from './components/widgets/StatsWidget';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
+import LoadingSpinner from '../components/LoadingSpinner';
 import {
   Users,
   FileCheck,
@@ -160,7 +161,7 @@ const OverviewPage = () => {
       setData(result);
     } catch (err: any) {
       console.error('Error fetching overview:', err);
-      
+
       // Generic error handling without port-specific messages
       if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
         setError('Unable to connect to the backend server. Please ensure the server is running.');
@@ -236,14 +237,7 @@ const OverviewPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <RefreshCw className="animate-spin mx-auto mb-4 text-blue-600" size={48} />
-          <p className="text-gray-600">Loading data...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading dashboard data..." />;
   }
 
   if (error && !data) {
@@ -281,9 +275,9 @@ const OverviewPage = () => {
         </div>
 
         <div className="flex gap-2">
-          <Button 
-            variant="ghost" 
-            icon={<RefreshCw size={16} />} 
+          <Button
+            variant="ghost"
+            icon={<RefreshCw size={16} />}
             onClick={fetchOverviewData}
             className="text-xs sm:text-sm"
           >

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from './components/ui/Card';
 import Button from './components/ui/Button';
+import LoadingSpinner from '../components/LoadingSpinner';
 import {
   Search,
   Filter,
@@ -600,14 +601,7 @@ const UsersPage: React.FC = () => {
   };
 
   if (loading && users.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-          <p className="mt-4 text-gray-600">Loading users...</p>
-        </div>
-      </div>
-    );
+    return <LoadingSpinner message="Loading users..." />;
   }
 
   return (
@@ -723,8 +717,8 @@ const UsersPage: React.FC = () => {
                   key={status}
                   onClick={() => setFilterStatus(status as any)}
                   className={`px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm transition-all ${filterStatus === status
-                      ? 'bg-orange-500 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-orange-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}

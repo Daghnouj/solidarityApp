@@ -57,6 +57,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import ErrorBoundary from "./pages/ProfessionalProfile/components/ErrorBoundary";
 import { SocketProvider } from "./context/SocketContext";
 import DashboardBridge from "./components/DashboardBridge";
+import ProtectedRoute from "./components/ProtectedRoute";
 import { Toaster } from "react-hot-toast";
 
 const App: React.FC = () => {
@@ -72,11 +73,11 @@ const App: React.FC = () => {
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
               <Route path="/professionals" element={<Professionals />} />
-              <Route path="/professionals/:id" element={<ProfessionalProfile />} />
-              <Route path="/book/:therapistId" element={<BookingPage />} />
-              <Route path="/activities-centers" element={<ActivitiesCenters />} />
-              <Route path="/community" element={<Community />} />
-              <Route path="/galerie" element={<Galerie />} />
+              <Route path="/professionals/:id" element={<ProtectedRoute><ProfessionalProfile /></ProtectedRoute>} />
+              <Route path="/book/:therapistId" element={<ProtectedRoute><BookingPage /></ProtectedRoute>} />
+              <Route path="/activities-centers" element={<ProtectedRoute><ActivitiesCenters /></ProtectedRoute>} />
+              <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
+              <Route path="/galerie" element={<ProtectedRoute><Galerie /></ProtectedRoute>} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/about" element={<AboutPage />} />
             </Route>

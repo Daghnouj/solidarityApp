@@ -14,6 +14,11 @@ const CommunityService = {
     return response.data;
   },
 
+  getSinglePost: async (postId: string) => {
+    const response = await axios.get(`${API_URL}/posts/${postId}`);
+    return response.data;
+  },
+
   getMyPosts: async () => {
     const response = await axios.get(`${API_URL}/posts/me`, {
       headers: getAuthHeaders(),
@@ -21,10 +26,10 @@ const CommunityService = {
     return response.data;
   },
 
-  createPost: async (content: string) => {
+  createPost: async (content: string, isAnonymous: boolean = false) => {
     const response = await axios.post(
       `${API_URL}/posts/addPost`,
-      { content },
+      { content, isAnonymous },
       { headers: getAuthHeaders() }
     );
     return response.data;
@@ -39,19 +44,19 @@ const CommunityService = {
     return response.data;
   },
 
-  addComment: async (postId: string, text: string) => {
+  addComment: async (postId: string, text: string, isAnonymous: boolean = false) => {
     const response = await axios.post(
       `${API_URL}/posts/${postId}/comment`,
-      { comment: text },
+      { comment: text, isAnonymous },
       { headers: getAuthHeaders() }
     );
     return response.data;
   },
 
-  addReply: async (postId: string, commentId: string, text: string) => {
+  addReply: async (postId: string, commentId: string, text: string, notifiedUserId?: string, isAnonymous: boolean = false) => {
     const response = await axios.post(
       `${API_URL}/posts/${postId}/comments/${commentId}/reply`,
-      { replyText: text },
+      { replyText: text, notifiedUserId, isAnonymous },
       { headers: getAuthHeaders() }
     );
     return response.data;
@@ -118,6 +123,11 @@ const CommunityService = {
       `${API_URL}/posts/${postId}/comments/${commentId}/replies/${replyId}`,
       { headers: getAuthHeaders() }
     );
+    return response.data;
+  },
+
+  getPostLikers: async (postId: string) => {
+    const response = await axios.get(`${API_URL}/posts/${postId}/likers`, { headers: getAuthHeaders() });
     return response.data;
   },
 

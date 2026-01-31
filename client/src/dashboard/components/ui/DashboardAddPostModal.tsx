@@ -6,13 +6,14 @@ import { useAuth } from "../../../pages/auth/hooks/useAuth";
 interface DashboardAddPostModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (content: string) => Promise<void>;
+    onSubmit: (content: string, isAnonymous?: boolean) => Promise<void>;
 }
 
 const DashboardAddPostModal: React.FC<DashboardAddPostModalProps> = ({ isOpen, onClose, onSubmit }) => {
     const { user } = useAuth();
     const [content, setContent] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAnonymous, setIsAnonymous] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,8 +21,9 @@ const DashboardAddPostModal: React.FC<DashboardAddPostModalProps> = ({ isOpen, o
 
         setIsSubmitting(true);
         try {
-            await onSubmit(content);
+            await onSubmit(content, isAnonymous);
             setContent("");
+            setIsAnonymous(false);
             onClose();
         } catch (error) {
             console.error("Failed to submit post:", error);
@@ -99,6 +101,18 @@ const DashboardAddPostModal: React.FC<DashboardAddPostModalProps> = ({ isOpen, o
 
                             {/* Footer */}
                             <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50/50">
+                                <div className="flex items-center gap-4 flex-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAnonymous(!isAnonymous)}
+                                        className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${isAnonymous ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-500 border-gray-200 hover:border-gray-900 hover:text-gray-900'}`}
+                                    >
+                                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center transition-colors ${isAnonymous ? 'border-white bg-white' : 'border-gray-300'}`}>
+                                            {isAnonymous && <div className="w-1.5 h-1.5 rounded-full bg-gray-900" />}
+                                        </div>
+                                        {isAnonymous ? "Posting Anonymously" : "Post Anonymously"}
+                                    </button>
+                                </div>
                                 <button
                                     type="button"
                                     onClick={onClose}

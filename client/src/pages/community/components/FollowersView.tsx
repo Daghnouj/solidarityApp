@@ -6,6 +6,7 @@ import { useAuth } from '../../auth/hooks/useAuth';
 import { useDispatch } from 'react-redux';
 import { updateFollowing } from '../../../redux/slices/auth.slice';
 import SendMessageModal from './SendMessageModal';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 
 export default function FollowersView() {
     const { user } = useAuth();
@@ -91,11 +92,7 @@ export default function FollowersView() {
     );
 
     if (loading) {
-        return (
-            <div className="flex justify-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-            </div>
-        );
+        return <LoadingSpinner message="Loading followers..." fullScreen={false} />;
     }
 
     return (

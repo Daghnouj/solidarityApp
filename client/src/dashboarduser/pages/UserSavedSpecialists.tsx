@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Heart, RefreshCw, X } from 'lucide-react';
+import { Heart, X } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import UserService from '../services/user.service';
 import { useAuth } from '../../pages/auth/hooks/useAuth';
 
 const UserSavedSpecialists: React.FC = () => {
   const { user } = useAuth();
-  const userId = user?._id || user?.id;
+  const userId = (user as any)?._id || (user as any)?.id;
   const [specialists, setSpecialists] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     if (!userId) return;
@@ -17,7 +17,7 @@ const UserSavedSpecialists: React.FC = () => {
       const data = await UserService.getSavedSpecialists(userId);
       setSpecialists(data);
     } catch (e: any) {
-      setError(e?.message || 'Failed to load saved specialists');
+      console.error('Failed to load saved specialists:', e);
     } finally {
       setLoading(false);
     }
@@ -46,9 +46,7 @@ const UserSavedSpecialists: React.FC = () => {
       </div>
 
       {loading ? (
-        <div className="flex justify-center p-12">
-          <RefreshCw className="animate-spin text-blue-600" size={32} />
-        </div>
+        <LoadingSpinner message="Loading saved specialists..." fullScreen={false} />
       ) : specialists.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {specialists.map((pro) => (

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, User, LogOut, ChevronDown } from 'lucide-react';
+import { Bell, User, LogOut, ChevronDown, Home } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../pages/auth/hooks/useAuth';
 import { useSocket } from '../../../context/SocketContext';
@@ -67,6 +67,11 @@ const UserHeader: React.FC = () => {
 
     const markOneAsRead = async (id: string) => {
         try {
+            const token = localStorage.getItem('token');
+            await fetch(`${API_BASE_URL}/community/notifications/${id}/mark-read`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
             setUnreadCount(prev => Math.max(0, prev - 1));
         } catch (error) {
@@ -74,18 +79,21 @@ const UserHeader: React.FC = () => {
         }
     };
 
-    const handleNotificationClick = (notification: any) => {
+    const handleNotificationClick = async (notification: any) => {
         setIsNotificationsOpen(false);
         if (!notification.read) {
-            markOneAsRead(notification._id);
+            await markOneAsRead(notification._id);
         }
 
         if (notification.type.includes('appointment')) {
             navigate('/dashboard/user/appointments');
-        } else if (notification.post?._id) {
-            navigate(`/community/post/${notification.post._id}`);
-        } else if (notification.type === 'comment' || notification.type === 'reply') {
-            if (notification.post?._id) navigate(`/community/post/${notification.post._id}`);
+        } else if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'reply') {
+            const postId = notification.post?._id || notification.post;
+            if (postId) {
+                navigate(`/community?post=${postId}`);
+            } else {
+                navigate('/community');
+            }
         }
     };
 
@@ -95,7 +103,7 @@ const UserHeader: React.FC = () => {
     };
 
     const getNotificationContent = (n: any) => {
-        const senderName = n.sender?.nom || 'Someone';
+        const senderName = n.sender?.nom || 'Unknown User';
         switch (n.type) {
             case 'appointment_request': return `New appointment request from ${senderName}`;
             case 'appointment_confirmed': return `Appointment confirmed with ${senderName}`;
@@ -132,6 +140,12 @@ const UserHeader: React.FC = () => {
 
                 {/* LEFT */}
                 <div className="flex items-center gap-4 min-w-0">
+                    <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity flex-shrink-0 border-r border-gray-200 pr-4 mr-2 hidden sm:flex">
+                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                            <span className="text-white font-bold text-xl">S</span>
+                        </div>
+                        <span className="font-bold text-gray-900 dark:text-white">Solidarity</span>
+                    </Link>
                     <div className="truncate">
                         <h1 className="text-lg md:text-2xl font-bold text-blue-900 dark:text-white truncate">
                             Welcome back, {user?.nom?.split(" ")[0] || user?.name?.split(" ")[0] || 'User'}
@@ -150,13 +164,14 @@ const UserHeader: React.FC = () => {
                         <button
                             onClick={() => {
                                 setIsNotificationsOpen(!isNotificationsOpen);
-                                if (!isNotificationsOpen) markAsRead();
                             }}
                             className="p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-all duration-300 relative group focus:outline-none"
                         >
                             <Bell size={20} />
                             {unreadCount > 0 && (
-                                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
+                                <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white shadow-sm">
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
                             )}
                         </button>
 
@@ -176,17 +191,26 @@ const UserHeader: React.FC = () => {
                                                 onClick={() => handleNotificationClick(n)}
                                                 className={`px-4 py-3 hover:bg-gray-50 transition-colors cursor-pointer border-b border-gray-50 last:border-0 ${!n.read ? 'bg-blue-50/30' : ''}`}
                                             >
-                                                <div className="flex justify-between items-start gap-2">
-                                                    <p className={`text-sm ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
-                                                        {getNotificationContent(n)}
-                                                    </p>
-                                                    {!n.read && (
-                                                        <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
-                                                    )}
+                                                <div className="flex items-center gap-3">
+                                                    <img
+                                                        src={n.sender?.photo || `https://ui-avatars.com/api/?name=${n.sender ? encodeURIComponent(n.sender.nom) : 'UU'}&background=random&color=fff`}
+                                                        alt={n.sender?.nom || "Unknown User"}
+                                                        className="w-10 h-10 rounded-full object-cover border border-gray-100 bg-gray-50 flex-shrink-0"
+                                                    />
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <p className={`text-sm ${!n.read ? 'font-semibold text-gray-900' : 'text-gray-600'}`}>
+                                                                {getNotificationContent(n)}
+                                                            </p>
+                                                            {!n.read && (
+                                                                <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1.5"></span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-400 mt-1">
+                                                            {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-xs text-gray-400 mt-1">
-                                                    {new Date(n.createdAt).toLocaleDateString()} {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </p>
                                             </div>
                                         ))
                                     ) : (
@@ -251,6 +275,14 @@ const UserHeader: React.FC = () => {
                                         <User size={18} />
                                         My Profile
                                     </Link>
+                                    <Link
+                                        to="/"
+                                        onClick={() => setIsProfileOpen(false)}
+                                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-orange-600 transition-colors"
+                                    >
+                                        <Home size={18} />
+                                        Back to Website
+                                    </Link>
                                 </div>
 
                                 <div className="border-t border-gray-100 dark:border-gray-700 py-1">
@@ -289,7 +321,7 @@ const UserHeader: React.FC = () => {
                     background: #cbd5e1;
                 }
             `}</style>
-        </header>
+        </header >
     );
 };
 

@@ -8,6 +8,7 @@ export interface Reply {
     role?: string;
   };
   text: string;
+  isAnonymous?: boolean;
   date: string;
 }
 
@@ -20,6 +21,7 @@ export interface Comment {
     role?: string;
   };
   text: string;
+  isAnonymous?: boolean;
   date: string;
   replies?: Reply[];
 }
@@ -30,6 +32,7 @@ export interface Post {
   userPhoto?: string;
   userRole: string;
   content: string;
+  isAnonymous?: boolean;
   likes: number;
   likedBy: (string | { _id: string; nom: string; photo?: string; role: string })[]; // can be ids or populated objects
   comments: Comment[];

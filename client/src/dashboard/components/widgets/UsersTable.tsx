@@ -1,6 +1,7 @@
 import React from 'react';
 import type { UserRow } from '../../types';
 import { Mail, User, Calendar, Shield } from 'lucide-react';
+import LoadingSpinner from '../../../components/LoadingSpinner';
 
 interface UsersTableProps {
   users: UserRow[];
@@ -9,12 +10,7 @@ interface UsersTableProps {
 
 const UsersTable: React.FC<UsersTableProps> = ({ users, loading }) => {
   if (loading) {
-    return (
-      <div className="p-12 text-center">
-        <div className="inline-block w-12 h-12 border-4 border-blue-900 border-t-orange-500 rounded-full animate-spin"></div>
-        <p className="text-gray-600 mt-4 font-medium">Loading users...</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading users..." fullScreen={false} />;
   }
 
   if (!users.length) {
@@ -66,8 +62,8 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, loading }) => {
           {/* Table Body */}
           <tbody className="divide-y divide-gray-100">
             {users.map((user, index) => (
-              <tr 
-                key={user.id} 
+              <tr
+                key={user.id}
                 className="hover:bg-blue-50/50 transition-colors duration-200 group"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
@@ -90,13 +86,12 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, loading }) => {
 
                 {/* Role Cell */}
                 <td className="px-6 py-4">
-                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${
-                    user.role === 'Admin' 
-                      ? 'bg-orange-100 text-orange-700' 
+                  <span className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold ${user.role === 'Admin'
+                      ? 'bg-orange-100 text-orange-700'
                       : user.role === 'Therapist'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
                     {user.role || 'User'}
                   </span>
                 </td>
@@ -104,12 +99,12 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, loading }) => {
                 {/* Joined Date Cell */}
                 <td className="px-6 py-4">
                   <span className="text-sm text-gray-600">
-                    {user.createdAt 
+                    {user.createdAt
                       ? new Date(user.createdAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })
                       : '-'
                     }
                   </span>

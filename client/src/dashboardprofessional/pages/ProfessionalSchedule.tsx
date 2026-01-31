@@ -7,6 +7,7 @@ import {
     Check,
     Trash2
 } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
 type ViewType = 'day' | 'week';
 
@@ -243,10 +244,7 @@ const ProfessionalSchedule: React.FC = () => {
                 <div className="flex-1 overflow-y-auto relative custom-scrollbar">
                     {loading && (
                         <div className="absolute inset-0 bg-white/80 z-50 flex items-center justify-center backdrop-blur-sm">
-                            <div className="flex flex-col items-center gap-3">
-                                <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-gray-500 font-medium">Loading schedule...</span>
-                            </div>
+                            <LoadingSpinner message="Loading schedule..." fullScreen={false} />
                         </div>
                     )}
 

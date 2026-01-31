@@ -1,13 +1,14 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
 import {
     LayoutDashboard,
     Calendar,
     Clock,
     MessageSquare,
     User,
-    Shield
+    Shield,
+    Home
 } from "lucide-react";
+import { Link, NavLink } from "react-router-dom";
 
 const ProfessionalSidebar: React.FC = () => {
     const menuItems = [
@@ -36,13 +37,18 @@ const ProfessionalSidebar: React.FC = () => {
             path: "/dashboard/professional/profile",
             label: "Profile",
             icon: User
+        },
+        {
+            path: "/",
+            label: "Main Site",
+            icon: Home
         }
     ];
 
     return (
         <aside className="fixed left-0 top-0 h-full w-20 md:w-72 bg-gradient-to-b from-blue-900 to-blue-800 text-white p-3 md:p-4 lg:p-6 shadow-2xl z-50 overflow-y-auto">
             {/* Logo */}
-            <div className="flex items-center gap-2 md:gap-3 mb-8 md:mb-12">
+            <Link to="/" className="flex items-center gap-2 md:gap-3 mb-8 md:mb-12 hover:opacity-80 transition-opacity cursor-pointer px-1">
                 <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
                     <Shield className="text-white" size={18} />
                 </div>
@@ -50,7 +56,7 @@ const ProfessionalSidebar: React.FC = () => {
                     <span className="text-xl md:text-2xl font-bold">Solidarity</span>
                     <p className="text-xs text-blue-200">Professional Dashboard</p>
                 </div>
-            </div>
+            </Link>
 
             {/* Navigation */}
             <nav className="space-y-1 md:space-y-2">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Award, MapPin, Building2, Book, GraduationCap, Globe, BadgeCheck, Plus, Trash2, Camera, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Save, Award, MapPin, Building2, Book, GraduationCap, Globe, BadgeCheck, Plus, Trash2, Camera, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import axios from 'axios';
 
 interface Education {
@@ -198,11 +199,7 @@ const ProfessionalProfile: React.FC = () => {
 
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="animate-spin text-blue-600" size={32} />
-            </div>
-        );
+        return <LoadingSpinner message="Loading profile..." />;
     }
 
     if (!profile) {
@@ -249,6 +246,11 @@ const ProfessionalProfile: React.FC = () => {
                                 alt="Profile"
                                 className="w-full h-full object-cover"
                             />
+                            {saving && (
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full">
+                                    <LoadingSpinner fullScreen={false} size="sm" />
+                                </div>
+                            )}
                             <label className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
                                 <Camera className="text-white" size={24} />
                                 <input type="file" className="hidden" accept="image/*" onChange={handlePhotoChange} />
@@ -281,7 +283,7 @@ const ProfessionalProfile: React.FC = () => {
                                 disabled={saving}
                                 className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                                {saving ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
                                 {saving ? 'Saving...' : 'Save Changes'}
                             </button>
                         </div>

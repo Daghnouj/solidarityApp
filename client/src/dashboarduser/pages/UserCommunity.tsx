@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Share2, RefreshCw, Bookmark, Heart, X } from 'lucide-react';
-import { useAuth } from '../../pages/auth/hooks/useAuth';
+import { MessageSquare, Bookmark } from 'lucide-react';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import DashboardAddPostModal from '../../dashboard/components/ui/DashboardAddPostModal';
 import CommunityService from '../../pages/community/services/community.service';
 import CommentModal from '../../pages/community/components/CommentModal';
+import PostCard from '../../pages/community/components/PostCard';
 import type { Post } from '../../pages/community/types';
 
-
 const UserCommunity: React.FC = () => {
-    const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<'activity' | 'saved'>('activity');
     const [selectedPost, setSelectedPost] = useState<Post | null>(null);
-    const [likersModalOpen, setLikersModalOpen] = useState(false);
-    const [selectedPostLikers, setSelectedPostLikers] = useState<any[]>([]);
 
     const currentSelectedPost = selectedPost ? posts.find(p => p._id === selectedPost._id) || selectedPost : null;
 
@@ -41,16 +38,15 @@ const UserCommunity: React.FC = () => {
         }
     };
 
-    const handleCreatePost = async (content: string) => {
+    const handleCreatePost = async (content: string, isAnonymous?: boolean) => {
         try {
-            const response = await CommunityService.createPost(content);
+            const response = await CommunityService.createPost(content, isAnonymous);
             if (response.success) {
                 if (activeTab === 'activity') fetchData();
                 setIsModalOpen(false);
             }
         } catch (error) {
             console.error("Error creating post:", error);
-            alert("Failed to create post. Please try again.");
             throw error;
         }
     };
@@ -78,6 +74,24 @@ const UserCommunity: React.FC = () => {
             }
         } catch (error) {
             console.error("Failed to toggle favorite", error);
+        }
+    };
+
+    const handleDeletePost = async (postId: string) => {
+        try {
+            await CommunityService.deletePost(postId);
+            setPosts((prev: Post[]) => prev.filter((p: Post) => p._id !== postId));
+        } catch (error) {
+            console.error("Failed to delete post", error);
+        }
+    };
+
+    const handleEditPost = async (postId: string, content: string) => {
+        try {
+            const response = await CommunityService.updatePost(postId, content);
+            setPosts((prev: Post[]) => prev.map((p: Post) => p._id === postId ? response : p));
+        } catch (error) {
+            console.error("Failed to edit post", error);
         }
     };
 
@@ -120,83 +134,19 @@ const UserCommunity: React.FC = () => {
             </div>
 
             {loading ? (
-                <div className="flex justify-center p-12">
-                    <RefreshCw className="animate-spin text-blue-600" size={32} />
-                </div>
+                <LoadingSpinner message="Loading feed..." fullScreen={false} />
             ) : posts.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-4 max-w-2xl mx-auto">
                     {posts.map((post) => (
-                        <div key={post._id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                            <div className="flex gap-4">
-                                <div className="w-12 h-12 rounded-full bg-gray-50 overflow-hidden flex-shrink-0 border border-gray-100">
-                                    <img
-                                        src={(activeTab === 'activity' ? user?.photo : post.user?.photo) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${(activeTab === 'activity' ? user?.nom : post.user?.nom) || 'default'}`}
-                                        alt="User"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className="font-bold text-gray-900">{activeTab === 'activity' ? (user?.nom || 'Me') : (post.user?.nom)}</h3>
-                                            <p className="text-xs text-gray-400">
-                                                {new Date(post.date).toLocaleDateString()}
-                                            </p>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {post.hashtags?.slice(0, 2).map((tag: string, i: number) => (
-                                                <span key={i} className="px-2 py-1 bg-gray-50 text-gray-600 rounded-lg text-xs font-semibold">#{tag}</span>
-                                            ))}
-                                            <button
-                                                onClick={() => handleToggleFavorite(post._id)}
-                                                className={`transition-colors ${post.favorites?.includes(user?._id || '') ? 'text-amber-500' : 'text-gray-300 hover:text-amber-500'}`}
-                                            >
-                                                <Bookmark size={18} className={post.favorites?.includes(user?._id || '') ? 'fill-current' : ''} />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <p className="mt-4 text-gray-600 leading-relaxed">
-                                        {post.content}
-                                    </p>
-
-                                    <div className="flex gap-6 mt-6 pt-4 border-t border-gray-100">
-                                        <button
-                                            onClick={() => handleLike(post._id)}
-                                            className={`flex items-center gap-2 text-sm transition-colors ${post.likedBy?.some((u: any) => (u._id || u) === user?._id) ? 'text-red-500 font-semibold' : 'text-gray-400 hover:text-red-500'}`}
-                                        >
-                                            <Heart size={18} className={post.likedBy?.some((u: any) => (u._id || u) === user?._id) ? 'fill-current' : ''} />
-                                            <span
-                                                className="hover:underline cursor-pointer"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (post.likedBy?.length) {
-                                                        const likers = post.likedBy.filter(l => typeof l !== 'string');
-                                                        if (likers.length) {
-                                                            setSelectedPostLikers(likers);
-                                                            setLikersModalOpen(true);
-                                                        }
-                                                    }
-                                                }}
-                                            >
-                                                {post.likes || 0} Likes
-                                            </span>
-                                        </button>
-                                        <button
-                                            onClick={() => setSelectedPost(post)}
-                                            className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors"
-                                        >
-                                            <MessageSquare size={18} />
-                                            <span>{post.comments?.length || 0} Comments</span>
-                                        </button>
-                                        <button className="flex items-center gap-2 text-sm text-gray-400 hover:text-blue-600 transition-colors ml-auto">
-                                            <Share2 size={18} />
-                                            <span>Share</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <PostCard
+                            key={post._id}
+                            post={post}
+                            onLike={() => handleLike(post._id)}
+                            onFavorite={() => handleToggleFavorite(post._id)}
+                            onComment={() => setSelectedPost(post)}
+                            onEdit={(content) => handleEditPost(post._id, content)}
+                            onDelete={() => handleDeletePost(post._id)}
+                        />
                     ))}
                 </div>
             ) : (
@@ -232,8 +182,8 @@ const UserCommunity: React.FC = () => {
                     const res = await CommunityService.addComment(pid, txt);
                     setPosts((prev: Post[]) => prev.map((p: Post) => p._id === pid ? res.post : p));
                 }}
-                onAddReply={async (pid: string, cid: string, txt: string) => {
-                    const res = await CommunityService.addReply(pid, cid, txt);
+                onAddReply={async (pid: string, cid: string, txt: string, nid?: string) => {
+                    const res = await CommunityService.addReply(pid, cid, txt, nid);
                     setPosts((prev: Post[]) => prev.map((p: Post) => p._id === pid ? res.post : p));
                 }}
                 onEditComment={async (pid: string, cid: string, txt: string) => {
@@ -253,37 +203,6 @@ const UserCommunity: React.FC = () => {
                     setPosts((prev: Post[]) => prev.map((p: Post) => p._id === pid ? res.post : p));
                 }}
             />
-
-            {likersModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                            <h3 className="font-bold text-gray-900">Liked by</h3>
-                            <button
-                                onClick={() => setLikersModalOpen(false)}
-                                className="p-1 rounded-full hover:bg-gray-200 text-gray-500 transition-colors"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-                        <div className="max-h-[400px] overflow-y-auto p-2">
-                            {selectedPostLikers.map((liker: any, index: number) => (
-                                <div key={index} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl transition-colors">
-                                    <img
-                                        src={liker.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${liker.nom || 'User'}`}
-                                        alt={liker.nom}
-                                        className="w-10 h-10 rounded-full bg-gray-100 border border-gray-100"
-                                    />
-                                    <div>
-                                        <p className="font-semibold text-sm text-gray-900">{liker.nom}</p>
-                                        <p className="text-xs text-gray-500 capitalize">{liker.role}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             <style>{`
                 @keyframes fadeIn {

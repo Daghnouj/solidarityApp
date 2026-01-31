@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import { IPost, IComment, IReply } from './post.types';
 
 const replySchema = new Schema({
-  user: { 
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -12,15 +12,16 @@ const replySchema = new Schema({
     required: true,
     trim: true
   },
-  date: { 
-    type: Date, 
-    default: Date.now 
+  date: {
+    type: Date,
+    default: Date.now
   },
   edited: { type: Boolean, default: false },
+  isAnonymous: { type: Boolean, default: false },
 });
 
 const commentSchema = new Schema({
-  user: { 
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
@@ -30,63 +31,68 @@ const commentSchema = new Schema({
     required: true,
     trim: true
   },
-  date: { 
-    type: Date, 
-    default: Date.now 
+  date: {
+    type: Date,
+    default: Date.now
   },
   edited: { type: Boolean, default: false },
+  isAnonymous: { type: Boolean, default: false },
   replies: [replySchema]
 });
 
 const postSchema = new Schema({
-  content: { 
-    type: String, 
-    required: true 
+  content: {
+    type: String,
+    required: true
   },
-  user: { 
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'User',
-    required: true 
+    required: true
   },
-  username: { 
-    type: String, 
-    required: true 
+  username: {
+    type: String,
+    required: true
   },
-  userPhoto: { 
-    type: String, 
-    default: 'default.png' 
+  userPhoto: {
+    type: String,
+    default: 'default.png'
   },
-  userRole: { 
-    type: String, 
+  userRole: {
+    type: String,
     enum: ['patient', 'professional'],
-    required: true 
+    required: true
   },
-  likes: { 
-    type: Number, 
-    default: 0 
+  likes: {
+    type: Number,
+    default: 0
   },
-  likedBy: [{ 
+  likedBy: [{
     type: Schema.Types.ObjectId,
-    ref: 'User' 
+    ref: 'User'
   }],
   comments: [commentSchema],
-  favorites: [{ 
+  favorites: [{
     type: Schema.Types.ObjectId,
-    ref: 'User' 
+    ref: 'User'
   }],
-  hashtags: [{ 
-    type: String 
+  hashtags: [{
+    type: String
   }],
-  date: { 
-    type: Date, 
-    default: Date.now 
+  date: {
+    type: Date,
+    default: Date.now
   },
-  edited: { 
-    type: Boolean, 
-    default: false 
+  edited: {
+    type: Boolean,
+    default: false
+  },
+  isAnonymous: {
+    type: Boolean,
+    default: false
   }
-}, { 
-  timestamps: true 
+}, {
+  timestamps: true
 });
 
 export default mongoose.model<IPost>('Post', postSchema);

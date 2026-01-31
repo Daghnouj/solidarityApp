@@ -42,11 +42,11 @@ export class AppointmentController {
         }
     }
 
-    static async updateStatus(req: Request, res: Response): Promise<void> {
+    static async updateStatus(req: any, res: Response): Promise<void> {
         try {
             const { id } = req.params;
             const { status } = req.body;
-            const appointment = await AppointmentService.updateAppointmentStatus(id, status);
+            const appointment = await AppointmentService.updateAppointmentStatus(id, status, req.io);
 
             if (!appointment) {
                 res.status(404).json({ message: 'Rendez-vous non trouvé' });

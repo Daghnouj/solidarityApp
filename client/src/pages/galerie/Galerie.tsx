@@ -1,6 +1,7 @@
 // src/pages/galerie/Galerie.tsx
 
-import { CategoryDropdown, VideoCard, ArticleCard, LoadingSpinner } from './components';
+import { CategoryDropdown, VideoCard, ArticleCard } from './components';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { useGalleryFilters, useGalleryActions } from './hooks';
 import { useAppSelector } from '../../redux/hooks';
 import { selectFeaturedVideo } from '../../redux/slices/galerieSelectors';

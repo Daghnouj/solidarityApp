@@ -8,6 +8,7 @@ export interface INotification {
   post?: Types.ObjectId;
   appointment?: Types.ObjectId;
   read: boolean;
+  isAnonymous: boolean;
   metadata: any;
   createdAt: Date;
   updatedAt: Date;
@@ -20,5 +21,6 @@ export interface CreateNotificationParams {
   postId?: string;
   appointmentId?: string;
   metadata: any;
+  isAnonymous?: boolean;
   io?: any;
 }

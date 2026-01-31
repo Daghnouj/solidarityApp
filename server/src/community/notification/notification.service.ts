@@ -18,6 +18,13 @@ export class NotificationService {
     );
   }
 
+  static async markOneAsRead(userId: Types.ObjectId, notificationId: string): Promise<void> {
+    await Notification.updateOne(
+      { _id: notificationId, recipient: userId },
+      { $set: { read: true } }
+    );
+  }
+
   static async createNotification({
     recipientId,
     senderId,
@@ -25,6 +32,7 @@ export class NotificationService {
     postId,
     appointmentId,
     metadata,
+    isAnonymous,
     io
   }: CreateNotificationParams): Promise<INotification | null> {
     try {
@@ -38,6 +46,7 @@ export class NotificationService {
         type,
         post: postId || undefined,
         appointment: appointmentId || undefined,
+        isAnonymous: isAnonymous || false,
         metadata
       });
 
@@ -88,7 +97,8 @@ export const createNotification = (
   postId: string | undefined, // Make optional
   metadata: any,
   io?: any,
-  appointmentId?: string // Add optional param
+  appointmentId?: string,
+  isAnonymous?: boolean
 ): Promise<INotification | null> => {
   return NotificationService.createNotification({
     recipientId,
@@ -97,6 +107,7 @@ export const createNotification = (
     postId,
     appointmentId,
     metadata,
+    isAnonymous,
     io
   });
 };

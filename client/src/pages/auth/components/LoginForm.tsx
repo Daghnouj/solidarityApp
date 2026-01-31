@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const LoginForm: React.FC = () => {
   const { login, loading, error } = useAuth();
@@ -12,6 +12,7 @@ const LoginForm: React.FC = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +20,8 @@ const LoginForm: React.FC = () => {
       const result = await login(form);
       // Check if login was successful based on the returned action
       if (result.meta.requestStatus === 'fulfilled') {
-        navigate('/dashboard');
+        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
       }
     } catch (err) {
       console.error("Login failed", err);

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Save, Camera, Loader2 } from 'lucide-react';
+import { Save, Camera, RefreshCw } from 'lucide-react';
 import { useAuth } from '../../pages/auth/hooks/useAuth';
+import LoadingSpinner from '../../components/LoadingSpinner';
 import UserService from '../services/user.service';
 import { toast } from 'react-hot-toast';
 
@@ -114,7 +115,7 @@ const UserProfile: React.FC = () => {
                             />
                             {uploading && (
                                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded-full">
-                                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                    <LoadingSpinner fullScreen={false} size="sm" />
                                 </div>
                             )}
                         </div>
@@ -210,7 +211,7 @@ const UserProfile: React.FC = () => {
                             disabled={loading}
                             className="flex items-center gap-2 px-6 py-3 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-400 text-white rounded-xl font-semibold transition-colors shadow-lg shadow-orange-200"
                         >
-                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save size={20} />}
+                            {loading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save size={20} />}
                             {loading ? 'Saving...' : 'Save Changes'}
                         </button>
                     </div>
