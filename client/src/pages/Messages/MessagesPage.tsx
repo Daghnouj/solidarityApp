@@ -27,7 +27,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../../context/SocketContext';
 import Navbar from '../../components/Navbar';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 interface Message {
     id?: string;
@@ -98,11 +98,8 @@ export default function MessagesPage() {
     const [typingUsers, setTypingUsers] = useState<{ [convId: string]: string[] }>({});
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
     const [showContactInfo, setShowContactInfo] = useState(false);
-    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [isSearchingMessage, setIsSearchingMessage] = useState(false);
     const [messageSearchQuery, setMessageSearchQuery] = useState("");
-
-    const navigate = useNavigate();
 
     const activeContactIdRef = useRef<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -437,10 +434,7 @@ export default function MessagesPage() {
         }
     };
 
-    const handleViewProfile = () => {
-        if (!activeContactId) return;
-        setIsProfileModalOpen(true);
-    };
+
 
     const handleLeaveGroup = async () => {
         if (!activeContactId) return;
@@ -853,16 +847,13 @@ export default function MessagesPage() {
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: "100%", opacity: 0 }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className={`absolute right-0 top-0 bottom-0 w-80 border-l ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} p-6 shadow-xl z-20 overflow-y-auto custom-scrollbar`}
+                        className={`absolute right-0 top-0 bottom-0 w-80 border-l ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} p-6 shadow-xl z-20 overflow-y-auto custom-scrollbar flex flex-col`}
                     >
                         <div className="flex items-center gap-3 mb-8">
-                            <button onClick={() => setShowContactInfo(false)} className={`p-2 rounded-full transition-colors ${isDarkMode ? 'hover:bg-gray-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}>
-                                <ArrowLeft size={20} />
-                            </button>
                             <h3 className={`text-lg font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-900'}`}>Contact Info</h3>
                         </div>
 
-                        <div className="flex flex-col items-center text-center">
+                        <div className="flex flex-col items-center text-center flex-1">
                             <div className="relative mb-4 group">
                                 <img
                                     src={activeContact.photo}
@@ -874,107 +865,55 @@ export default function MessagesPage() {
                                 )}
                             </div>
                             <h2 className={`text-xl font-black mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{activeContact.name}</h2>
-                            <p className={`text-sm font-medium mb-6 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            <p className={`text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                 {activeContact.isGroup ? activeContact.status : (onlineUsers.includes(activeContact._id) ? 'Active Now' : `Last seen ${formatLastSeen(activeContact.lastSeen)}`)}
                             </p>
+                            <p className={`text-xs font-bold uppercase tracking-wider mb-6 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} flex items-center gap-1.5 justify-center`}>
+                                <Shield size={12} className="fill-current" />
+                                {activeContact.role || (activeContact.isGroup ? 'Group Chat' : 'User')}
+                            </p>
 
-                            <div className="w-full space-y-3">
-                                <button onClick={handleViewProfile} className={`w-full py-3 rounded-2xl font-bold text-sm transition-all ${isDarkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}>
-                                    View Profile
-                                </button>
-                                <button onClick={() => { setIsSearchingMessage(true); setShowContactInfo(false); }} className={`w-full py-3 rounded-2xl font-bold text-sm transition-all ${isDarkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}>
+                            <div className="w-full space-y-3 text-left mb-auto">
+                                {activeContact.email && (
+                                    <div className={`flex items-center gap-3 p-3 rounded-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50 border border-gray-100 shadow-sm'}`}>
+                                        <div className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-blue-400' : 'bg-white text-blue-600 shadow-sm'}`}>
+                                            <Mail size={16} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-[10px] uppercase tracking-wider font-bold mb-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Email</p>
+                                            <p className="text-xs font-semibold truncate">{activeContact.email}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeContact.phone && (
+                                    <div className={`flex items-center gap-3 p-3 rounded-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50 border border-gray-100 shadow-sm'}`}>
+                                        <div className={`p-2 rounded-full ${isDarkMode ? 'bg-gray-700 text-green-400' : 'bg-white text-green-600 shadow-sm'}`}>
+                                            <Phone size={16} />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-[10px] uppercase tracking-wider font-bold mb-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Phone</p>
+                                            <p className="text-xs font-semibold truncate">{activeContact.phone}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button onClick={() => { setIsSearchingMessage(true); setShowContactInfo(false); }} className={`w-full py-3 rounded-2xl font-bold text-sm transition-all mt-4 ${isDarkMode ? 'bg-gray-800 text-gray-200 hover:bg-gray-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100 shadow-sm'}`}>
                                     Search in Conversation
                                 </button>
-                                <button onClick={handleBlockContact} className="w-full py-3 rounded-2xl font-bold text-sm text-red-500 hover:bg-red-50 transition-all border border-transparent hover:border-red-100">
+                                <button onClick={handleBlockContact} className={`w-full py-3 rounded-2xl font-bold text-sm transition-all border ${isDarkMode ? 'border-red-900/50 text-red-500 hover:bg-red-900/20' : 'bg-red-50 text-red-600 border-red-50 hover:bg-red-100 hover:border-red-100 shadow-sm'}`}>
                                     Block Contact
                                 </button>
                             </div>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            {/* Profile Popup Modal */}
-            <AnimatePresence>
-                {isProfileModalOpen && activeContact && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-                        onClick={() => setIsProfileModalOpen(false)}
-                    >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className={`w-full max-w-sm rounded-[32px] p-6 shadow-2xl relative overflow-hidden ${isDarkMode ? 'bg-gray-900 text-white' : 'bg-white text-gray-900'}`}
-                        >
-                            <button
-                                onClick={() => setIsProfileModalOpen(false)}
-                                className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${isDarkMode ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-500'}`}
-                            >
-                                <X size={20} />
+                        {/* Return Arrow at Bottom */}
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                            <button onClick={() => setShowContactInfo(false)} className={`w-full flex items-center justify-center gap-2 py-3 rounded-2xl font-bold text-sm transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900'}`}>
+                                <ArrowLeft size={18} />
+                                Return to Chat
                             </button>
-
-                            <div className="flex flex-col items-center pt-4">
-                                <div className="relative mb-4 group cursor-pointer" onClick={() => setExpandedImage(activeContact.photo)}>
-                                    <div className={`p-1 rounded-full ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                                        <img
-                                            src={activeContact.photo}
-                                            alt={activeContact.name}
-                                            className="w-24 h-24 rounded-full object-cover border-4 border-transparent"
-                                        />
-                                    </div>
-                                    {onlineUsers.includes(activeContact._id) && !activeContact.isGroup && (
-                                        <div className="absolute bottom-2 right-2 w-5 h-5 bg-green-500 border-4 border-white dark:border-gray-900 rounded-full" />
-                                    )}
-                                </div>
-
-                                <h2 className="text-2xl font-black mb-1 text-center">{activeContact.name}</h2>
-                                <p className={`text-sm font-medium mb-6 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} flex items-center gap-1.5`}>
-                                    <Shield size={14} className="fill-current" />
-                                    {activeContact.role || (activeContact.isGroup ? 'Group Chat' : 'User')}
-                                </p>
-
-                                <div className="w-full space-y-3">
-                                    {activeContact.email && (
-                                        <div className={`flex items-center gap-4 p-4 rounded-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                                            <div className={`p-2.5 rounded-full ${isDarkMode ? 'bg-gray-700 text-blue-400' : 'bg-white text-blue-600 shadow-sm'}`}>
-                                                <Mail size={18} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className={`text-[10px] uppercase tracking-wider font-bold mb-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Email</p>
-                                                <p className="text-sm font-semibold truncate">{activeContact.email}</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {activeContact.phone && (
-                                        <div className={`flex items-center gap-4 p-4 rounded-2xl ${isDarkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
-                                            <div className={`p-2.5 rounded-full ${isDarkMode ? 'bg-gray-700 text-green-400' : 'bg-white text-green-600 shadow-sm'}`}>
-                                                <Phone size={18} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className={`text-[10px] uppercase tracking-wider font-bold mb-0.5 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>Phone</p>
-                                                <p className="text-sm font-semibold truncate">{activeContact.phone}</p>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Action Buttons */}
-                                    <div className="grid grid-cols-2 gap-3 mt-2">
-                                        <button onClick={() => navigate(`/professionals/${activeContact.id}`)} className={`py-3 px-4 rounded-xl font-bold text-xs transition-colors ${isDarkMode ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-blue-600 hover:bg-blue-700 text-white'}`}>
-                                            View Full Page
-                                        </button>
-                                        <button onClick={handleBlockContact} className={`py-3 px-4 rounded-xl font-bold text-xs transition-colors border ${isDarkMode ? 'border-red-900/50 text-red-500 hover:bg-red-900/20' : 'border-red-100 text-red-600 hover:bg-red-50'}`}>
-                                            Block User
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
