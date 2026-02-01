@@ -20,7 +20,7 @@ const LoginForm: React.FC = () => {
       const result = await login(form);
       // Check if login was successful based on the returned action
       if (result.meta.requestStatus === 'fulfilled') {
-        const from = (location.state as any)?.from?.pathname || '/dashboard';
+        const from = (location.state as any)?.from?.pathname || '/';
         navigate(from, { replace: true });
       }
     } catch (err) {

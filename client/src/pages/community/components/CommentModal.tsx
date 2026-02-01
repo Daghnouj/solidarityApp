@@ -1,10 +1,28 @@
-// components/community/CommentModal.tsx
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Post } from "../types";
-import { FaTimes, FaPaperPlane, FaPencilAlt, FaTrashAlt, FaCheck } from "react-icons/fa";
+import { FaTimes, FaPaperPlane, FaPencilAlt, FaTrashAlt, FaCheck, FaSmile } from "react-icons/fa";
 import { useAppSelector } from "../../../redux/hooks";
 import { BadgeCheck } from "lucide-react";
+
+const EMOJI_CATEGORIES = [
+  {
+    name: "Feelings",
+    emojis: ["😊", "😂", "😍", "🥰", "😎", "🤔", "😔", "😔", "😭", "😡", "😱", "😴", "😇", "🥳", "🥺", "🙄", "🤡", "💖", "✨", "🔥"]
+  },
+  {
+    name: "Health & Care",
+    emojis: ["🏥", "💊", "🧘", "🧠", "🎗️", "🫂", "🩸", "🌡️", "🩺", "🩹", "🧖", "🚶", "🏃", "🥗", "🍵"]
+  },
+  {
+    name: "Support",
+    emojis: ["🤝", "❤️", "🧡", "💛", "💚", "💙", "💜", "✨", "🌟", "🙌", "🤲", "💪", "🌈", "🕊️", "🍀"]
+  },
+  {
+    name: "Activities",
+    emojis: ["🎓", "💻", "📚", "✍️", "🎨", "🎭", "🎤", "🎧", "🎬", "🤳", "📅", "⏰", "💡", "⚡", "🌍"]
+  }
+];
 
 interface Props {
   post: Post | null;
@@ -24,6 +42,7 @@ export default function CommentModal({
   const { user: currentUser } = useAppSelector((state) => state.auth);
   const [text, setText] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [replyTo, setReplyTo] = useState<{ commentId: string; userName: string; userId?: string; userRole?: string } | null>(null);
   const [editingItem, setEditingItem] = useState<{ id: string, text: string, type: 'comment' | 'reply', parentId?: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string, type: 'comment' | 'reply', parentId?: string } | null>(null);
@@ -63,6 +82,10 @@ export default function CommentModal({
       onDeleteReply(post._id, confirmDelete.parentId!, confirmDelete.id);
     }
     setConfirmDelete(null);
+  };
+
+  const addEmoji = (emoji: string) => {
+    setText(prev => prev + emoji);
   };
 
   return (
@@ -315,18 +338,66 @@ export default function CommentModal({
                 </button>
               </div>
 
-              <div className="relative flex items-center">
-                <input
-                  value={text}
-                  onKeyDown={(e) => e.key === 'Enter' && submit()}
-                  onChange={(e) => setText(e.target.value)}
-                  className="w-full bg-white border border-gray-200 rounded-2xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
-                  placeholder="Write a supportive comment..."
-                />
+              <div className="relative flex items-center gap-2">
+                <div className="flex-1 relative flex items-center">
+                  <input
+                    value={text}
+                    onKeyDown={(e) => e.key === 'Enter' && submit()}
+                    onChange={(e) => setText(e.target.value)}
+                    className="w-full bg-white border border-gray-200 rounded-2xl pl-4 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-sm"
+                    placeholder="Write a supportive comment..."
+                  />
+                  <div className="absolute right-3 flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`p-1.5 rounded-full transition-colors ${showEmojiPicker ? 'text-yellow-500 bg-yellow-50' : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50'}`}
+                    >
+                      <FaSmile size={18} />
+                    </button>
+                  </div>
+
+                  <AnimatePresence>
+                    {showEmojiPicker && (
+                      <>
+                        <div className="fixed inset-0 z-20" onClick={() => setShowEmojiPicker(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute bottom-full right-0 mb-3 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 z-30 max-h-[350px] overflow-y-auto no-scrollbar"
+                        >
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-bold text-gray-900 text-sm">Select Emoji</span>
+                            <FaTimes size={12} className="text-gray-400 cursor-pointer" onClick={() => setShowEmojiPicker(false)} />
+                          </div>
+
+                          {EMOJI_CATEGORIES.map((category) => (
+                            <div key={category.name} className="mb-4">
+                              <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">{category.name}</h4>
+                              <div className="grid grid-cols-6 gap-1">
+                                {category.emojis.map((emoji, idx) => (
+                                  <button
+                                    key={`${category.name}-${idx}`}
+                                    onClick={() => addEmoji(emoji)}
+                                    className="w-8 h-8 flex items-center justify-center text-xl hover:bg-gray-50 rounded-lg transition-transform active:scale-90"
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+
                 <button
                   onClick={submit}
                   disabled={!text.trim()}
-                  className="absolute right-2 p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md shadow-indigo-100"
+                  className="p-3 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed shadow-md shadow-indigo-100"
                 >
                   <FaPaperPlane className="text-sm" />
                 </button>

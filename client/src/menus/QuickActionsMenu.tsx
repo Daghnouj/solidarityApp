@@ -18,7 +18,8 @@ import {
     Moon,
     FileText,
     Pencil,
-    Trash2
+    Trash2,
+    Maximize2
 } from 'lucide-react';
 
 const EMOJI_CATEGORIES = [
@@ -108,18 +109,18 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     // Consolidated listener to open a specific chat (User or Group)
     useEffect(() => {
         const handleOpenChat = async (e: any) => {
-            const { userId, userName, userPhoto, isGroup } = e.detail;
+            const { userId, conversationId, userName, userPhoto, isGroup } = e.detail;
+            const targetId = conversationId || userId;
 
             setIsOpen(false); // Close quick actions menu if open
             setIsChatOpen(true);
             setIsMinimized(false);
             setIsSearching(false);
 
-            if (userId) {
+            if (targetId) {
                 // 1. Check existing conversations
-                // If isGroup is true, 'userId' passed is actually the conversationId/groupId
                 const existingContact = contacts.find(c =>
-                    isGroup ? (c.id === userId || c.conversationId === userId) : (c._id === userId && !c.isGroup)
+                    isGroup ? (c.id === targetId || c.conversationId === targetId) : (c._id === targetId && !c.isGroup)
                 );
 
                 if (existingContact) {
@@ -131,7 +132,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                 // 2. Try to refresh conversations first
                 const latestContacts = await fetchConversations();
                 const refreshedContact = (latestContacts || []).find((c: any) =>
-                    isGroup ? (c.id === userId || c.conversationId === userId) : (c._id === userId && !c.isGroup)
+                    isGroup ? (c.id === targetId || c.conversationId === targetId) : (c._id === targetId && !c.isGroup)
                 );
 
                 if (refreshedContact) {
@@ -147,9 +148,9 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                     : `https://api.dicebear.com/7.x/avataaars/svg?seed=${finalName}`);
 
                 const tempContact: Contact = {
-                    id: isGroup ? userId : `new-${userId}`,
-                    _id: userId,
-                    conversationId: isGroup ? userId : '',
+                    id: isGroup ? targetId : `new-${targetId}`,
+                    _id: isGroup ? targetId : targetId,
+                    conversationId: isGroup ? targetId : '',
                     isGroup: !!isGroup,
                     name: finalName,
                     photo: finalPhoto,
@@ -157,7 +158,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                     messages: []
                 };
 
-                setContacts(prev => [tempContact, ...prev.filter(c => c._id !== userId)]);
+                setContacts(prev => [tempContact, ...prev.filter(c => (isGroup ? c.id : c._id) !== targetId)]);
                 setActiveContactId(tempContact.id);
                 activeContactIdRef.current = tempContact.id;
                 setMessages([]);
@@ -192,6 +193,9 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     useEffect(() => {
         activeContactIdRef.current = activeContactId;
+        if (activeContactId) {
+            localStorage.setItem('last_active_conv_id', activeContactId);
+        }
     }, [activeContactId]);
     const { socket, onlineUsers } = useSocket();
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -812,6 +816,16 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                                 )}
                             </div>
                             <div className="flex items-center gap-1 text-blue-600">
+                                <button
+                                    onClick={() => {
+                                        setIsChatOpen(false);
+                                        window.location.href = `/messages${activeContactId ? `?id=${activeContactId}` : ''}`;
+                                    }}
+                                    className={`p-1.5 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} rounded-full transition-colors`}
+                                    title="Expand to full page"
+                                >
+                                    <Maximize2 size={16} />
+                                </button>
                                 <button
                                     onClick={() => setIsMinimized(!isMinimized)}
                                     className={`p-1.5 ${isDarkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-100'} rounded-full transition-colors`}

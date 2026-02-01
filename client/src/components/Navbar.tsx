@@ -431,15 +431,13 @@ const Header = () => {
                         )}
                       </div>
                       <div className="p-2 border-t border-gray-100 bg-gray-50/50">
-                        <button
-                          onClick={() => {
-                            setMessagesOpen(false);
-                            window.dispatchEvent(new CustomEvent('open_chat', { detail: {} }));
-                          }}
-                          className="w-full text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                        <NavLink
+                          to="/messages"
+                          onClick={() => setMessagesOpen(false)}
+                          className="block w-full text-center py-2 text-blue-600 text-xs font-bold hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                         >
                           View All
-                        </button>
+                        </NavLink>
                       </div>
                     </div>
                   )}
