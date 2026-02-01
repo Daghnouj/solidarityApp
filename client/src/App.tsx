@@ -16,6 +16,7 @@ import Community from "./pages/community/community";
 import Galerie from "./pages/galerie/Galerie";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
+import MessagesPage from "./pages/Messages/MessagesPage";
 
 // Pages - Auth
 import LoginForm from "./pages/auth/LoginPage";
@@ -81,6 +82,9 @@ const App: React.FC = () => {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/about" element={<AboutPage />} />
             </Route>
+
+            {/* ================= Messages (Isolated Layout to hide Footer) ================= */}
+            <Route path="/messages" element={<ProtectedRoute><MessagesPage /></ProtectedRoute>} />
 
             {/* ================= Admin Dashboard ================= */}
             <Route path="/admin" element={<AdminLayout />}>
