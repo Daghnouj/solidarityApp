@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Plus,
     Calendar,
     MessageSquare,
+
     Heart,
     X,
     Sparkles,
@@ -19,7 +21,10 @@ import {
     FileText,
     Pencil,
     Trash2,
-    Maximize2
+    Maximize2,
+    Bot,
+    HandHeart,
+    Wind
 } from 'lucide-react';
 
 const EMOJI_CATEGORIES = [
@@ -43,6 +48,8 @@ const EMOJI_CATEGORIES = [
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSocket } from '../context/SocketContext';
+import GeminiChatWidget from '../components/GeminiChatWidget';
+
 
 interface Message {
     id?: string;
@@ -91,8 +98,10 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
     actions,
     position = 'bottom-right'
 }) => {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
+    const [isGeminiOpen, setIsGeminiOpen] = useState(false);
     const [expandedImage, setExpandedImage] = useState<string | null>(null);
 
     // Communicate with Navbar to reset notifications
@@ -669,13 +678,57 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     const activeContact = contacts.find(c => c.id === activeContactId);
 
+    const [activeModal, setActiveModal] = useState<'affirmation' | 'tip' | null>(null);
+    const [currentAffirmation, setCurrentAffirmation] = useState("");
+    const [currentTip, setCurrentTip] = useState("");
+
+    const DAILY_AFFIRMATIONS = [
+        "You are enough just as you are.",
+        "Your feelings are valid and important.",
+        "Take it one step at a time.",
+        "You are stronger than you think.",
+        "It's okay to ask for help.",
+        "Breathe. You've got this.",
+        "You deserve happiness and peace.",
+        "Your mental health matters.",
+        "Every day is a fresh start.",
+        "You are loved and supported."
+    ];
+
+    const WELLNESS_TIPS = [
+        "Drink a glass of water right now.",
+        "Take 3 deep breaths: Inhale for 4s, Hold for 4s, Exhale for 6s.",
+        "Step outside for 5 minutes of fresh air.",
+        "Stretch your neck and shoulders.",
+        "Write down one thing you're grateful for.",
+        "Unclench your jaw and relax your forehead.",
+        "Listen to your favorite calming song.",
+        "Put your phone away for 10 minutes.",
+        "Smile at yourself in the mirror.",
+        "Do a quick body scan to release tension."
+    ];
+
+    const showRandomAffirmation = () => {
+        const random = DAILY_AFFIRMATIONS[Math.floor(Math.random() * DAILY_AFFIRMATIONS.length)];
+        setCurrentAffirmation(random);
+        setActiveModal('affirmation');
+        setIsOpen(false);
+    };
+
+    const showRandomTip = () => {
+        const random = WELLNESS_TIPS[Math.floor(Math.random() * WELLNESS_TIPS.length)];
+        setCurrentTip(random);
+        setActiveModal('tip');
+        setIsOpen(false);
+    };
+
     const defaultActions: QuickAction[] = [
         {
             id: 'chatbot-gemini',
             label: 'Chatbot Gemini',
-            icon: Sparkles,
+            icon: Bot,
             color: 'from-purple-600 via-indigo-600 to-blue-600',
-            action: () => console.log('Gemini Chat'),
+            action: () => setIsGeminiOpen(true),
             description: 'AI Health Assistant'
         },
         {
@@ -687,20 +740,28 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
             description: 'Check your inbox'
         },
         {
-            id: 'book-session',
-            label: 'Book Session',
-            icon: Calendar,
-            color: 'from-blue-500 to-blue-600',
-            action: () => console.log('Book session'),
-            description: 'Schedule appointment'
+            id: 'breathing',
+            label: 'Breathe',
+            icon: Wind,
+            color: 'from-sky-500 to-blue-600',
+            action: () => { setActiveModal('tip'); setIsOpen(false); }, // Using 'tip' state key for breathing modal
+            description: 'Relax & Ground'
+        },
+        {
+            id: 'wellness-hub',
+            label: 'Wellness Hub',
+            icon: Heart,
+            color: 'from-pink-500 to-rose-500',
+            action: () => navigate('/test'),
+            description: 'Track your mood'
         },
         {
             id: 'log-mood',
-            label: 'Log Mood',
-            icon: Heart,
+            label: 'Daily Affirmation',
+            icon: HandHeart,
             color: 'from-orange-500 to-orange-600',
-            action: () => console.log('Log mood'),
-            description: 'Track your feelings'
+            action: showRandomAffirmation,
+            description: 'Positive thought for you'
         }
     ];
 
@@ -749,6 +810,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
 
     return (
         <div className={`fixed ${positionClasses[position]} z-50`}>
+            <GeminiChatWidget isOpen={isGeminiOpen} onClose={() => setIsGeminiOpen(false)} />
             {/* Facebook-style Chat Box */}
             {isChatOpen && (
                 <div className={`fixed bottom-4 right-4 w-[450px] ${isMinimized ? 'h-[56px]' : 'h-[480px]'} ${isDarkMode ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'} rounded-2xl shadow-2xl border flex overflow-hidden animate-chatFadeIn origin-bottom-right transition-all duration-300 z-[100]`}>
@@ -780,7 +842,7 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
                         <div className="mt-auto">
                             <button
                                 onClick={fetchAllContacts}
-                                className={`w-10 h-10 rounded-full border ${isDarkMode ? 'border-gray-800' : 'border-gray-200'} border-dashed flex items-center justify-center text-gray-400 hover:text-blue-500 hover:border-blue-500 transition-colors ${isSearching ? 'text-blue-500 border-blue-500 bg-blue-50/50' : ''}`}
+                                className={`w-10 h-10 rounded-full border ${isDarkMode ? 'border-sky-800/50' : 'border-sky-300'} border-dashed flex items-center justify-center text-sky-500 hover:text-sky-600 hover:border-sky-600 hover:bg-sky-50 transition-all ${isSearching ? 'text-sky-600 border-sky-600 bg-sky-100' : ''}`}
                             >
                                 <Plus size={20} />
                             </button>
@@ -1398,6 +1460,112 @@ const QuickActionsMenu: React.FC<QuickActionsMenuProps> = ({
           background: ${isDarkMode ? '#475569' : '#cbd5e1'};
         }
       `}</style>
+            {/* 🌟 Professional Interactive Modal (Affirmation & Breathing) */}
+            <AnimatePresence>
+                {activeModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md transition-all duration-300" onClick={() => setActiveModal(null)}>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`relative bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 max-w-md w-full text-center border border-white/40 overflow-hidden ${activeModal === 'affirmation' ? 'shadow-orange-500/20' : 'shadow-sky-500/20'}`}
+                        >
+                            {/* Decorative Background Elements */}
+                            <div className={`absolute -top-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-20 ${activeModal === 'affirmation' ? 'bg-orange-400' : 'bg-sky-400'}`}></div>
+                            <div className={`absolute -bottom-20 -left-20 w-64 h-64 rounded-full blur-3xl opacity-20 ${activeModal === 'affirmation' ? 'bg-yellow-400' : 'bg-blue-400'}`}></div>
+
+                            <button
+                                onClick={() => setActiveModal(null)}
+                                className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 text-gray-400 hover:text-gray-600 transition-all z-10"
+                            >
+                                <X size={20} />
+                            </button>
+
+                            {/* Content */}
+                            <div className="relative z-10">
+                                <div className={`w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center shadow-lg transform rotate-3 ${activeModal === 'affirmation' ? 'bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-orange-500/30' : 'bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-sky-500/30'}`}>
+                                    {activeModal === 'affirmation' ? <HandHeart size={32} /> : <Wind size={32} />}
+                                </div>
+
+                                <h3 className={`text-2xl font-bold mb-2 font-display tracking-tight ${activeModal === 'affirmation' ? 'text-orange-900' : 'text-sky-900'}`}>
+                                    {activeModal === 'affirmation' ? 'Daily Inspiration' : 'Deep Breathing'}
+                                </h3>
+                                <p className="text-sm font-medium text-gray-400 uppercase tracking-widest mb-8">
+                                    {activeModal === 'affirmation' ? 'Pause & Reflect' : 'Inhale • Hold • Exhale'}
+                                </p>
+
+                                {activeModal === 'affirmation' ? (
+                                    <div className="mb-8">
+                                        <div className="relative">
+                                            <span className="absolute -top-4 -left-2 text-6xl text-orange-200 font-serif leading-none">“</span>
+                                            <p className="text-xl text-gray-700 font-serif italic leading-relaxed px-6">
+                                                {currentAffirmation}
+                                            </p>
+                                            <span className="absolute -bottom-8 -right-2 text-6xl text-orange-200 font-serif leading-none">”</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="mb-8 flex justify-center py-4">
+                                        {/* Breathing Animation Circle */}
+                                        <div className="relative flex items-center justify-center">
+                                            <motion.div
+                                                animate={{
+                                                    scale: [1, 1.5, 1.5, 1],
+                                                    opacity: [0.3, 0.7, 0.7, 0.3],
+                                                }}
+                                                transition={{
+                                                    duration: 8, // 4s in, 4s out cycle
+                                                    repeat: Infinity,
+                                                    times: [0, 0.4, 0.6, 1],
+                                                    ease: "easeInOut"
+                                                }}
+                                                className="absolute inset-0 bg-sky-400 rounded-full blur-xl"
+                                            ></motion.div>
+                                            <motion.div
+                                                animate={{
+                                                    scale: [1, 1.3, 1.3, 1],
+                                                    borderColor: ["#38bdf8", "#0ea5e9", "#0ea5e9", "#38bdf8"],
+                                                }}
+                                                transition={{
+                                                    duration: 8,
+                                                    repeat: Infinity,
+                                                    times: [0, 0.4, 0.6, 1],
+                                                    ease: "easeInOut"
+                                                }}
+                                                className="w-32 h-32 rounded-full border-4 border-sky-400/50 flex items-center justify-center relative bg-white/50 backdrop-blur-sm z-10"
+                                            >
+                                                <p className="text-sm font-bold text-sky-600 uppercase tracking-widest animate-pulse">Breathe</p>
+                                            </motion.div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {activeModal === 'affirmation' && (
+                                    <button
+                                        onClick={showRandomAffirmation}
+                                        className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-orange-500/20 bg-gradient-to-r from-orange-500 to-red-500"
+                                    >
+                                        <Sparkles size={18} />
+                                        New Affirmation
+                                    </button>
+                                )}
+
+                                {activeModal === 'tip' && (
+                                    <button
+                                        onClick={() => setActiveModal(null)}
+                                        className="inline-flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-sky-500/20 bg-gradient-to-r from-sky-500 to-blue-500"
+                                    >
+                                        <Check size={18} />
+                                        I Feel Better
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
         </div>
     );
 };

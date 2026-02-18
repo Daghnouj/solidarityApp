@@ -19,7 +19,9 @@ import {
   Phone,
   MapPin,
   GraduationCap,
-  FileDown
+  FileDown,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 // Utilisation exclusive de la variable d'environnement VITE_API_URL
@@ -109,6 +111,11 @@ const RequestsPage: React.FC = () => {
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+
+  // Bulk reject state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkRejectConfirmOpen, setBulkRejectConfirmOpen] = useState(false);
+  const [bulkRejecting, setBulkRejecting] = useState(false);
 
   // Fonction pour convertir les données backend vers frontend
   const mapBackendToFrontend = (backendRequest: BackendRequest): Request => {
@@ -312,6 +319,56 @@ const RequestsPage: React.FC = () => {
     }
   };
 
+  // Bulk reject handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredRequests.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredRequests.map(r => r.id)));
+    }
+  };
+
+  const handleBulkRejectConfirm = async () => {
+    const reason = prompt('Please enter the rejection reason for all selected requests:');
+    if (!reason || reason.trim() === '') return;
+
+    setBulkRejecting(true);
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      // Build list of professional IDs from selected request IDs
+      const selectedRequests = requests.filter(r => selectedIds.has(r.id));
+      const rejectPromises = selectedRequests.map(r =>
+        fetch(`${API_BASE_URL}/admin/verification/reject/${r.professionalId}`, {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ reason: reason.trim() })
+        })
+      );
+      await Promise.all(rejectPromises);
+      await fetchRequests();
+      setSelectedIds(new Set());
+      setBulkRejectConfirmOpen(false);
+      alert(`${selectedIds.size} request(s) rejected successfully!`);
+    } catch (err: any) {
+      console.error('Error bulk rejecting:', err);
+      setError(err.message || 'Failed to reject some requests');
+    } finally {
+      setBulkRejecting(false);
+    }
+  };
+
   // Fonction pour exporter les requêtes
   const handleExport = async (format: 'pdf' | 'zip') => {
     try {
@@ -449,7 +506,26 @@ const RequestsPage: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-blue-900">Activation Requests</h1>
           <p className="text-gray-600 text-sm md:text-base mt-1">Review and approve account activation requests</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="ghost"
+            icon={selectedIds.size === filteredRequests.length && filteredRequests.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
+            onClick={toggleSelectAll}
+          >
+            {selectedIds.size === filteredRequests.length && filteredRequests.length > 0 ? 'Deselect All' : 'Select All'}
+          </Button>
+          {selectedIds.size > 0 && activeTab === 'pending' && (
+            <Button
+              icon={<XCircle size={18} />}
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              onClick={() => setBulkRejectConfirmOpen(true)}
+            >
+              Reject Selected ({selectedIds.size})
+            </Button>
+          )}
+          {selectedIds.size > 0 && activeTab !== 'pending' && (
+            <span className="text-sm text-gray-500 self-center">{selectedIds.size} selected</span>
+          )}
           <Button
             variant="ghost"
             icon={<RefreshCw size={18} />}
@@ -595,10 +671,16 @@ const RequestsPage: React.FC = () => {
       {/* Requests List */}
       <div className="space-y-4">
         {filteredRequests.map((request) => (
-          <Card key={request.id} className="p-6">
+          <Card key={request.id} className={`p-6 ${selectedIds.has(request.id) ? 'ring-2 ring-blue-500' : ''}`}>
             <div className="flex flex-col lg:flex-row gap-6">
-              {/* Applicant Info */}
+              {/* Checkbox + Applicant Info */}
               <div className="flex items-start gap-4 flex-1">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(request.id)}
+                  onChange={() => toggleSelect(request.id)}
+                  className="w-5 h-5 rounded cursor-pointer mt-5"
+                />
                 <img
                   src={request.applicant.avatar}
                   alt={request.applicant.name}
@@ -882,6 +964,32 @@ const RequestsPage: React.FC = () => {
                 )}
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Reject Confirmation Modal */}
+      {bulkRejectConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <XCircle className="text-red-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Reject {selectedIds.size} Request(s)?</h3>
+                <p className="text-sm text-gray-500">You will be prompted for a rejection reason.</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to reject <span className="font-bold text-red-600">{selectedIds.size}</span> selected request(s)? The same rejection reason will be applied to all.
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setBulkRejectConfirmOpen(false)} disabled={bulkRejecting}>Cancel</Button>
+              <Button icon={<XCircle size={18} />} className="bg-red-600 hover:bg-red-700 text-white border-red-600" onClick={handleBulkRejectConfirm} disabled={bulkRejecting}>
+                {bulkRejecting ? 'Rejecting...' : `Reject All (${selectedIds.size})`}
+              </Button>
             </div>
           </div>
         </div>

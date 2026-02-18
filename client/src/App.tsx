@@ -14,9 +14,13 @@ import BookingPage from "./pages/Booking/BookingPage";
 import ActivitiesCenters from "./pages/ActivitiesCenters/ActivitiesCenters";
 import Community from "./pages/community/community";
 import Galerie from "./pages/galerie/Galerie";
+import Blog from "./pages/blog/Blog";
+import BlogDetail from "./pages/blog/BlogDetail";
 import ContactPage from "./pages/ContactPage";
 import AboutPage from "./pages/AboutPage";
+import PartnersPublicPage from "./pages/PartnersPage";
 import MessagesPage from "./pages/Messages/MessagesPage";
+import MentalTestHub from "./pages/MentalTest/MentalTestHub";
 
 // Pages - Auth
 import LoginForm from "./pages/auth/LoginPage";
@@ -34,6 +38,8 @@ import ActivitiesCentersPage from "./dashboard/ActivitiesCentersPage";
 import GalleryPage from "./dashboard/GalleryPage";
 import AdminProfilePage from "./dashboard/AdminProfilePage";
 import DashboardLoginPage from "./dashboard/DashboardLoginPage";
+import BlogManagementPage from "./dashboard/BlogManagementPage";
+import AdminPartnersPage from "./dashboard/PartnersPage";
 
 // Pages - User Dashboard
 import UserLayout from "./dashboarduser/UserLayout";
@@ -79,8 +85,12 @@ const App: React.FC = () => {
               <Route path="/activities-centers" element={<ProtectedRoute><ActivitiesCenters /></ProtectedRoute>} />
               <Route path="/community" element={<ProtectedRoute><Community /></ProtectedRoute>} />
               <Route path="/galerie" element={<ProtectedRoute><Galerie /></ProtectedRoute>} />
+              <Route path="/blog" element={<Blog />} />
+              <Route path="/blog/:slug" element={<BlogDetail />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/about" element={<AboutPage />} />
+              <Route path="/partners" element={<PartnersPublicPage />} />
+              <Route path="/test" element={<ProtectedRoute><MentalTestHub /></ProtectedRoute>} />
             </Route>
 
             {/* ================= Messages (Isolated Layout to hide Footer) ================= */}
@@ -93,8 +103,9 @@ const App: React.FC = () => {
               <Route path="requests" element={<RequestsPage />} />
               <Route path="activities-centers" element={<ActivitiesCentersPage />} />
               <Route path="gallery" element={<GalleryPage />} />
+              <Route path="blog" element={<BlogManagementPage />} />
+              <Route path="partners" element={<AdminPartnersPage />} />
               <Route path="profile" element={<AdminProfilePage />} />
-              {/* Add more admin routes here later */}
             </Route>
 
             {/* ================= User Dashboard ================= */}

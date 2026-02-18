@@ -16,10 +16,10 @@ export interface Video {
   category: string;
 }
 
-export type CategoryType = 
-  | 'Toutes les catégories'
-  | 'Bien-être Mental'
-  | 'Gestion du Stress'
-  | 'Thérapies et Coaching'
-  | 'Relations Sociales'
-  | 'Développement Personnel';
+export type CategoryType =
+  | 'All Categories'
+  | 'Mental Wellbeing'
+  | 'Stress Management'
+  | 'Therapy & Coaching'
+  | 'Social Relations'
+  | 'Personal Development';

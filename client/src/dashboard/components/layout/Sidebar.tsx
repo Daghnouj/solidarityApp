@@ -1,13 +1,15 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileCheck, 
-  Building2, 
-  Images, 
+import {
+  LayoutDashboard,
+  Users,
+  FileCheck,
+  Building2,
+  Images,
   User,
-  Shield
+  Shield,
+  BookOpen,
+  Handshake
 } from "lucide-react";
 
 const Sidebar: React.FC = () => {
@@ -39,13 +41,23 @@ const Sidebar: React.FC = () => {
       icon: Images
     },
     {
+      path: "/admin/blog",
+      label: "Blog",
+      icon: BookOpen
+    },
+    {
+      path: "/admin/partners",
+      label: "Partners",
+      icon: Handshake
+    },
+    {
       path: "/admin/profile",
       label: "Profile",
       icon: User
     }
   ];
 
-  return ( 
+  return (
     <aside className="fixed left-0 top-0 h-full w-20 md:w-72 bg-gradient-to-b from-blue-900 to-blue-800 text-white p-3 md:p-4 lg:p-6 shadow-2xl z-50 overflow-y-auto">
       {/* Logo */}
       <div className="flex items-center gap-2 md:gap-3 mb-8 md:mb-12">
@@ -66,10 +78,9 @@ const Sidebar: React.FC = () => {
             to={item.path}
             end={item.end}
             className={({ isActive }) =>
-              `flex items-center gap-2 md:gap-3 px-2 md:px-3 lg:px-4 py-2 md:py-3 rounded-lg md:rounded-xl transition-all duration-300 text-sm md:text-base ${
-                isActive 
-                  ? "bg-orange-500 text-white shadow-lg transform scale-105" 
-                  : "text-blue-100 hover:bg-blue-800/50"
+              `flex items-center gap-2 md:gap-3 px-2 md:px-3 lg:px-4 py-2 md:py-3 rounded-lg md:rounded-xl transition-all duration-300 text-sm md:text-base ${isActive
+                ? "bg-orange-500 text-white shadow-lg transform scale-105"
+                : "text-blue-100 hover:bg-blue-800/50"
               }`
             }
           >

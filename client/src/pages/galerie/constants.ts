@@ -7,12 +7,12 @@ import gg4 from '../../assets/gg4.jpeg';
 import type { Article, Video, CategoryType } from './types';
 
 export const CATEGORIES: CategoryType[] = [
-  'Toutes les catégories',
-  'Bien-être Mental',
-  'Gestion du Stress',
-  'Thérapies et Coaching',
-  'Relations Sociales',
-  'Développement Personnel',
+  'All Categories',
+  'Mental Wellbeing',
+  'Stress Management',
+  'Therapy & Coaching',
+  'Social Relations',
+  'Personal Development',
 ];
 
 export const ARTICLES: Article[] = [

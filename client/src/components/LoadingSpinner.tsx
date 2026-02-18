@@ -1,4 +1,5 @@
 import React from 'react';
+import logoSrc from '../assets/logo.png';
 
 interface LoadingSpinnerProps {
     message?: string;
@@ -7,33 +8,101 @@ interface LoadingSpinnerProps {
 }
 
 /**
- * Unified loading spinner component used across all pages
- * Provides consistent loading experience for admin, user, professional dashboards and public pages
- * Uses the same double-circle spinner design as the community page
+ * Branded loading spinner featuring the Solidarity logo
+ * with a pulsing animation and orbiting ring.
+ * Used across all pages for a consistent loading experience.
  */
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
     message = 'Loading...',
     fullScreen = true,
     size = 'md'
 }) => {
-    const sizeClasses = {
-        sm: 'h-12 w-12',
-        md: 'h-16 w-16',
-        lg: 'h-20 w-20'
+    const sizeMap = {
+        sm: { logo: 48, ring: 72 },
+        md: { logo: 72, ring: 104 },
+        lg: { logo: 96, ring: 136 },
     };
 
-    const containerClasses = fullScreen
-        ? 'flex items-center justify-center min-h-screen'
-        : 'flex items-center justify-center py-12';
+    const { logo: logoSize, ring: ringSize } = sizeMap[size];
+
+    const containerStyle: React.CSSProperties = fullScreen
+        ? { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }
+        : { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 0' };
 
     return (
-        <div className={containerClasses}>
-            <div className="flex flex-col items-center gap-4">
-                <div className="relative">
-                    <div className={`${sizeClasses[size]} rounded-full border-t-4 border-b-4 border-indigo-200`}></div>
-                    <div className={`absolute top-0 left-0 ${sizeClasses[size]} rounded-full border-t-4 border-indigo-600 animate-spin`}></div>
+        <div style={containerStyle}>
+            <div
+                style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '1.25rem',
+                    animation: 'solidarity-fade-in 0.5s ease-out',
+                }}
+            >
+                {/* Logo + orbiting ring */}
+                <div
+                    style={{
+                        position: 'relative',
+                        width: ringSize,
+                        height: ringSize,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}
+                >
+                    {/* Orbiting ring */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            borderRadius: '50%',
+                            border: '3px solid #e0e7ff',
+                            borderTopColor: '#6366f1',
+                            borderRightColor: '#6366f1',
+                            animation: 'solidarity-ring-spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite',
+                        }}
+                    />
+
+                    {/* Second faint ring (decorative) */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: 4,
+                            borderRadius: '50%',
+                            border: '2px solid transparent',
+                            borderBottomColor: '#a5b4fc',
+                            borderLeftColor: '#a5b4fc',
+                            animation: 'solidarity-ring-spin 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite reverse',
+                        }}
+                    />
+
+                    {/* Logo */}
+                    <img
+                        src={logoSrc}
+                        alt="Solidarity"
+                        style={{
+                            width: logoSize,
+                            height: 'auto',
+                            objectFit: 'contain',
+                            animation: 'solidarity-pulse 2s ease-in-out infinite',
+                            filter: 'drop-shadow(0 2px 8px rgba(99, 102, 241, 0.15))',
+                        }}
+                    />
                 </div>
-                <p className="text-gray-600 text-sm md:text-base font-medium">{message}</p>
+
+                {/* Message */}
+                <p
+                    style={{
+                        color: '#6b7280',
+                        fontSize: size === 'sm' ? '0.75rem' : '0.875rem',
+                        fontWeight: 500,
+                        letterSpacing: '0.025em',
+                        animation: 'solidarity-fade-in 0.8s ease-out 0.3s both',
+                    }}
+                >
+                    {message}
+                </p>
             </div>
         </div>
     );

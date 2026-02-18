@@ -17,7 +17,9 @@ import {
   RefreshCw,
   AlertCircle,
   X,
-  Save
+  Save,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 // Utilisation exclusive de la variable d'environnement VITE_API_URL
@@ -122,6 +124,11 @@ const UsersPage: React.FC = () => {
     userId: null,
     userName: null
   });
+
+  // Bulk delete state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Fonction pour convertir l'utilisateur backend vers frontend
   const mapBackendToFrontend = (backendUser: BackendUser): User => {
@@ -566,6 +573,50 @@ const UsersPage: React.FC = () => {
     }
   };
 
+  // Bulk delete handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedUsers.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(paginatedUsers.map(u => u.id)));
+    }
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    setBulkDeleting(true);
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      const deletePromises = Array.from(selectedIds).map(id =>
+        fetch(`${API_BASE_URL}/users/profile/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+      );
+      await Promise.all(deletePromises);
+      setSelectedIds(new Set());
+      setBulkDeleteConfirmOpen(false);
+      await fetchUsers();
+      alert(`${selectedIds.size} user(s) deleted successfully!`);
+    } catch (err: any) {
+      console.error('Error bulk deleting:', err);
+      setError(err.message || 'Failed to delete some users');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   // Initial fetch et filtrage
   useEffect(() => {
     fetchUsers();
@@ -612,7 +663,24 @@ const UsersPage: React.FC = () => {
           <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-900">Users Management</h1>
           <p className="text-gray-600 text-xs sm:text-sm md:text-base mt-1">View and manage all platform users</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="ghost"
+            icon={selectedIds.size === paginatedUsers.length && paginatedUsers.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
+            onClick={toggleSelectAll}
+            className="text-xs sm:text-sm"
+          >
+            {selectedIds.size === paginatedUsers.length && paginatedUsers.length > 0 ? 'Deselect All' : 'Select All'}
+          </Button>
+          {selectedIds.size > 0 && (
+            <Button
+              icon={<Trash2 size={16} />}
+              className="text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white border-red-600"
+              onClick={() => setBulkDeleteConfirmOpen(true)}
+            >
+              Delete Selected ({selectedIds.size})
+            </Button>
+          )}
           <Button
             variant="ghost"
             icon={<RefreshCw size={16} className="sm:w-[18px] sm:h-[18px]" />}
@@ -747,6 +815,14 @@ const UsersPage: React.FC = () => {
               <table className="w-full min-w-[800px]">
                 <thead className="bg-gradient-to-r from-blue-900 to-blue-800">
                   <tr>
+                    <th className="px-3 py-3 sm:py-4 text-center w-12">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.size === paginatedUsers.length && paginatedUsers.length > 0}
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 rounded cursor-pointer"
+                      />
+                    </th>
                     <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white">User</th>
                     <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white hidden md:table-cell">Contact</th>
                     <th className="px-3 sm:px-4 md:px-6 py-3 sm:py-4 text-left text-xs sm:text-sm font-semibold text-white">Role</th>
@@ -758,7 +834,16 @@ const UsersPage: React.FC = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {paginatedUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-blue-50/50 transition-colors">
+                    <tr key={user.id} className={`hover:bg-blue-50/50 transition-colors ${selectedIds.has(user.id) ? 'bg-blue-50 ring-1 ring-inset ring-blue-200' : ''}`}>
+                      {/* Checkbox */}
+                      <td className="px-3 py-3 sm:py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(user.id)}
+                          onChange={() => toggleSelect(user.id)}
+                          className="w-4 h-4 rounded cursor-pointer"
+                        />
+                      </td>
                       {/* User Info */}
                       <td className="px-3 sm:px-4 md:px-6 py-3 sm:py-4">
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -1261,6 +1346,32 @@ const UsersPage: React.FC = () => {
                   {confirmDialog.type === 'suspend' && 'Suspend'}
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="text-red-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete {selectedIds.size} User(s)?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete <span className="font-bold text-red-600">{selectedIds.size}</span> selected user(s)?
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setBulkDeleteConfirmOpen(false)} disabled={bulkDeleting}>Cancel</Button>
+              <Button icon={<Trash2 size={18} />} className="bg-red-600 hover:bg-red-700 text-white border-red-600" onClick={handleBulkDeleteConfirm} disabled={bulkDeleting}>
+                {bulkDeleting ? 'Deleting...' : `Delete All (${selectedIds.size})`}
+              </Button>
             </div>
           </div>
         </div>

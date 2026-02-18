@@ -4,13 +4,10 @@ import Button from './components/ui/Button';
 import LoadingSpinner from '../components/LoadingSpinner';
 import {
   Search,
-  Filter,
   Plus,
   Edit,
   Trash2,
   MapPin,
-  Phone,
-  Mail,
   Users,
   Star,
   MoreVertical,
@@ -23,7 +20,10 @@ import {
   AlertCircle,
   Upload,
   Save,
-  Trash
+  CheckSquare,
+  Square,
+  Smartphone,
+  Mail
 } from 'lucide-react';
 
 // API Base URL
@@ -43,6 +43,11 @@ interface BackendEvent {
   description: string;
   website?: string;
   category?: string;
+  phone?: string;
+  email?: string;
+  participants?: string[];
+  averageRating?: number;
+  numberOfRatings?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -86,6 +91,14 @@ const ActivitiesCentersPage: React.FC = () => {
   const [editingCenter, setEditingCenter] = useState<Center | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [membersModalOpen, setMembersModalOpen] = useState(false);
+  const [viewingMembersCenter, setViewingMembersCenter] = useState<Center | null>(null);
+  const [centerMembers, setCenterMembers] = useState<any[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
+
 
   // Form states
   const [formData, setFormData] = useState({
@@ -95,13 +108,14 @@ const ActivitiesCentersPage: React.FC = () => {
     description: '',
     website: '',
     category: '',
+    phone: '',
+    email: '',
     activities: [] as Array<{ name: string; day: string }>
   });
-  const [images, setImages] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [images, setImages] = useState<(File | null)[]>(new Array(4).fill(null));
+  const [imagePreviews, setImagePreviews] = useState<(string | null)[]>(new Array(4).fill(null));
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [newActivity, setNewActivity] = useState({ name: '', day: '' });
 
   // Fetch events from server
   const fetchEvents = async () => {
@@ -147,11 +161,11 @@ const ActivitiesCentersPage: React.FC = () => {
             type: type,
             address: event.address,
             city: city,
-            phone: '+216 XX XXX XXX', // Default phone as it's not in event model
-            email: 'contact@center.tn', // Default email as it's not in event model
+            phone: event.phone || '+216 XX XXX XXX',
+            email: event.email || 'contact@center.tn',
             status: 'active' as const, // Default status
-            rating: 4.5, // Default rating
-            members: 0, // Default members
+            rating: event.averageRating || 0,
+            members: event.participants?.length || 0,
             image: image,
             description: event.description,
             website: event.website,
@@ -230,10 +244,18 @@ const ActivitiesCentersPage: React.FC = () => {
         description: backendEvent.description,
         website: backendEvent.website || '',
         category: backendEvent.category || '',
+        phone: backendEvent.phone || '',
+        email: backendEvent.email || '',
         activities: backendEvent.activities || []
       });
-      setImagePreviews(backendEvent.images || []);
-      setImages([]);
+
+      // Initialize with backend images, padding to 4 slots
+      const backendImages = backendEvent.images || [];
+      const paddedPreviews = new Array(4).fill(null);
+      backendImages.forEach((img, i) => { if (i < 4) paddedPreviews[i] = img; });
+      setImagePreviews(paddedPreviews);
+      setImages(new Array(4).fill(null));
+
       setFormError(null);
       setEditModalOpen(true);
     }
@@ -248,12 +270,13 @@ const ActivitiesCentersPage: React.FC = () => {
       description: '',
       website: '',
       category: '',
+      phone: '',
+      email: '',
       activities: []
     });
-    setImages([]);
-    setImagePreviews([]);
+    setImages(new Array(4).fill(null));
+    setImagePreviews(new Array(4).fill(null));
     setFormError(null);
-    setNewActivity({ name: '', day: '' });
     setShowAddModal(true);
   };
 
@@ -261,8 +284,6 @@ const ActivitiesCentersPage: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, index: number) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const newImages = [...images];
-      const newPreviews = [...imagePreviews];
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
@@ -276,44 +297,38 @@ const ActivitiesCentersPage: React.FC = () => {
         return;
       }
 
-      newImages[index] = file;
+      // Update images state immediately
+      setImages(prev => {
+        const next = [...prev];
+        next[index] = file;
+        return next;
+      });
+
+      // Update previews
       const reader = new FileReader();
       reader.onloadend = () => {
-        newPreviews[index] = reader.result as string;
-        setImagePreviews([...newPreviews]);
+        setImagePreviews(prev => {
+          const next = [...prev];
+          next[index] = reader.result as string;
+          return next;
+        });
       };
       reader.readAsDataURL(file);
-      setImages([...newImages]);
       setFormError(null);
     }
   };
 
   // Remove image
   const handleRemoveImage = (index: number) => {
-    const newImages = [...images];
-    const newPreviews = [...imagePreviews];
-    newImages.splice(index, 1);
-    newPreviews.splice(index, 1);
-    setImages(newImages);
-    setImagePreviews(newPreviews);
-  };
-
-  // Add activity
-  const handleAddActivity = () => {
-    if (newActivity.name.trim() && newActivity.day.trim()) {
-      setFormData({
-        ...formData,
-        activities: [...formData.activities, { ...newActivity }]
-      });
-      setNewActivity({ name: '', day: '' });
-    }
-  };
-
-  // Remove activity
-  const handleRemoveActivity = (index: number) => {
-    setFormData({
-      ...formData,
-      activities: formData.activities.filter((_, i) => i !== index)
+    setImages(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
+    });
+    setImagePreviews(prev => {
+      const next = [...prev];
+      next[index] = null;
+      return next;
     });
   };
 
@@ -339,7 +354,7 @@ const ActivitiesCentersPage: React.FC = () => {
         setFormLoading(false);
         return;
       }
-      if (images.length !== 4) {
+      if (images.filter(img => img !== null).length !== 4) {
         setFormError('Exactly 4 images are required');
         setFormLoading(false);
         return;
@@ -369,8 +384,10 @@ const ActivitiesCentersPage: React.FC = () => {
       formDataToSend.append('activities', JSON.stringify(formData.activities));
 
       // Append images
-      images.forEach((image, index) => {
-        formDataToSend.append('photo', image);
+      images.forEach((image) => {
+        if (image) {
+          formDataToSend.append('photo', image);
+        }
       });
 
       const response = await fetch(`${API_BASE_URL}/events`, {
@@ -396,10 +413,12 @@ const ActivitiesCentersPage: React.FC = () => {
         description: '',
         website: '',
         category: '',
+        phone: '',
+        email: '',
         activities: []
       });
-      setImages([]);
-      setImagePreviews([]);
+      setImages(new Array(4).fill(null));
+      setImagePreviews(new Array(4).fill(null));
       alert('Event created successfully!');
     } catch (err: any) {
       console.error('Error creating event:', err);
@@ -433,9 +452,15 @@ const ActivitiesCentersPage: React.FC = () => {
         setFormLoading(false);
         return;
       }
-      // For update, images are optional, but if provided, must be 4
-      if (images.length > 0 && images.length !== 4) {
-        setFormError('If uploading new images, exactly 4 images are required');
+      // Build image mapping to tell server which slots are new and which are existing URLs
+      const imageMapping = imagePreviews.map((preview, index) => {
+        if (images[index]) return '__NEW__';
+        return preview; // Existing URL or null
+      });
+
+      // Validation: Ensure we still end up with 4 images (new or existing)
+      if (imageMapping.filter(url => url !== null).length !== 4) {
+        setFormError('Exactly 4 images are required (new or existing)');
         setFormLoading(false);
         return;
       }
@@ -461,14 +486,21 @@ const ActivitiesCentersPage: React.FC = () => {
       if (formData.category) {
         formDataToSend.append('category', formData.category);
       }
-      formDataToSend.append('activities', JSON.stringify(formData.activities));
-
-      // Append images only if new ones are provided
-      if (images.length === 4) {
-        images.forEach((image) => {
-          formDataToSend.append('photo', image);
-        });
+      if (formData.phone) {
+        formDataToSend.append('phone', formData.phone);
       }
+      if (formData.email) {
+        formDataToSend.append('email', formData.email);
+      }
+      formDataToSend.append('activities', JSON.stringify(formData.activities));
+      formDataToSend.append('imageMapping', JSON.stringify(imageMapping));
+
+      // Append only the NEW images
+      images.forEach((image) => {
+        if (image) {
+          formDataToSend.append('photo', image);
+        }
+      });
 
       const response = await fetch(`${API_BASE_URL}/events/${editingCenter.id}`, {
         method: 'PUT',
@@ -494,10 +526,12 @@ const ActivitiesCentersPage: React.FC = () => {
         description: '',
         website: '',
         category: '',
+        phone: '',
+        email: '',
         activities: []
       });
-      setImages([]);
-      setImagePreviews([]);
+      setImages(new Array(4).fill(null));
+      setImagePreviews(new Array(4).fill(null));
       alert('Event updated successfully!');
     } catch (err: any) {
       console.error('Error updating event:', err);
@@ -548,6 +582,84 @@ const ActivitiesCentersPage: React.FC = () => {
     }
   };
 
+  // Bulk select/delete handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredCenters.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredCenters.map(c => c.id)));
+    }
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setBulkDeleting(true);
+      setError(null);
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) {
+        throw new Error('Admin authentication required');
+      }
+      const deletePromises = Array.from(selectedIds).map(id =>
+        fetch(`${API_BASE_URL}/events/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${adminToken}`,
+            'Content-Type': 'application/json',
+          },
+        })
+      );
+      await Promise.all(deletePromises);
+      setSelectedIds(new Set());
+      setBulkDeleteConfirmOpen(false);
+      await fetchEvents();
+      alert(`${selectedIds.size} event(s) deleted successfully!`);
+    } catch (err: any) {
+      console.error('Error bulk deleting events:', err);
+      setError(err.message || 'Failed to delete some events');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const handleViewMembers = async (center: Center) => {
+    try {
+      setViewingMembersCenter(center);
+      setMembersModalOpen(true);
+      setLoadingMembers(true);
+      setCenterMembers([]);
+
+      const adminToken = localStorage.getItem('adminToken');
+      const response = await fetch(`${API_BASE_URL}/events/${center.id}/members`, {
+        headers: {
+          'Authorization': `Bearer ${adminToken}`,
+        },
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch members');
+      const data = await response.json();
+      if (data.success) {
+        setCenterMembers(data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching members:', err);
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
   const getTypeColor = (type: string) => {
     switch (type.toLowerCase()) {
       case 'therapy': return 'bg-blue-100 text-blue-700 border-blue-200';
@@ -576,7 +688,26 @@ const ActivitiesCentersPage: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-blue-900">Activities & Centers</h1>
           <p className="text-gray-600 text-sm md:text-base mt-1">Manage therapy centers and wellness facilities</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {filteredCenters.length > 0 && (
+            <Button
+              variant="ghost"
+              icon={selectedIds.size === filteredCenters.length ? <CheckSquare size={18} /> : <Square size={18} />}
+              onClick={toggleSelectAll}
+            >
+              {selectedIds.size === filteredCenters.length ? 'Deselect All' : 'Select All'}
+            </Button>
+          )}
+          {selectedIds.size > 0 && (
+            <Button
+              variant="ghost"
+              icon={<Trash2 size={18} />}
+              className="border-red-300 text-red-600 hover:bg-red-50"
+              onClick={() => setBulkDeleteConfirmOpen(true)}
+            >
+              Delete Selected ({selectedIds.size})
+            </Button>
+          )}
           <Button
             variant="ghost"
             icon={<RefreshCw size={18} />}
@@ -676,7 +807,7 @@ const ActivitiesCentersPage: React.FC = () => {
       {/* Centers Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredCenters.map((center) => (
-          <Card key={center.id} hover className="overflow-hidden">
+          <Card key={center.id} hover className={`overflow-hidden ${selectedIds.has(center.id) ? 'ring-2 ring-blue-500' : ''}`}>
             {/* Center Image */}
             <div className="h-48 bg-gray-200 relative overflow-hidden">
               <img
@@ -687,6 +818,19 @@ const ActivitiesCentersPage: React.FC = () => {
                   (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400';
                 }}
               />
+              {/* Selection checkbox */}
+              <div className="absolute top-4 left-4">
+                <button
+                  onClick={(e) => { e.stopPropagation(); toggleSelect(center.id); }}
+                  className="w-8 h-8 rounded-lg bg-white/90 backdrop-blur-sm border border-gray-200 flex items-center justify-center hover:bg-white transition-colors"
+                >
+                  {selectedIds.has(center.id) ? (
+                    <CheckSquare size={18} className="text-blue-600" />
+                  ) : (
+                    <Square size={18} className="text-gray-400" />
+                  )}
+                </button>
+              </div>
               <div className="absolute top-4 right-4 flex gap-2">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm bg-white/90 ${getStatusColor(center.status)}`}>
                   {center.status.charAt(0).toUpperCase() + center.status.slice(1)}
@@ -735,7 +879,10 @@ const ActivitiesCentersPage: React.FC = () => {
                   </div>
                   <p className="text-xs text-gray-600">Rating</p>
                 </div>
-                <div className="text-center">
+                <div
+                  className="text-center cursor-pointer hover:bg-gray-100 transition-colors p-1 rounded-lg"
+                  onClick={(e) => { e.stopPropagation(); handleViewMembers(center); }}
+                >
                   <div className="flex items-center justify-center gap-1 mb-1">
                     <Users size={16} className="text-blue-600" />
                     <span className="font-bold text-blue-900">{center.members}</span>
@@ -962,7 +1109,7 @@ const ActivitiesCentersPage: React.FC = () => {
       {/* Add/Edit Modals */}
       {(showAddModal || editModalOpen) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-8">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto my-8 flex flex-col relative">
             <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
               <h2 className="text-2xl font-bold text-blue-900">
                 {editModalOpen ? 'Edit Center' : 'Add New Center'}
@@ -1102,12 +1249,12 @@ const ActivitiesCentersPage: React.FC = () => {
               {/* Category */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Category (Optional)
+                  Category <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors cursor-pointer"
                 >
                   <option value="">Select category</option>
                   <option value="therapy">Therapy</option>
@@ -1117,64 +1264,10 @@ const ActivitiesCentersPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Activities */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Activities
-                </label>
-                <div className="space-y-3">
-                  {/* Add Activity */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newActivity.name}
-                      onChange={(e) => setNewActivity({ ...newActivity, name: e.target.value })}
-                      className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
-                      placeholder="Activity name"
-                    />
-                    <input
-                      type="text"
-                      value={newActivity.day}
-                      onChange={(e) => setNewActivity({ ...newActivity, day: e.target.value })}
-                      className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 transition-colors"
-                      placeholder="Day (e.g., Monday)"
-                    />
-                    <Button
-                      type="button"
-                      icon={<Plus size={18} />}
-                      onClick={handleAddActivity}
-                      disabled={!newActivity.name.trim() || !newActivity.day.trim()}
-                    >
-                      Add
-                    </Button>
-                  </div>
-
-                  {/* Activities List */}
-                  {formData.activities.length > 0 && (
-                    <div className="space-y-2">
-                      {formData.activities.map((activity, index) => (
-                        <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
-                          <Calendar size={16} className="text-blue-600" />
-                          <div className="flex-1">
-                            <p className="font-medium text-gray-900">{activity.name}</p>
-                            <p className="text-sm text-gray-600">Day: {activity.day}</p>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveActivity(index)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash size={18} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
 
             {/* Footer */}
-            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3 z-10">
               <Button
                 variant="ghost"
                 onClick={() => {
@@ -1193,6 +1286,125 @@ const ActivitiesCentersPage: React.FC = () => {
                 disabled={formLoading}
               >
                 {formLoading ? 'Saving...' : (editModalOpen ? 'Save Changes' : 'Create Center')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 text-left">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="text-red-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete {selectedIds.size} Center(s)?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete <span className="font-bold text-red-600">{selectedIds.size}</span> selected center(s) and all their associated images?
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="ghost"
+                onClick={() => setBulkDeleteConfirmOpen(false)}
+                disabled={bulkDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                icon={<Trash2 size={18} />}
+                className="bg-red-600 hover:bg-red-700 text-white border-red-600 shadow-none"
+                onClick={handleBulkDeleteConfirm}
+                disabled={bulkDeleting}
+              >
+                {bulkDeleting ? 'Deleting...' : `Delete All (${selectedIds.size})`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {membersModalOpen && viewingMembersCenter && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden animate-fade-in">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gray-900 text-white flex items-center justify-center shadow-lg shadow-gray-200">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">Enrolled Members</h3>
+                  <p className="text-sm text-gray-500 font-medium">{viewingMembersCenter.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setMembersModalOpen(false)}
+                className="p-2 hover:bg-white rounded-full transition-colors text-gray-400 hover:text-gray-600 shadow-sm border border-transparent hover:border-gray-100"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingMembers ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <LoadingSpinner />
+                  <p className="text-gray-500 mt-4 font-medium animate-pulse">Loading members...</p>
+                </div>
+              ) : centerMembers.length > 0 ? (
+                <div className="grid gap-4">
+                  {centerMembers.map((member, idx) => (
+                    <div key={idx} className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 border border-gray-100 hover:border-gray-200 hover:bg-white transition-all duration-200 group">
+                      <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-sm flex-shrink-0">
+                        <img
+                          src={member.photo || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.nom)}&background=random`}
+                          alt={member.nom}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-gray-900 truncate group-hover:text-black transition-colors uppercase text-sm tracking-wide">
+                          {member.nom}
+                        </h4>
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Mail size={12} className="text-gray-400" />
+                            <span className="truncate">{member.email}</span>
+                          </div>
+                          {member.telephone && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                              <Smartphone size={12} className="text-gray-400" />
+                              <span className="font-medium text-gray-700">{member.telephone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-dashed border-gray-200">
+                    <Users className="text-gray-400" size={32} />
+                  </div>
+                  <h4 className="text-lg font-bold text-gray-900 mb-1">No members enrolled</h4>
+                  <p className="text-gray-500 text-sm">This center has no members yet.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setMembersModalOpen(false)}
+                className="font-bold text-gray-600 hover:bg-gray-100"
+              >
+                Close
               </Button>
             </div>
           </div>

@@ -1,0 +1,33 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const user_controller_1 = require("./user.controller");
+const protect_1 = require("../../middlewares/protect");
+const cloudinary_1 = require("../../config/cloudinary/cloudinary");
+const optionalAuth_1 = require("../../middlewares/optionalAuth");
+const router = express_1.default.Router();
+router.get("/profile/me", protect_1.protect, user_controller_1.getProfile);
+router.get("/profile/:userId", protect_1.protect, user_controller_1.getProfile);
+router.put("/profile/:userId", protect_1.protect, user_controller_1.updateProfile);
+router.put("/profile/:userId/password", protect_1.protect, user_controller_1.updatePassword);
+router.put("/profile/:userId/photo", protect_1.protect, cloudinary_1.uploadProfile.single("photo"), user_controller_1.updateProfilePhoto);
+router.delete("/profile/:userId", protect_1.protect, user_controller_1.deleteProfile);
+router.put("/profile/:userId/deactivate", protect_1.protect, user_controller_1.deactivateAccount);
+router.put("/profile/:userId/activate", protect_1.protect, user_controller_1.activateAccount);
+router.get('/profile/:userId/saved-specialists', protect_1.protect, user_controller_1.getSavedSpecialists);
+router.post('/profile/:userId/saved-specialists/:professionalId', protect_1.protect, user_controller_1.saveSpecialist);
+router.delete('/profile/:userId/saved-specialists/:professionalId', protect_1.protect, user_controller_1.unsaveSpecialist);
+router.get('/public/:id', user_controller_1.getPublicProfessional);
+router.get('/me', protect_1.protect, user_controller_1.getCurrentUser);
+router.get('/:id', protect_1.protect, user_controller_1.getUserById);
+router.get('/', optionalAuth_1.optionalAuth, user_controller_1.getAllUsers);
+router.get('/me', protect_1.protect, user_controller_1.getCurrentUser);
+router.get('/:id', protect_1.protect, user_controller_1.getUserById);
+router.get('/public/:id', user_controller_1.getUserById);
+router.get('/:id', protect_1.protect, user_controller_1.getUserById);
+router.get('/', user_controller_1.getAllUsers);
+exports.default = router;
+//# sourceMappingURL=user.routes.js.map
