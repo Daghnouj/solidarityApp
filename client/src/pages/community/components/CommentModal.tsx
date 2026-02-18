@@ -133,7 +133,7 @@ export default function CommentModal({
                     )}
                   </div>
                   <span className="text-[10px] text-gray-500">
-                    {post.isAnonymous ? "User" : ((post.user?.role || post.userRole) === 'patient' ? 'Membre' : (post.user?.role || post.userRole) === 'professional' ? '' : (post.user?.role || post.userRole))} {post.isAnonymous ? "" : "•"} {new Date(post.date).toLocaleDateString()}
+                    {post.isAnonymous ? "User" : ((post.user?.role || post.userRole) === 'patient' ? 'Member' : (post.user?.role || post.userRole) === 'professional' ? '' : (post.user?.role || post.userRole))} {post.isAnonymous ? "" : "•"} {new Date(post.date).toLocaleDateString()}
                   </span>
                 </div>
               </div>
@@ -189,8 +189,8 @@ export default function CommentModal({
                                   </div>
                                 ) : (
                                   <>
-                                    <button onClick={() => setEditingItem({ id: c._id, text: c.text, type: 'comment' })} className="text-gray-400 hover:text-indigo-600 transition-colors" title="Modifier"><FaPencilAlt size={10} /></button>
-                                    <button onClick={() => setConfirmDelete({ id: c._id, type: 'comment' })} className="text-gray-400 hover:text-red-500 transition-colors" title="Supprimer"><FaTrashAlt size={10} /></button>
+                                    <button onClick={() => setEditingItem({ id: c._id, text: c.text, type: 'comment' })} className="text-gray-400 hover:text-indigo-600 transition-colors" title="Edit"><FaPencilAlt size={10} /></button>
+                                    <button onClick={() => setConfirmDelete({ id: c._id, type: 'comment' })} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete"><FaTrashAlt size={10} /></button>
                                   </>
                                 )}
                               </div>
@@ -261,8 +261,8 @@ export default function CommentModal({
                                         </div>
                                       ) : (
                                         <>
-                                          <button onClick={() => setEditingItem({ id: r._id, text: r.text, type: 'reply', parentId: c._id })} className="text-gray-400 hover:text-indigo-600 transition-colors" title="Modifier"><FaPencilAlt size={9} /></button>
-                                          <button onClick={() => setConfirmDelete({ id: r._id, type: 'reply', parentId: c._id })} className="text-gray-400 hover:text-red-500 transition-colors" title="Supprimer"><FaTrashAlt size={9} /></button>
+                                          <button onClick={() => setEditingItem({ id: r._id, text: r.text, type: 'reply', parentId: c._id })} className="text-gray-400 hover:text-indigo-600 transition-colors" title="Edit"><FaPencilAlt size={9} /></button>
+                                          <button onClick={() => setConfirmDelete({ id: r._id, type: 'reply', parentId: c._id })} className="text-gray-400 hover:text-red-500 transition-colors" title="Delete"><FaTrashAlt size={9} /></button>
                                         </>
                                       )}
                                     </div>

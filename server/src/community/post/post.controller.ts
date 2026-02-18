@@ -5,14 +5,18 @@ import { getIOInstance } from '../../socket';
 
 export const createPost = async (req: SocketIORequest, res: Response): Promise<void> => {
   try {
-    const { content, isAnonymous } = req.body as { content: string, isAnonymous?: boolean };
+    const { content, isAnonymous, sharedContent } = req.body as {
+      content: string,
+      isAnonymous?: boolean,
+      sharedContent?: any
+    };
 
     if (!req.user) {
       res.status(401).json({ message: 'Non autorisé' });
       return;
     }
 
-    const post = await PostService.createPost({ content, isAnonymous }, req.user, getIOInstance());
+    const post = await PostService.createPost({ content, isAnonymous, sharedContent }, req.user, getIOInstance());
 
     res.status(201).json({
       success: true,

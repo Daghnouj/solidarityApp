@@ -131,6 +131,7 @@ export default function AddPostModal({ visible, onClose, onSubmit, initialConten
                   </span>
                 ))}
               </div>
+
             </div>
 
             <div className="px-6 pb-6 relative">

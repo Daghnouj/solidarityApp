@@ -11,6 +11,8 @@ import { adminOverviewRoutes } from "./src/admin/adminOverview/adminOverview.rou
 import { adminNotificationRoutes } from "./src/admin/adminNotification/adminNotification.routes";
 import galleryRouter from "./src/gallery/gallery.routes";
 import contactRouter from "./src/contact/contact.routes";
+import aiChatRouter from "./src/chat/ai-chat.routes";
+
 import eventRoutes from "./src/event/event.routes";
 import partnersRoutes from "./src/partners/partners.routes";
 import postRoutes from "./src/community/post/post.routes";
@@ -23,6 +25,7 @@ import notificationRoutes from "./src/community/notification/notification.routes
 import exploreRoutes from "./src/community/explore/explore.routes";
 import chatRoutes from "./src/chat/chat.routes";
 import reviewRoutes from "./src/review/review.routes";
+import blogRoutes from "./src/blog/blog.routes";
 import { authLimiter, basicSecurity, generalLimiter, noSqlInjectionMiddleware } from "./middlewares/security";
 import { requestLogger } from "./middlewares/logger";
 import { notFoundHandler, errorHandler } from "./middlewares/errorHandler";
@@ -73,6 +76,8 @@ app.use("/api/auth/", authLimiter);
 app.use("/api/", generalLimiter);
 
 // 🛣️ 7. Routes
+app.use("/api/blog", blogRoutes);
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/password", passwordRoutes);
@@ -83,6 +88,8 @@ app.use('/api/admin/verification', verificationRouter);
 app.use('/api/admin/overview', adminOverviewRoutes);
 app.use('/api/admin/notifications', adminNotificationRoutes);
 app.use('/api/contact', contactRouter);
+app.use('/api/ai-chat', aiChatRouter);
+
 app.use('/api/gallery', galleryRouter);
 app.use('/api/professional', professionnelRouter);
 app.use('/api/partners', partnersRoutes);

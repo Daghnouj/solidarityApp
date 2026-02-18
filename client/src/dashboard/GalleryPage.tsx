@@ -19,7 +19,9 @@ import {
   X,
   AlertCircle,
   Save,
-  Play
+  Play,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 // API Base URL
@@ -101,6 +103,11 @@ const GalleryPage: React.FC = () => {
   });
   const [formError, setFormError] = useState<string | null>(null);
   const [formLoading, setFormLoading] = useState(false);
+
+  // Bulk delete state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Fetch gallery items from server
   const fetchGalleryItems = async () => {
@@ -319,6 +326,49 @@ const GalleryPage: React.FC = () => {
     }
   };
 
+  // Bulk delete handlers
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredItems.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredItems.map(i => i.id)));
+    }
+  };
+
+  const handleBulkDeleteConfirm = async () => {
+    setBulkDeleting(true);
+    try {
+      const adminToken = localStorage.getItem('adminToken');
+      if (!adminToken) throw new Error('Admin authentication required');
+
+      const deletePromises = Array.from(selectedIds).map(id =>
+        fetch(`${API_BASE_URL}/gallery/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' },
+        })
+      );
+      await Promise.all(deletePromises);
+      await fetchGalleryItems();
+      setSelectedIds(new Set());
+      setBulkDeleteConfirmOpen(false);
+      alert(`${selectedIds.size} item(s) deleted successfully!`);
+    } catch (err: any) {
+      console.error('Error bulk deleting:', err);
+      setError(err.message || 'Failed to delete some items');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   // Handle view
   const handleView = (item: GalleryItem) => {
     setSelectedItem(item);
@@ -354,7 +404,23 @@ const GalleryPage: React.FC = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-blue-900">Gallery</h1>
           <p className="text-gray-600 text-sm md:text-base mt-1">Manage platform images and media content</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant="ghost"
+            icon={selectedIds.size === filteredItems.length && filteredItems.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
+            onClick={toggleSelectAll}
+          >
+            {selectedIds.size === filteredItems.length && filteredItems.length > 0 ? 'Deselect All' : 'Select All'}
+          </Button>
+          {selectedIds.size > 0 && (
+            <Button
+              icon={<Trash2 size={18} />}
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              onClick={() => setBulkDeleteConfirmOpen(true)}
+            >
+              Delete Selected ({selectedIds.size})
+            </Button>
+          )}
           <Button
             variant="ghost"
             icon={<RefreshCw size={18} />}
@@ -459,7 +525,16 @@ const GalleryPage: React.FC = () => {
       {viewMode === 'grid' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item) => (
-            <Card key={item.id} hover className="overflow-hidden group">
+            <Card key={item.id} hover className={`overflow-hidden group relative ${selectedIds.has(item.id) ? 'ring-2 ring-blue-500' : ''}`}>
+              {/* Checkbox */}
+              <div className="absolute top-3 left-3 z-10">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(item.id)}
+                  onChange={() => toggleSelect(item.id)}
+                  className="w-5 h-5 rounded cursor-pointer shadow-sm"
+                />
+              </div>
               {/* Image */}
               <div className="relative h-64 bg-gray-200 overflow-hidden">
                 <img
@@ -543,8 +618,17 @@ const GalleryPage: React.FC = () => {
       {viewMode === 'list' && (
         <div className="space-y-4">
           {filteredItems.map((item) => (
-            <Card key={item.id} hover className="p-6">
+            <Card key={item.id} hover className={`p-6 ${selectedIds.has(item.id) ? 'ring-2 ring-blue-500' : ''}`}>
               <div className="flex gap-6">
+                {/* Checkbox */}
+                <div className="flex items-start pt-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(item.id)}
+                    onChange={() => toggleSelect(item.id)}
+                    className="w-5 h-5 rounded cursor-pointer"
+                  />
+                </div>
                 {/* Thumbnail */}
                 <div className="w-32 h-32 bg-gray-200 rounded-xl overflow-hidden flex-shrink-0 relative">
                   <img
@@ -905,6 +989,32 @@ const GalleryPage: React.FC = () => {
                 className="bg-red-600 hover:bg-red-700 text-white"
               >
                 Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {bulkDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="text-red-600" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Delete {selectedIds.size} Item(s)?</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to permanently delete <span className="font-bold text-red-600">{selectedIds.size}</span> selected gallery item(s)?
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => setBulkDeleteConfirmOpen(false)} disabled={bulkDeleting}>Cancel</Button>
+              <Button icon={<Trash2 size={18} />} className="bg-red-600 hover:bg-red-700 text-white border-red-600" onClick={handleBulkDeleteConfirm} disabled={bulkDeleting}>
+                {bulkDeleting ? 'Deleting...' : `Delete All (${selectedIds.size})`}
               </Button>
             </div>
           </div>

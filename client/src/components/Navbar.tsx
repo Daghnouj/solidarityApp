@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, Link, useNavigate } from "react-router-dom";
 import logo from "../assets/logo.png";
 import UserProfileDropdown from "./UserProfileDropdown";
 import { useAuth } from "../pages/auth/hooks/useAuth";
@@ -250,7 +250,7 @@ const Header = () => {
               </button>
               <div className="absolute top-full left-0 mt-2 w-52 bg-white border border-gray-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
                 <div className="p-2">
-                  <NavLink to="/apropos" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                  <NavLink to="/about" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
                     About
                   </NavLink>
                   <NavLink to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
@@ -259,9 +259,10 @@ const Header = () => {
                   <NavLink to="/professionals" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
                     Professionals
                   </NavLink>
-                  <NavLink to="/test" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
-                    Mental Test
+                  <NavLink to="/partners" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                    Partners
                   </NavLink>
+
                 </div>
               </div>
             </div>
@@ -290,9 +291,9 @@ const Header = () => {
                   <NavLink to="/galerie" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
                     Gallery
                   </NavLink>
-                  <a href="https://solidarity-mentalhealth.blogspot.com" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
+                  <Link to="/blog" className="block px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 rounded-lg transition-colors">
                     Blog
-                  </a>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -426,7 +427,7 @@ const Header = () => {
                           ))
                         ) : (
                           <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                            Pas de messages récents
+                            No recent messages
                           </div>
                         )}
                       </div>
@@ -480,10 +481,11 @@ const Header = () => {
           </button>
           {solidarityOpen && (
             <div className="pl-4 space-y-1 bg-gray-50/50 rounded-xl p-2 mb-2">
-              <NavLink to="/apropos" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">About</NavLink>
+              <NavLink to="/about" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">About</NavLink>
               <NavLink to="/contact" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Contact</NavLink>
               <NavLink to="/professionals" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Professionals</NavLink>
-              <NavLink to="/test" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Mental Test</NavLink>
+              <NavLink to="/partners" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Partners</NavLink>
+
             </div>
           )}
 
@@ -502,7 +504,7 @@ const Header = () => {
             <div className="pl-4 space-y-1 bg-gray-50/50 rounded-xl p-2 mb-2">
               <NavLink to="/community" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Community</NavLink>
               <NavLink to="/galerie" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Gallery</NavLink>
-              <a href="https://solidarity-mentalhealth.blogspot.com" target="_blank" rel="noopener noreferrer" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Blog</a>
+              <NavLink to="/blog" className="block px-4 py-2 text-sm text-gray-600 hover:text-blue-600 rounded-lg">Blog</NavLink>
             </div>
           )}
 

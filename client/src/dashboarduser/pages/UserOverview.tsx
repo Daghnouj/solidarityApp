@@ -88,9 +88,18 @@ const UserOverview: React.FC = () => {
                     </h1>
                     <p className="text-gray-500 mt-1">Here's what's happening with your wellness journey today.</p>
                 </div>
-                <button className="px-6 py-2.5 bg-gray-900 hover:bg-black text-white rounded-xl text-sm font-semibold shadow-lg shadow-gray-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
-                    Find a Specialist
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => window.location.href = '/test'}
+                        className="px-6 py-2.5 bg-gradient-to-r from-teal-500 to-green-500 hover:from-teal-600 hover:to-green-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-teal-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2"
+                    >
+                        <Activity size={16} />
+                        Wellness Hub
+                    </button>
+                    <button className="px-6 py-2.5 bg-gray-900 hover:bg-black text-white rounded-xl text-sm font-semibold shadow-lg shadow-gray-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                        Find a Specialist
+                    </button>
+                </div>
             </div>
 
             {/* Stats Grid */}

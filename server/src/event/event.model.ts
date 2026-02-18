@@ -8,19 +8,19 @@ export interface IEventDocument extends IEvent, Document {
 }
 
 const ActivitySchema = new Schema({
-  name: { 
-    type: String, 
-    required: [true, 'Le nom de l\'activité est requis'] 
+  name: {
+    type: String,
+    required: [true, 'Le nom de l\'activité est requis']
   },
-  day: { 
-    type: String, 
-    required: [true, 'Le jour de l\'activité est requis'] 
+  day: {
+    type: String,
+    required: [true, 'Le jour de l\'activité est requis']
   }
 });
 
 const EventSchema = new Schema<IEventDocument>({
-  name: { 
-    type: String, 
+  name: {
+    type: String,
     required: [true, 'Le nom de l\'événement est requis'],
     trim: true
   },
@@ -32,28 +32,53 @@ const EventSchema = new Schema<IEventDocument>({
       message: 'Il faut exactement 4 images.'
     }
   },
-  address: { 
-    type: String, 
+  address: {
+    type: String,
     required: [true, 'L\'adresse est requise'],
     trim: true
   },
-  coordinates: { 
+  coordinates: {
     type: String,
     trim: true
   },
   activities: [ActivitySchema],
-  description: { 
-    type: String, 
+  description: {
+    type: String,
     required: [true, 'La description est requise'],
     trim: true
   },
-  website: { 
+  website: {
     type: String,
     trim: true
   },
-  category: { 
+  category: {
     type: String,
     trim: true
+  },
+  phone: {
+    type: String,
+    trim: true
+  },
+  email: {
+    type: String,
+    trim: true
+  },
+  participants: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  ratings: [{
+    user: { type: Schema.Types.ObjectId, ref: 'User' },
+    rating: { type: Number, required: true, min: 1, max: 5 },
+    createdAt: { type: Date, default: Date.now }
+  }],
+  averageRating: {
+    type: Number,
+    default: 0
+  },
+  numberOfRatings: {
+    type: Number,
+    default: 0
   }
 }, {
   timestamps: true

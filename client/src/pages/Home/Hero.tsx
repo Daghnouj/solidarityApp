@@ -13,7 +13,7 @@ const HeroSection = () => {
   };
 
   const navigationOptions = [
-    { label: "About", value: "/apropos" },
+    { label: "About", value: "/about" },
     { label: "Contact", value: "/contact" },
     { label: "Professionals Directory", value: "/professionals" },
     { label: "Book Reservation", value: "/Professionals" },
@@ -25,7 +25,7 @@ const HeroSection = () => {
   return (
     <section className="w-full bg-[#F5A146] mt-20">
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center lg:items-center  lg:gap-20 pt-24 pb-24  ">
-        
+
         {/* Left Text Section */}
         <div className="flex-1 text-white">
           <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold leading-tight">
@@ -50,9 +50,8 @@ const HeroSection = () => {
               ))}
             </select>
             <button
-              className={`w-full sm:w-auto px-6 py-3 rounded-full text-white font-medium transition-colors ${
-                selectedOption ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-400 cursor-not-allowed"
-              }`}
+              className={`w-full sm:w-auto px-6 py-3 rounded-full text-white font-medium transition-colors ${selectedOption ? "bg-blue-600 hover:bg-blue-700" : "bg-blue-400 cursor-not-allowed"
+                }`}
               onClick={handleGoClick}
               disabled={!selectedOption}
             >

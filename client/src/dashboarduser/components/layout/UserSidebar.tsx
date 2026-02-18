@@ -39,6 +39,11 @@ const UserSidebar: React.FC = () => {
             icon: User
         },
         {
+            path: "/test",
+            label: "Wellness Hub",
+            icon: Heart
+        },
+        {
             path: "/",
             label: "Main Site",
             icon: Home

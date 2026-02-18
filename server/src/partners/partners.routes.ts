@@ -8,7 +8,7 @@ const router = Router();
 
 // Créer un partenaire (admin uniquement)
 router.post(
-  'add/',
+  '/add',
   protectAdmin,
   uploadPartenaireLogo.single('logo'),
   validate(partenaireValidation.create),

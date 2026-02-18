@@ -11,6 +11,13 @@ export interface ActivityCenter {
   images: string[];
   coordinates?: string;
   activities: Activity[];
+  website?: string;
+  category?: string;
+  phone?: string;
+  email?: string;
+  participants: string[];
+  averageRating: number;
+  numberOfRatings: number;
 }
 
 export interface LightboxState {

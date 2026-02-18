@@ -17,12 +17,12 @@ const partenaireLogoStorage = new CloudinaryStorage({
   params: {
     folder: "partenaires/logos",
     allowed_formats: ["jpg", "png", "jpeg", "webp", "svg", "gif"],
-    transformation: [{ 
-      width: 300, 
-      height: 300, 
-      crop: "fill", 
+    transformation: [{
+      width: 300,
+      height: 300,
+      crop: "fill",
       gravity: "auto",
-      quality: "auto:good" 
+      quality: "auto:good"
     }],
   } as any,
 });
@@ -33,12 +33,12 @@ const profileStorage = new CloudinaryStorage({
   params: {
     folder: "profiles",
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
-    transformation: [{ 
-      width: 500, 
-      height: 500, 
-      crop: "fill", 
+    transformation: [{
+      width: 500,
+      height: 500,
+      crop: "fill",
       gravity: "face",
-      quality: "auto:good" 
+      quality: "auto:good"
     }],
   } as any,
 });
@@ -59,11 +59,11 @@ const bannerStorage = new CloudinaryStorage({
   params: {
     folder: "banners",
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
-    transformation: [{ 
-      width: 1200, 
-      height: 600, 
-      crop: "fill", 
-      quality: "auto:good" 
+    transformation: [{
+      width: 1200,
+      height: 600,
+      crop: "fill",
+      quality: "auto:good"
     }],
   } as any,
 });
@@ -74,11 +74,11 @@ const productImageStorage = new CloudinaryStorage({
   params: {
     folder: "products",
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
-    transformation: [{ 
-      width: 800, 
-      height: 800, 
-      crop: "fill", 
-      quality: "auto:good" 
+    transformation: [{
+      width: 800,
+      height: 800,
+      crop: "fill",
+      quality: "auto:good"
     }],
   } as any,
 });
@@ -89,60 +89,79 @@ const avatarStorage = new CloudinaryStorage({
   params: {
     folder: "avatars",
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
-    transformation: [{ 
-      width: 200, 
-      height: 200, 
-      crop: "fill", 
+    transformation: [{
+      width: 200,
+      height: 200,
+      crop: "fill",
       gravity: "face",
-      quality: "auto:good" 
+      quality: "auto:good"
     }],
   } as any,
 });
+const blogStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: "blog",
+    allowed_formats: ["jpg", "png", "jpeg", "webp"],
+    transformation: [{
+      width: 1200,
+      height: 800,
+      crop: "fill",
+      quality: "auto:good"
+    }],
+  } as any,
+});
+
+export const uploadBlogImage = multer({
+  storage: blogStorage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
+
 const eventStorage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: "events",
     allowed_formats: ["jpg", "png", "jpeg", "webp"],
-    transformation: [{ 
-      width: 1200, 
-      height: 800, 
-      crop: "fill", 
-      quality: "auto:good" 
+    transformation: [{
+      width: 1200,
+      height: 800,
+      crop: "fill",
+      quality: "auto:good"
     }],
   } as any,
 });
 
-export const uploadEventImages = multer({ 
+export const uploadEventImages = multer({
   storage: eventStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 // Export des différents uploaders
-export const uploadPartenaireLogo = multer({ 
+export const uploadPartenaireLogo = multer({
   storage: partenaireLogoStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-export const uploadProfile = multer({ 
+export const uploadProfile = multer({
   storage: profileStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-export const uploadDocument = multer({ 
+export const uploadDocument = multer({
   storage: documentStorage,
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
-export const uploadBanner = multer({ 
+export const uploadBanner = multer({
   storage: bannerStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-export const uploadProductImage = multer({ 
+export const uploadProductImage = multer({
   storage: productImageStorage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-export const uploadAvatar = multer({ 
+export const uploadAvatar = multer({
   storage: avatarStorage,
   limits: { fileSize: 3 * 1024 * 1024 } // 3MB limit
 });
@@ -166,7 +185,7 @@ export const deleteCloudinaryFile = async (publicId: string): Promise<void> => {
 };
 
 export const uploadToCloudinary = async (
-  filePath: string, 
+  filePath: string,
   options: {
     folder?: string;
     transformation?: any[];
@@ -179,7 +198,7 @@ export const uploadToCloudinary = async (
       transformation: options.transformation,
       public_id: options.public_id,
     });
-    
+
     return {
       url: result.secure_url,
       public_id: result.public_id

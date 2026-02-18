@@ -1,6 +1,7 @@
 import express from 'express';
 import { EventController } from './event.controller';
 import { protectAdmin } from '../../middlewares/protectAdmin';
+import { protect } from '../../middlewares/protect';
 import { eventValidation, validate, validateObjectId } from '../../middlewares/validator';
 
 // Configuration Cloudinary pour les événements
@@ -16,23 +17,24 @@ const eventStorage = new CloudinaryStorage({
   params: {
     folder: 'events',
     allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
-    transformation: [{ 
-      width: 1200, 
-      height: 800, 
-      crop: 'fill', 
-      quality: 'auto:good' 
+    transformation: [{
+      width: 1200,
+      height: 800,
+      crop: 'fill',
+      quality: 'auto:good'
     }],
     public_id: (req, file) => {
-      const name = file.originalname.split('.')[0];
+      const name = file.originalname.split('.')[0].replace(/[^a-zA-Z0-9]/g, '_');
       const timestamp = Date.now();
-      return `event_${name}_${timestamp}`;
+      const random = Math.random().toString(36).substring(7);
+      return `event_${name}_${timestamp}_${random}`;
     }
   } as any,
 });
 
-const uploadEventImages = multer({ 
+const uploadEventImages = multer({
   storage: eventStorage,
-  limits: { 
+  limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
     files: 4 // Maximum 4 fichiers 
   },
@@ -83,6 +85,27 @@ router.delete(
   validateObjectId,
   validate(eventValidation.delete),
   EventController.deleteEvent
+);
+
+router.post(
+  '/:id/participate',
+  protect,
+  validateObjectId,
+  EventController.toggleParticipation
+);
+
+router.get(
+  '/:id/members',
+  protectAdmin,
+  validateObjectId,
+  EventController.getEventMembers
+);
+
+router.post(
+  '/:id/rate',
+  protect,
+  validateObjectId,
+  EventController.submitRating
 );
 
 export default router;

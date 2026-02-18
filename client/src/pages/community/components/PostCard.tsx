@@ -35,7 +35,7 @@ export default function PostCard({ post, onLike, onFavorite, onComment, onEdit, 
   const authorName = post.isAnonymous ? "Anonymous User" : (post.user ? (post.user.nom || post.username) : "Deleted Account");
   const authorPhoto = post.isAnonymous ? getAvatar(undefined, "AU") : (post.user ? getAvatar(post.user.photo || post.userPhoto, authorName) : getAvatar(undefined, "DA"));
   const rawRole = post.isAnonymous ? "User" : (post.user?.role || post.userRole);
-  const authorRole = rawRole === 'patient' ? 'Membre' : rawRole === 'professional' ? '' : rawRole;
+  const authorRole = rawRole === 'patient' ? 'Member' : rawRole === 'professional' ? '' : rawRole;
   const isLiked = !!currentUserId && !!post.likedBy && post.likedBy.some(idOrUser => {
     if (typeof idOrUser === 'string') return idOrUser === currentUserId;
     return idOrUser._id === currentUserId;
@@ -108,7 +108,7 @@ export default function PostCard({ post, onLike, onFavorite, onComment, onEdit, 
             <div className="flex gap-1">
               {showConfirmDelete ? (
                 <div className="flex items-center gap-1 bg-red-50 p-1 rounded-lg border border-red-100 shadow-sm">
-                  <span className="text-[10px] font-bold text-red-600 px-1">Supprimer?</span>
+                  <span className="text-[10px] font-bold text-red-600 px-1">Delete?</span>
                   <button
                     onClick={(e) => { e.stopPropagation(); handleConfirmDelete(); }}
                     className="p-1.5 text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors"
@@ -127,14 +127,14 @@ export default function PostCard({ post, onLike, onFavorite, onComment, onEdit, 
                   <button
                     onClick={(e) => { e.stopPropagation(); setIsEditing(true); }}
                     className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all"
-                    title="Modifier"
+                    title="Edit"
                   >
                     <FaPencilAlt size={14} />
                   </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); setShowConfirmDelete(true); }}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                    title="Supprimer"
+                    title="Delete"
                   >
                     <FaTrashAlt size={14} />
                   </button>
@@ -171,6 +171,34 @@ export default function PostCard({ post, onLike, onFavorite, onComment, onEdit, 
           </div>
         ) : (
           <p className="text-gray-700 mb-4 whitespace-pre-wrap leading-relaxed">{post.content}</p>
+        )}
+
+        {/* Shared Content Display */}
+        {post.sharedContent && (
+          <div className="mt-4 mb-6 border border-blue-100 rounded-2xl overflow-hidden bg-blue-50/30 hover:bg-blue-50 transition-colors group cursor-pointer" onClick={() => window.open(post.sharedContent?.url, '_blank')}>
+            <div className="flex flex-col sm:flex-row">
+              <div className="sm:w-32 aspect-video sm:aspect-auto bg-gray-200 relative overflow-hidden flex-shrink-0">
+                <img
+                  src={post.sharedContent.coverImage || '/default-blog.png'}
+                  alt={post.sharedContent.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+              <div className="p-3 sm:p-4 flex flex-col justify-center min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] uppercase font-black text-blue-600 tracking-widest bg-blue-100 px-2 py-0.5 rounded-full">
+                    Blog Article
+                  </span>
+                </div>
+                <h4 className="font-bold text-gray-900 text-sm sm:text-base leading-tight mb-1 group-hover:text-blue-700 transition-colors line-clamp-1">
+                  {post.sharedContent.title}
+                </h4>
+                <p className="text-xs text-gray-600 line-clamp-2">
+                  {post.sharedContent.excerpt || "Click to read more about this topic..."}
+                </p>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Hashtags */}
@@ -211,7 +239,7 @@ export default function PostCard({ post, onLike, onFavorite, onComment, onEdit, 
           <button
             onClick={onFavorite}
             className={`p-2 rounded-lg transition-all ${isFavorited ? "text-amber-500 bg-amber-50" : "text-gray-400 hover:text-amber-500 hover:bg-amber-50"}`}
-            title={isFavorited ? "Retirer des favoris" : "Enregistrer"}
+            title={isFavorited ? "Remove from favorites" : "Save"}
           >
             {isFavorited ? <FaBookmark size={16} /> : <FaRegBookmark size={16} />}
           </button>
